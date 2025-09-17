@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "env": {
+    "SOLANA_NETWORK": "devnet"
+  }
+}
