@@ -43,3 +43,4 @@ Microserviço serverless (Vercel) para o **Bags Shield**:
 - MVP usa **sinais mock**; depois plugar leitura real on-chain.
 - Chave `BAGS_API_KEY` fica **somente** nas envs da Vercel.
 
+redeploy-check: ok
