@@ -1,0 +1,16 @@
+{
+  "name": "bags-shield-api",
+  "version": "0.2.0",
+  "private": true,
+  "description": "MVP API Bags Shield (FASE 2)",
+  "main": "api/health.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "node api/health.js",
+    "test:health": "node -e \"console.log('ok')\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
