@@ -9,15 +9,9 @@ import {
 } from './_utils.js';
 import { getBagsTokenInfo, hintsFromBags } from './_bags.js';
 
-// BASE (sem transform) + mock opcional
 const BodySchema = ScanBaseSchema
-  .extend({
-    mock: z.record(z.any()).optional()
-  })
-  .transform((data) => ({
-    ...data,
-    mint: data.mint ?? data.tokenMint ?? undefined
-  }))
+  .extend({ mock: z.record(z.any()).optional() })
+  .transform((data) => ({ ...data, mint: data.mint ?? data.tokenMint ?? undefined }))
   .refine((data) => data.mint || data.transactionSig, {
     message: 'Forneça mint/tokenMint ou transactionSig.'
   });
@@ -31,7 +25,7 @@ export default async function handler(req, res) {
     const raw = await readJson(req);
     const body = BodySchema.parse(raw);
 
-    // MVP txOnly (sem mint)
+    // txOnly (sem mint)
     if (!body.mint && body.transactionSig) {
       return sendJson(res, 201, {
         ok: true,
@@ -43,17 +37,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // === BAGS: enriquecer e gerar hints ===
+    // Bags: enriquecer → hints
     let bags = { ok: false, skipped: 'not_called' };
     let hints = {};
     if (body.mint) {
       bags = await getBagsTokenInfo({ mint: body.mint, network: body.network });
-      if (bags.ok && bags.raw) {
-        hints = hintsFromBags(bags.raw);
-      }
+      if (bags.ok && bags.raw) hints = hintsFromBags(bags.raw);
     }
 
-    // Mescla hints → mock (sem sobrescrever o que o cliente setou explicitamente)
+    // Merge hints em mock (sem sobrescrever entradas explícitas do cliente)
     const enriched = {
       ...body,
       mock: { ...(body.mock || {}), ...Object.fromEntries(Object.entries(hints).filter(([, v]) => v !== undefined)) }
@@ -81,7 +73,6 @@ export default async function handler(req, res) {
       risk
     });
 
-    // Anexar Bags para debug/transparência
     resp.bags = { ...bags, hints };
 
     return sendJson(res, 201, resp);
