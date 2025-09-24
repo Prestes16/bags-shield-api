@@ -21,7 +21,7 @@ export function riskFromScore(score) {
 export const ScanBaseSchema = z.object({
   mint: z.string().min(32).max(64).optional(),
   tokenMint: z.string().min(32).max(64).optional(),
-  transactionSig: z.string().min(8).max(120).optional(), // min 8 (relaxado)
+  transactionSig: z.string().min(8).max(120).optional(),
   network: z.enum(['devnet', 'mainnet-beta']).default('devnet'),
   context: z.object({
     wallet: z.string().optional(),
@@ -41,94 +41,54 @@ export const ScanInputSchema = ScanBaseSchema
 
 /**
  * Engine de risco v0.3.6
- * - NÃO penaliza por padrão quando não há sinal (antes gerava 95).
- * - Aplica penalidades só quando o sinal vier definido (mock/hints).
- * - Se houver poucos sinais, adiciona "insufficient_data" (+20) para evitar falso SAFE.
+ * - Só penaliza quando há sinal fornecido (mock/hints).
+ * - Com poucos sinais, aplica "insufficient_data" (+20) para evitar falso SAFE.
  */
 export function computeRiskFactors(input) {
   const m = input?.mock ?? {};
   const factors = [];
   let signals = 0;
 
-  // Mint authority ativa = risco
-  if (m.mintAuthorityActive === true) {
-    factors.push({ key: 'mint_authority_active', score: 25, detail: 'Mint authority ativa' });
-    signals++;
-  } else if (m.mintAuthorityActive === false) {
-    signals++;
-  }
+  if (m.mintAuthorityActive === true) { factors.push({ key: 'mint_authority_active', score: 25, detail: 'Mint authority ativa' }); signals++; }
+  else if (m.mintAuthorityActive === false) { signals++; }
 
-  // Concentração holders
   if (typeof m.top10HoldersPct === 'number' && !Number.isNaN(m.top10HoldersPct)) {
-    if (m.top10HoldersPct >= 70) {
-      factors.push({ key: 'holders_concentrated', score: 25, detail: `Top10 detém ~${m.top10HoldersPct}%` });
-    } else if (m.top10HoldersPct >= 40) {
-      factors.push({ key: 'holders_mid_concentration', score: 10, detail: `Top10 detém ~${m.top10HoldersPct}%` });
-    }
+    if (m.top10HoldersPct >= 70) factors.push({ key: 'holders_concentrated', score: 25, detail: `Top10 detém ~${m.top10HoldersPct}%` });
+    else if (m.top10HoldersPct >= 40) factors.push({ key: 'holders_mid_concentration', score: 10, detail: `Top10 detém ~${m.top10HoldersPct}%` });
     signals++;
   }
 
-  // Freeze não renunciada
-  if (m.freezeNotRenounced === true) {
-    factors.push({ key: 'freeze_not_renounced', score: 15, detail: 'Freeze authority não renunciada' });
-    signals++;
-  } else if (m.freezeNotRenounced === false) {
-    signals++;
-  }
+  if (m.freezeNotRenounced === true) { factors.push({ key: 'freeze_not_renounced', score: 15, detail: 'Freeze authority não renunciada' }); signals++; }
+  else if (m.freezeNotRenounced === false) { signals++; }
 
-  // Idade do token
   if (typeof m.tokenAgeDays === 'number' && !Number.isNaN(m.tokenAgeDays)) {
-    if (m.tokenAgeDays < 3) {
-      factors.push({ key: 'young_token', score: 10, detail: `Token muito novo (${m.tokenAgeDays}d)` });
-    } else if (m.tokenAgeDays < 14) {
-      factors.push({ key: 'new_token', score: 5, detail: `Token novo (${m.tokenAgeDays}d)` });
-    }
+    if (m.tokenAgeDays < 3) factors.push({ key: 'young_token', score: 10, detail: `Token muito novo (${m.tokenAgeDays}d)` });
+    else if (m.tokenAgeDays < 14) factors.push({ key: 'new_token', score: 5, detail: `Token novo (${m.tokenAgeDays}d)` });
     signals++;
   }
 
-  // Liquidez
-  if (m.liquidityLocked === false) {
-    factors.push({ key: 'liquidity_unlocked', score: 15, detail: 'Liquidez não bloqueada' });
-    signals++;
-  } else if (m.liquidityLocked === true) {
-    signals++;
-  } else {
-    // Se não sabemos nada de liquidez e não for verificado, leve aviso
-    if (m.bagsVerified !== true) {
-      factors.push({ key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' });
-    }
-  }
+  if (m.liquidityLocked === false) { factors.push({ key: 'liquidity_unlocked', score: 15, detail: 'Liquidez não bloqueada' }); signals++; }
+  else if (m.liquidityLocked === true) { signals++; }
+  else { if (m.bagsVerified !== true) factors.push({ key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' }); }
 
-  // Reputação do criador
   if (typeof m.creatorReputation === 'number' && !Number.isNaN(m.creatorReputation)) {
-    if (m.creatorReputation < 40) {
-      factors.push({ key: 'creator_low_reputation', score: 10, detail: 'Reputação do criador baixa' });
-    } else if (m.creatorReputation < 60) {
-      factors.push({ key: 'creator_mixed_reputation', score: 5, detail: 'Reputação do criador média' });
-    }
+    if (m.creatorReputation < 40) factors.push({ key: 'creator_low_reputation', score: 10, detail: 'Reputação do criador baixa' });
+    else if (m.creatorReputation < 60) factors.push({ key: 'creator_mixed_reputation', score: 5, detail: 'Reputação do criador média' });
     signals++;
   }
 
-  // Socials
-  if (m.socialsOk === false) {
-    factors.push({ key: 'no_socials', score: 5, detail: 'Sem redes sociais vinculadas' });
-    signals++;
-  } else if (m.socialsOk === true) {
-    signals++;
-  }
+  if (m.socialsOk === false) { factors.push({ key: 'no_socials', score: 5, detail: 'Sem redes sociais vinculadas' }); signals++; }
+  else if (m.socialsOk === true) { signals++; }
 
-  // Verificado (evita aviso de dados insuficientes/unknown)
   const isVerified = m.bagsVerified === true;
   if (m.bagsVerified !== undefined) signals++;
 
-  // Poucos sinais? adiciona aviso
   if (!isVerified && signals < 2) {
     factors.push({ key: 'insufficient_data', score: 20, detail: 'Poucos sinais disponíveis' });
   }
 
   let total = factors.reduce((s, f) => s + f.score, 0);
   total = Math.min(100, total);
-
   return { factors, total };
 }
 
@@ -169,19 +129,13 @@ export async function readJson(req) {
 
 export function sendJson(res, status, data) {
   res.statusCode = status;
-  // Conteúdo + cache
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-
-  // Observabilidade
   res.setHeader('X-App-Version', APP_VERSION);
   res.setHeader('X-BagsShield', '1');
-
-  // Segurança básica
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'interest-cohort=()');
-
   res.end(JSON.stringify(data));
 }

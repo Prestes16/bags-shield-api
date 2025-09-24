@@ -7,8 +7,8 @@ import {
   readJson,
   sendJson
 } from './_utils.js';
-import { getBagsTokenInfo, hintsFromBags } from './_bags.js';
 
+// Schema: base + mock opcional
 const BodySchema = ScanBaseSchema
   .extend({ mock: z.record(z.any()).optional() })
   .transform((data) => ({ ...data, mint: data.mint ?? data.tokenMint ?? undefined }))
@@ -37,15 +37,25 @@ export default async function handler(req, res) {
       });
     }
 
-    // Bags: enriquecer → hints
+    // === Bags (lazy import) ===
     let bags = { ok: false, skipped: 'not_called' };
     let hints = {};
-    if (body.mint) {
-      bags = await getBagsTokenInfo({ mint: body.mint, network: body.network });
-      if (bags.ok && bags.raw) hints = hintsFromBags(bags.raw);
+    if (body.mint && process.env.BAGS_API_KEY) {
+      try {
+        const mod = await import('./_bags.js');
+        const info = await mod.getBagsTokenInfo({ mint: body.mint, network: body.network });
+        bags = info;
+        if (info.ok && info.raw) {
+          hints = mod.hintsFromBags(info.raw) || {};
+        }
+      } catch (e) {
+        bags = { ok: false, reason: 'import_error', message: String(e?.message || e) };
+      }
+    } else if (body.mint) {
+      bags = { ok: false, skipped: 'no_api_key' };
     }
 
-    // Merge hints em mock (sem sobrescrever entradas explícitas do cliente)
+    // Merge hints → mock (sem sobrescrever valores explícitos do cliente)
     const enriched = {
       ...body,
       mock: { ...(body.mock || {}), ...Object.fromEntries(Object.entries(hints).filter(([, v]) => v !== undefined)) }
