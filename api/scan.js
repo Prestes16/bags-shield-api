@@ -7,6 +7,7 @@ import {
   readJson,
   sendJson
 } from './_utils.js';
+import { getBagsTokenInfo } from './_bags.js'; // <-- NOVO
 
 // Usamos a BASE (sem transform) para poder .extend()
 const BodySchema = ScanBaseSchema
@@ -42,6 +43,13 @@ export default async function handler(req, res) {
       });
     }
 
+    // === NOVO: enriquecimento Bags (não quebra se falhar) ===
+    let bags = { ok: false, skipped: 'not_called' };
+    if (body.mint) {
+      bags = await getBagsTokenInfo({ mint: body.mint, network: body.network });
+    }
+
+    // Engine de risco (por enquanto, sem usar Bags para pontuar — usaremos na Fase 4)
     const risk = computeRiskFactors(body);
 
     const decision =
@@ -63,6 +71,9 @@ export default async function handler(req, res) {
       input: body,
       risk
     });
+
+    // Anexa o resultado da Bags para transparência
+    resp.bags = bags;
 
     return sendJson(res, 201, resp);
   } catch (err) {
