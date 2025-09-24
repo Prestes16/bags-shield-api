@@ -1,5 +1,6 @@
 // api/_utils.js
 import { z } from 'zod';
+import { APP_VERSION } from './_version.js';
 
 /** Níveis/cores de risco (UI futura) */
 export const RISK_LEVELS = {
@@ -20,7 +21,7 @@ export function riskFromScore(score) {
 export const ScanBaseSchema = z.object({
   mint: z.string().min(32).max(64).optional(),
   tokenMint: z.string().min(32).max(64).optional(),
-  transactionSig: z.string().min(8).max(120).optional(), // <- relaxado para 8
+  transactionSig: z.string().min(8).max(120).optional(), // min 8 (relaxado)
   network: z.enum(['devnet', 'mainnet-beta']).default('devnet'),
   context: z.object({
     wallet: z.string().optional(),
@@ -106,5 +107,6 @@ export async function readJson(req) {
 export function sendJson(res, status, data) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('X-App-Version', APP_VERSION); // <- expõe a versão em todas as respostas
   res.end(JSON.stringify(data));
 }
