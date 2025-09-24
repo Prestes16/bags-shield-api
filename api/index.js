@@ -34,11 +34,22 @@ pre{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px;
       </div>
 
       <h3>Testes (PowerShell)</h3>
+      <p class="muted">Health (GET)</p>
       <pre>irm "https://bags-shield-api.vercel.app/api/health"</pre>
+
+      <p class="muted">Scan (POST) com <code>mint</code></p>
       <pre>irm "https://bags-shield-api.vercel.app/api/scan" -Method Post -ContentType "application/json" -Body '{"mint":"9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F","network":"devnet"}'</pre>
+
+      <p class="muted">Scan (POST) com <code>tokenMint</code></p>
+      <pre>irm "https://bags-shield-api.vercel.app/api/scan" -Method Post -ContentType "application/json" -Body '{"tokenMint":"9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F","network":"devnet"}'</pre>
+
+      <p class="muted">Simulate (POST) — cenário melhorado</p>
+      <pre>irm "https://bags-shield-api.vercel.app/api/simulate" -Method Post -ContentType "application/json" -Body '{"mint":"9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F","network":"devnet","mock":{"mintAuthorityActive":false,"top10HoldersPct":35,"freezeNotRenounced":false,"tokenAgeDays":15,"liquidityLocked":true,"creatorReputation":20}}'</pre>
+
+      <p class="muted">Apply (POST)</p>
+      <pre>irm "https://bags-shield-api.vercel.app/api/apply" -Method Post -ContentType "application/json" -Body '{"mint":"9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F","network":"devnet","mock":{"top10HoldersPct":82}}'</pre>
     </div>
   </div>
 </body>
 </html>`);
 }
-
