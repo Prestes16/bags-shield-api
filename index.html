@@ -3,46 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bags Shield API</title>
+  <title>Bags Shield API — Status</title>
   <style>
-    :root { --bg:#0b0f14; --card:#121822; --fg:#e6eef8; --muted:#98a2b3; --ok:#00ffa3; --warn:#ffd166; --link:#7aa2ff; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background: var(--bg); color: var(--fg); }
-    .wrap { max-width: 860px; margin: 7vh auto; padding: 24px; }
-    .card { background: var(--card); border: 1px solid #1d2633; border-radius: 16px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
-    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: .2px; }
-    p { margin: 0 0 14px; color: var(--muted); }
-    code, pre { background: #0d1420; color: #d6e3f8; border:1px solid #1e2a3a; border-radius: 10px; padding: 10px; display:block; overflow:auto; }
-    a { color: var(--link); text-decoration: none; }
-    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 18px; }
-    .tag { display:inline-block; border-radius: 999px; padding: 6px 10px; font-size: 12px; border:1px solid #223047; background:#0d1420; color:#9fb4d6; }
-    .ok { color: var(--ok); }
+    :root { --bg:#0b1220; --fg:#e5e7eb; --muted:#9ca3af; --ok:#00ffa3; --warn:#ffd166; }
+    *{box-sizing:border-box} body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--fg)}
+    .wrap{max-width:880px;margin:40px auto;padding:24px}
+    .card{background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 6px;font-size:28px}
+    .muted{color:var(--muted);margin:0 0 18px}
+    a.btn{display:inline-block;margin:8px 8px 0 0;padding:10px 14px;border-radius:10px;text-decoration:none;background:#111827;border:1px solid #374151}
+    a.btn:hover{border-color:#4b5563}
+    pre{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px;overflow:auto}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Bags Shield API</h1>
-      <p>Bem-vindo! Esta é a landing page do seu backend. As rotas da API estão sob <code>/api/*</code>.</p>
-      <p>Status rápido: <a href="/api/health"><strong class="ok">/api/health</strong></a></p>
+      <h1>Bags Shield API <span style="background:linear-gradient(90deg,var(--ok),#06b6d4);color:#001b12;border-radius:999px;padding:6px 10px;margin-left:8px;font-weight:700;">online</span></h1>
+      <p class="muted">URL: <strong>https://bags-shield-api-iwd7.vercel.app</strong></p>
 
-      <div class="grid">
-        <div>
-          <h3>Rotas</h3>
-          <ul>
-            <li><a href="/api/health">GET /api/health</a> — healthcheck</li>
-            <li>POST /api/scan</li>
-            <li>POST /api/simulate</li>
-            <li>POST /api/apply</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Exemplo de teste (PowerShell)</h3>
-          <pre>irm "https://bags-shield-api-iwd7.vercel.app/api/scan" -Method Post -ContentType "application/json" -Body '{"mint":"9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F","network":"devnet"}'</pre>
-        </div>
-      </div>
+      <p class="muted">Rotas úteis:</p>
+      <a class="btn" href="/api/health" target="_blank">/api/health</a>
+      <a class="btn" href="/api/scan" target="_blank">/api/scan (POST)</a>
+      <a class="btn" href="/api/simulate" target="_blank">/api/simulate (POST)</a>
+      <a class="btn" href="/api/apply" target="_blank">/api/apply (POST)</a>
 
-      <p class="tag">Projeto: bags-shield-api • Ambiente: Vercel</p>
+      <h3>Testes (PowerShell)</h3>
+      <pre>irm "https://bags-shield-api-iwd7.vercel.app/api/health"</pre>
+      <pre>irm "https://bags-shield-api-iwd7.vercel.app/api/scan" -Method Post -ContentType "application/json" -Body '{"mint":"9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F","network":"devnet"}'</pre>
     </div>
   </div>
 </body>
