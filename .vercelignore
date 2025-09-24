@@ -1,0 +1,17 @@
+# Pastas e arquivos locais que não precisam ir pro build da Vercel
+node_modules/
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+
+# Logs e dumps
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dotenv locais
+.env
+.env.*
