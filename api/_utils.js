@@ -51,7 +51,7 @@ export function computeRiskFactors(input) {
   else if (top10Pct >= 40) factors.push({ key: 'holders_mid_concentration', score: 10, detail: `Top10 detém ~${top10Pct}%` });
 
   const freezeNotRenounced = input?.mock?.freezeNotRenounced ?? true;
-  if (freezeNotRenounced) factors.push({ key: 'freeze_not_renounced', score: 15, detail: 'Freeze authority não renunciada' });
+  if (freezeNotRenounced) factors.push({ key: 'freeze_not_renunciated', score: 15, detail: 'Freeze authority não renunciada' });
 
   const ageDays = input?.mock?.tokenAgeDays ?? 2;
   if (ageDays < 3) factors.push({ key: 'young_token', score: 10, detail: `Token muito novo (${ageDays}d)` });
@@ -106,10 +106,19 @@ export async function readJson(req) {
 
 export function sendJson(res, status, data) {
   res.statusCode = status;
+  // Conteúdo + cache
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  // Força header custom + evita cache do CDN (pass-through garantido)
   res.setHeader('Cache-Control', 'no-store');
+
+  // Observabilidade
   res.setHeader('X-App-Version', APP_VERSION);
   res.setHeader('X-BagsShield', '1');
+
+  // Segurança básica
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'interest-cohort=()');
+
   res.end(JSON.stringify(data));
 }
