@@ -107,6 +107,9 @@ export async function readJson(req) {
 export function sendJson(res, status, data) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('X-App-Version', APP_VERSION); // <- expõe a versão em todas as respostas
+  // Força header custom + evita cache do CDN (pass-through garantido)
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-App-Version', APP_VERSION);
+  res.setHeader('X-BagsShield', '1');
   res.end(JSON.stringify(data));
 }
