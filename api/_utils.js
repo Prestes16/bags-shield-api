@@ -20,7 +20,7 @@ export function riskFromScore(score) {
 export const ScanBaseSchema = z.object({
   mint: z.string().min(32).max(64).optional(),
   tokenMint: z.string().min(32).max(64).optional(),
-  transactionSig: z.string().min(20).max(120).optional(),
+  transactionSig: z.string().min(8).max(120).optional(), // <- relaxado para 8
   network: z.enum(['devnet', 'mainnet-beta']).default('devnet'),
   context: z.object({
     wallet: z.string().optional(),
