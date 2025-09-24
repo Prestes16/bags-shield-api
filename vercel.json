@@ -1,6 +1,11 @@
 {
   "version": 2,
-  "env": {
-    "SOLANA_NETWORK": "devnet"
-  }
+  "builds": [{ "src": "api/*.js", "use": "@vercel/node" }],
+  "routes": [
+    { "src": "/api/health", "dest": "/api/health.js" },
+    { "src": "/api/scan", "dest": "/api/scan.js" },
+    { "src": "/api/simulate", "dest": "/api/simulate.js" },
+    { "src": "/api/apply", "dest": "/api/apply.js" }
+  ]
 }
+
