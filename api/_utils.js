@@ -16,8 +16,8 @@ export function riskFromScore(score) {
   return RISK_LEVELS.block;
 }
 
-/** Schema base: aceita mint, tokenMint (alias) OU transactionSig */
-export const ScanInputSchema = z.object({
+/** Base sem transform/refine — pode fazer .extend() em outros arquivos */
+export const ScanBaseSchema = z.object({
   mint: z.string().min(32).max(64).optional(),
   tokenMint: z.string().min(32).max(64).optional(),
   transactionSig: z.string().min(20).max(120).optional(),
@@ -26,14 +26,17 @@ export const ScanInputSchema = z.object({
     wallet: z.string().optional(),
     appId: z.string().optional()
   }).optional()
-})
-.transform((data) => ({
-  ...data,
-  mint: data.mint ?? data.tokenMint ?? undefined
-}))
-.refine((data) => data.mint || data.transactionSig, {
-  message: 'Forneça mint/tokenMint ou transactionSig.'
 });
+
+/** Versão com transform/refine — para usos diretos */
+export const ScanInputSchema = ScanBaseSchema
+  .transform((data) => ({
+    ...data,
+    mint: data.mint ?? data.tokenMint ?? undefined
+  }))
+  .refine((data) => data.mint || data.transactionSig, {
+    message: 'Forneça mint/tokenMint ou transactionSig.'
+  });
 
 /** Engine de risco mockável (Fase 3) */
 export function computeRiskFactors(input) {
@@ -92,10 +95,9 @@ export async function readJson(req) {
   return new Promise((resolve, reject) => {
     try {
       let body = '';
-      req.on('data', (c) => body += c);
+      req.on('data', (c) => (body += c));
       req.on('end', () => {
-        try { resolve(body ? JSON.parse(body) : {}); }
-        catch (e) { reject(e); }
+        try { resolve(body ? JSON.parse(body) : {}); } catch (e) { reject(e); }
       });
     } catch (e) { reject(e); }
   });

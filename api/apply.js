@@ -1,17 +1,25 @@
 // api/apply.js
 import { z } from 'zod';
 import {
-  ScanInputSchema,
+  ScanBaseSchema,
   computeRiskFactors,
   buildResponse,
   readJson,
   sendJson
 } from './_utils.js';
 
-// MVP: aplica decisão e sugere ações
-const BodySchema = ScanInputSchema.extend({
-  mock: z.record(z.any()).optional()
-});
+// BASE + mock livre + transform/refine locais
+const BodySchema = ScanBaseSchema
+  .extend({
+    mock: z.record(z.any()).optional()
+  })
+  .transform((data) => ({
+    ...data,
+    mint: data.mint ?? data.tokenMint ?? undefined
+  }))
+  .refine((data) => data.mint || data.transactionSig, {
+    message: 'Forneça mint/tokenMint ou transactionSig.'
+  });
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -20,12 +28,8 @@ export default async function handler(req, res) {
 
   try {
     const raw = await readJson(req);
-    const normalized = {
-      ...raw,
-      mint: raw?.mint ?? raw?.tokenMint ?? undefined
-    };
+    const body = BodySchema.parse(raw);
 
-    const body = BodySchema.parse(normalized);
     const risk = computeRiskFactors(body);
 
     const decision =

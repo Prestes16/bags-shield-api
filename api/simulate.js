@@ -1,24 +1,32 @@
 // api/simulate.js
 import { z } from 'zod';
 import {
-  ScanInputSchema,
+  ScanBaseSchema,
   computeRiskFactors,
   buildResponse,
   readJson,
   sendJson
 } from './_utils.js';
 
-// Simulate exige o bloco mock (para testar cenários)
-const BodySchema = ScanInputSchema.extend({
-  mock: z.object({
-    mintAuthorityActive: z.boolean().optional(),
-    top10HoldersPct: z.number().min(0).max(100).optional(),
-    freezeNotRenounced: z.boolean().optional(),
-    tokenAgeDays: z.number().min(0).optional(),
-    liquidityLocked: z.boolean().optional(),
-    creatorReputation: z.number().min(0).max(100).optional()
+// BASE + mock validado + transform/refine locais
+const BodySchema = ScanBaseSchema
+  .extend({
+    mock: z.object({
+      mintAuthorityActive: z.boolean().optional(),
+      top10HoldersPct: z.number().min(0).max(100).optional(),
+      freezeNotRenounced: z.boolean().optional(),
+      tokenAgeDays: z.number().min(0).optional(),
+      liquidityLocked: z.boolean().optional(),
+      creatorReputation: z.number().min(0).max(100).optional()
+    })
   })
-});
+  .transform((data) => ({
+    ...data,
+    mint: data.mint ?? data.tokenMint ?? undefined
+  }))
+  .refine((data) => data.mint || data.transactionSig, {
+    message: 'Forneça mint/tokenMint ou transactionSig.'
+  });
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -27,12 +35,8 @@ export default async function handler(req, res) {
 
   try {
     const raw = await readJson(req);
-    const normalized = {
-      ...raw,
-      mint: raw?.mint ?? raw?.tokenMint ?? undefined
-    };
+    const body = BodySchema.parse(raw);
 
-    const body = BodySchema.parse(normalized);
     const risk = computeRiskFactors(body);
 
     const decision =
