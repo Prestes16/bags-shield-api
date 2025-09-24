@@ -68,6 +68,9 @@ export default async function handler(req, res) {
 
     return sendJson(res, 201, resp);
   } catch (err) {
-    return sendJson(res, 400, { ok: false, error: err.message });
+    // Loga no console da Vercel e retorna erro legível
+    console.error('scan_error', err);
+    return sendJson(res, 400, { ok: false, error: String(err?.message || err) });
   }
 }
+
