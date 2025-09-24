@@ -1,53 +1,61 @@
 // api/_bags.js
 const TIMEOUT_MS = Number(process.env.BAGS_TIMEOUT_MS || 7000);
 
+function parseBases() {
+  const raw = (process.env.BAGS_API_BASE || 'https://api.bags.app').trim();
+  return raw.split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
+}
 function hasKey() {
   return !!process.env.BAGS_API_KEY;
 }
 
-/**
- * Busca infos do token na Bags API (se chave e base estiverem configuradas).
- * Nunca quebra a sua API — retorna { ok:false, reason: ... } em caso de falha.
- */
+async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { method: 'GET', headers, signal: ctrl.signal });
+    const text = await res.text();
+    let json; try { json = JSON.parse(text); } catch { /* not json */ }
+    return { ok: res.ok, status: res.status, text, json };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Chama a Bags API com a primeira base que responder 2xx */
 export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
   if (!mint) return { ok: false, skipped: 'no_mint' };
   if (!hasKey()) return { ok: false, skipped: 'no_api_key' };
 
-  const base = (process.env.BAGS_API_BASE || 'https://api.bags.app').replace(/\/+$/, '');
-  const url = `${base}/v1/tokens/${encodeURIComponent(mint)}?network=${encodeURIComponent(network)}`;
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${process.env.BAGS_API_KEY}`,
-        'Accept': 'application/json',
-        'User-Agent': 'bags-shield/0.3.6'
-      },
-      signal: controller.signal
-    });
-
-    clearTimeout(timer);
-
-    const text = await res.text();
-    let json; try { json = JSON.parse(text); } catch { /* body não-JSON */ }
-
-    if (!res.ok) {
-      return { ok: false, status: res.status, reason: 'http_error', body: (text || '').slice(0, 500) };
+  const bases = parseBases();
+  const tried = [];
+  for (const base of bases) {
+    const url = `${base}/v1/tokens/${encodeURIComponent(mint)}?network=${encodeURIComponent(network)}`;
+    try {
+      const res = await getJson(url, {
+        headers: {
+          'Authorization': `Bearer ${process.env.BAGS_API_KEY}`,
+          'Accept': 'application/json',
+          'User-Agent': 'bags-shield/0.3.6'
+        }
+      });
+      tried.push({ base, path: '/v1/tokens/:mint', status: res.status, ok: res.ok });
+      if (res.ok) return { ok: true, raw: res.json ?? {}, base, status: res.status };
+      // se 401/403/404/5xx, tenta próxima base
+    } catch (e) {
+      tried.push({ base, path: '/v1/tokens/:mint', ok: false, error: String(e?.message || e) });
     }
-    return { ok: true, raw: json ?? {} };
-  } catch (err) {
-    const msg = String(err?.name === 'AbortError' ? 'timeout' : (err?.message || err));
-    return { ok: false, reason: 'exception', message: msg };
   }
+  // nada deu 2xx
+  return {
+    ok: false,
+    reason: 'http_or_network_error',
+    message: 'Nenhuma base respondeu 2xx',
+    tried
+  };
 }
 
-/**
- * Converte os campos possíveis da Bags em “hints” que nosso engine entende.
- */
+/** Converte respostas da Bags em "hints" pro nosso engine */
 export function hintsFromBags(raw) {
   if (!raw || typeof raw !== 'object') return {};
 
@@ -78,16 +86,15 @@ export function hintsFromBags(raw) {
     const explicitLock = (typeof liquidityLockedRaw === 'boolean') ? liquidityLockedRaw : undefined;
     hints.liquidityLocked = (explicitLock !== undefined) ? explicitLock : liquidityUsd > 1000;
   }
-
   if (typeof top10HoldersPct === 'number' && !Number.isNaN(top10HoldersPct)) {
     hints.top10HoldersPct = top10HoldersPct;
   }
 
-  const mintAuthorityActive =
+  const mintAuthorityActiveFinal =
     (typeof mintAuthActive === 'boolean') ? mintAuthActive
     : (typeof mintAuthRenounced === 'boolean') ? !mintAuthRenounced
     : undefined;
-  if (typeof mintAuthorityActive === 'boolean') hints.mintAuthorityActive = mintAuthorityActive;
+  if (typeof mintAuthorityActiveFinal === 'boolean') hints.mintAuthorityActive = mintAuthorityActiveFinal;
 
   const freezeNotRenounced =
     (typeof freezeAuthRenounced === 'boolean') ? !freezeAuthRenounced : undefined;
@@ -95,16 +102,11 @@ export function hintsFromBags(raw) {
 
   if (createdAt) {
     const t = Date.parse(createdAt);
-    if (!Number.isNaN(t)) {
-      hints.tokenAgeDays = Math.max(0, Math.floor((Date.now() - t) / 86400000));
-    }
+    if (!Number.isNaN(t)) hints.tokenAgeDays = Math.max(0, Math.floor((Date.now() - t) / 86400000));
   }
 
-  if (Array.isArray(socials)) {
-    hints.socialsOk = socials.length > 0;
-  } else if (socials && typeof socials === 'object') {
-    hints.socialsOk = Object.values(socials).some(Boolean);
-  }
+  if (Array.isArray(socials)) hints.socialsOk = socials.length > 0;
+  else if (socials && typeof socials === 'object') hints.socialsOk = Object.values(socials).some(Boolean);
 
   if (typeof creatorReputation === 'number') {
     hints.creatorReputation = Math.max(0, Math.min(100, creatorReputation));
