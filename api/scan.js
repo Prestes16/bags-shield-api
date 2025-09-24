@@ -7,9 +7,9 @@ import {
   readJson,
   sendJson
 } from './_utils.js';
-import { getBagsTokenInfo } from './_bags.js'; // <-- NOVO
+import { getBagsTokenInfo, hintsFromBags } from './_bags.js';
 
-// Usamos a BASE (sem transform) para poder .extend()
+// BASE (sem transform) + mock opcional
 const BodySchema = ScanBaseSchema
   .extend({
     mock: z.record(z.any()).optional()
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     const raw = await readJson(req);
     const body = BodySchema.parse(raw);
 
-    // MVP: aceitar transactionSig sem mint → resposta parcial
+    // MVP txOnly (sem mint)
     if (!body.mint && body.transactionSig) {
       return sendJson(res, 201, {
         ok: true,
@@ -43,14 +43,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // === NOVO: enriquecimento Bags (não quebra se falhar) ===
+    // === BAGS: enriquecer e gerar hints ===
     let bags = { ok: false, skipped: 'not_called' };
+    let hints = {};
     if (body.mint) {
       bags = await getBagsTokenInfo({ mint: body.mint, network: body.network });
+      if (bags.ok && bags.raw) {
+        hints = hintsFromBags(bags.raw);
+      }
     }
 
-    // Engine de risco (por enquanto, sem usar Bags para pontuar — usaremos na Fase 4)
-    const risk = computeRiskFactors(body);
+    // Mescla hints → mock (sem sobrescrever o que o cliente setou explicitamente)
+    const enriched = {
+      ...body,
+      mock: { ...(body.mock || {}), ...Object.fromEntries(Object.entries(hints).filter(([, v]) => v !== undefined)) }
+    };
+
+    const risk = computeRiskFactors(enriched);
 
     const decision =
       risk.total >= 80 ? 'block' :
@@ -68,12 +77,12 @@ export default async function handler(req, res) {
       id: `bsr_${Math.random().toString(36).slice(2, 10)}`,
       decision,
       reason,
-      input: body,
+      input: enriched,
       risk
     });
 
-    // Anexa o resultado da Bags para transparência
-    resp.bags = bags;
+    // Anexar Bags para debug/transparência
+    resp.bags = { ...bags, hints };
 
     return sendJson(res, 201, resp);
   } catch (err) {
