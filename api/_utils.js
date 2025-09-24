@@ -39,29 +39,92 @@ export const ScanInputSchema = ScanBaseSchema
     message: 'Forneça mint/tokenMint ou transactionSig.'
   });
 
-/** Engine de risco mockável (Fase 3) */
+/**
+ * Engine de risco v0.3.6
+ * - NÃO penaliza por padrão quando não há sinal (antes gerava 95).
+ * - Aplica penalidades só quando o sinal vier definido (mock/hints).
+ * - Se houver poucos sinais, adiciona "insufficient_data" (+20) para evitar falso SAFE.
+ */
 export function computeRiskFactors(input) {
+  const m = input?.mock ?? {};
   const factors = [];
+  let signals = 0;
 
-  const mintAuthorityActive = input?.mock?.mintAuthorityActive ?? true;
-  if (mintAuthorityActive) factors.push({ key: 'mint_authority_active', score: 25, detail: 'Mint authority ativa' });
+  // Mint authority ativa = risco
+  if (m.mintAuthorityActive === true) {
+    factors.push({ key: 'mint_authority_active', score: 25, detail: 'Mint authority ativa' });
+    signals++;
+  } else if (m.mintAuthorityActive === false) {
+    signals++;
+  }
 
-  const top10Pct = input?.mock?.top10HoldersPct ?? 78;
-  if (top10Pct >= 70) factors.push({ key: 'holders_concentrated', score: 25, detail: `Top10 detém ~${top10Pct}%` });
-  else if (top10Pct >= 40) factors.push({ key: 'holders_mid_concentration', score: 10, detail: `Top10 detém ~${top10Pct}%` });
+  // Concentração holders
+  if (typeof m.top10HoldersPct === 'number' && !Number.isNaN(m.top10HoldersPct)) {
+    if (m.top10HoldersPct >= 70) {
+      factors.push({ key: 'holders_concentrated', score: 25, detail: `Top10 detém ~${m.top10HoldersPct}%` });
+    } else if (m.top10HoldersPct >= 40) {
+      factors.push({ key: 'holders_mid_concentration', score: 10, detail: `Top10 detém ~${m.top10HoldersPct}%` });
+    }
+    signals++;
+  }
 
-  const freezeNotRenounced = input?.mock?.freezeNotRenounced ?? true;
-  if (freezeNotRenounced) factors.push({ key: 'freeze_not_renunciated', score: 15, detail: 'Freeze authority não renunciada' });
+  // Freeze não renunciada
+  if (m.freezeNotRenounced === true) {
+    factors.push({ key: 'freeze_not_renounced', score: 15, detail: 'Freeze authority não renunciada' });
+    signals++;
+  } else if (m.freezeNotRenounced === false) {
+    signals++;
+  }
 
-  const ageDays = input?.mock?.tokenAgeDays ?? 2;
-  if (ageDays < 3) factors.push({ key: 'young_token', score: 10, detail: `Token muito novo (${ageDays}d)` });
+  // Idade do token
+  if (typeof m.tokenAgeDays === 'number' && !Number.isNaN(m.tokenAgeDays)) {
+    if (m.tokenAgeDays < 3) {
+      factors.push({ key: 'young_token', score: 10, detail: `Token muito novo (${m.tokenAgeDays}d)` });
+    } else if (m.tokenAgeDays < 14) {
+      factors.push({ key: 'new_token', score: 5, detail: `Token novo (${m.tokenAgeDays}d)` });
+    }
+    signals++;
+  }
 
-  const liquidityLocked = input?.mock?.liquidityLocked ?? false;
-  if (!liquidityLocked) factors.push({ key: 'liquidity_unlocked', score: 15, detail: 'Liquidez não bloqueada' });
+  // Liquidez
+  if (m.liquidityLocked === false) {
+    factors.push({ key: 'liquidity_unlocked', score: 15, detail: 'Liquidez não bloqueada' });
+    signals++;
+  } else if (m.liquidityLocked === true) {
+    signals++;
+  } else {
+    // Se não sabemos nada de liquidez e não for verificado, leve aviso
+    if (m.bagsVerified !== true) {
+      factors.push({ key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' });
+    }
+  }
 
-  const creatorReputation = input?.mock?.creatorReputation ?? 60;
-  if (creatorReputation >= 70) factors.push({ key: 'creator_low_reputation', score: 10, detail: 'Reputação do criador baixa' });
-  else if (creatorReputation >= 40) factors.push({ key: 'creator_mixed_reputation', score: 5, detail: 'Reputação do criador média' });
+  // Reputação do criador
+  if (typeof m.creatorReputation === 'number' && !Number.isNaN(m.creatorReputation)) {
+    if (m.creatorReputation < 40) {
+      factors.push({ key: 'creator_low_reputation', score: 10, detail: 'Reputação do criador baixa' });
+    } else if (m.creatorReputation < 60) {
+      factors.push({ key: 'creator_mixed_reputation', score: 5, detail: 'Reputação do criador média' });
+    }
+    signals++;
+  }
+
+  // Socials
+  if (m.socialsOk === false) {
+    factors.push({ key: 'no_socials', score: 5, detail: 'Sem redes sociais vinculadas' });
+    signals++;
+  } else if (m.socialsOk === true) {
+    signals++;
+  }
+
+  // Verificado (evita aviso de dados insuficientes/unknown)
+  const isVerified = m.bagsVerified === true;
+  if (m.bagsVerified !== undefined) signals++;
+
+  // Poucos sinais? adiciona aviso
+  if (!isVerified && signals < 2) {
+    factors.push({ key: 'insufficient_data', score: 20, detail: 'Poucos sinais disponíveis' });
+  }
 
   let total = factors.reduce((s, f) => s + f.score, 0);
   total = Math.min(100, total);
