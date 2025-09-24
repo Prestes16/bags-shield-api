@@ -1,46 +1,58 @@
-import { ok, badRequest, notAllowed, serverError } from '../lib/responses.js';
-import { requireFields, isBoolean } from '../lib/validation.js';
+// api/simulate.js
+import { z } from 'zod';
+import {
+  ScanInputSchema,
+  computeRiskFactors,
+  buildResponse,
+  readJson,
+  sendJson
+} from './_utils.js';
+
+// Simulate exige o bloco mock (para testar cenários)
+const BodySchema = ScanInputSchema.extend({
+  mock: z.object({
+    mintAuthorityActive: z.boolean().optional(),
+    top10HoldersPct: z.number().min(0).max(100).optional(),
+    freezeNotRenounced: z.boolean().optional(),
+    tokenAgeDays: z.number().min(0).optional(),
+    liquidityLocked: z.boolean().optional(),
+    creatorReputation: z.number().min(0).max(100).optional()
+  })
+});
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return sendJson(res, 405, { ok: false, error: 'Use POST' });
+  }
+
   try {
-    if (req.method !== 'POST') return notAllowed(res, ['POST']);
+    const raw = await readJson(req);
+    const normalized = {
+      ...raw,
+      mint: raw?.mint ?? raw?.tokenMint ?? undefined
+    };
 
-    const body = req.body || {};
-    const schema = { supply: 'number', decimals: 'number' };
-    const check = requireFields(body, schema);
-    if (!check.valid) return badRequest(res, 'Campos inválidos', check.errors);
+    const body = BodySchema.parse(normalized);
+    const risk = computeRiskFactors(body);
 
-    const supply = Number(body.supply);
-    const decimals = Number(body.decimals);
-    const hasFreezeAuthority = isBoolean(body.hasFreezeAuthority) ? body.hasFreezeAuthority : false;
-    const hasMintAuthority = isBoolean(body.hasMintAuthority) ? body.hasMintAuthority : false;
+    const decision =
+      risk.total >= 80 ? 'block' :
+      risk.total >= 60 ? 'flag'  :
+      risk.total >= 30 ? 'warn'  :
+                         'safe';
 
-    // Opção A: fee on-chain em SOL (regras MVP)
-    let feeSol = 0.02; // base
-    if (supply > 1_000_000_000) feeSol += 0.01;
-    if (decimals > 6) feeSol += 0.005;
-    if (hasFreezeAuthority) feeSol += 0.005;
-    if (hasMintAuthority) feeSol += 0.0075;
+    const reason = 'Simulação de decisão de risco com base nos parâmetros mockados';
 
-    // Arredonda a 6 casas (µSOL)
-    feeSol = Math.round(feeSol * 1e6) / 1e6;
-
-    const breakdown = [
-      { label: 'Base', value: 0.02 },
-      { label: 'Supply', value: supply > 1_000_000_000 ? 0.01 : 0 },
-      { label: 'Decimals', value: decimals > 6 ? 0.005 : 0 },
-      { label: 'FreezeAuthority', value: hasFreezeAuthority ? 0.005 : 0 },
-      { label: 'MintAuthority', value: hasMintAuthority ? 0.0075 : 0 }
-    ];
-
-    return ok(res, {
-      network: process.env.SOLANA_NETWORK || 'devnet',
-      estimatedFeeSol: feeSol,
-      breakdown,
-      message: 'Simulação concluída (MVP) — ajuste as regras conforme negócio.'
+    const resp = buildResponse({
+      id: `bss_${Math.random().toString(36).slice(2, 10)}`,
+      decision,
+      reason,
+      input: body,
+      risk
     });
+
+    return sendJson(res, 201, resp);
   } catch (err) {
-    return serverError(res, err);
+    return sendJson(res, 400, { ok: false, error: String(err?.message || err) });
   }
 }
-

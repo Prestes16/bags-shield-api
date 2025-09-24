@@ -1,13 +1,16 @@
 {
   "name": "bags-shield-api",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vercel dev --listen 3001",
     "start": "node api/health.js"
   },
-  "dependencies": { "zod": "^3.23.8" },
-  "devDependencies": { "vercel": "^39.1.1" }
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "vercel": "^39.1.1"
+  }
 }
-

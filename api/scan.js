@@ -8,7 +8,7 @@ import {
   sendJson
 } from './_utils.js';
 
-// Mantemos o schema base e permitimos mocks opcionais
+// Permite mocks opcionais
 const BodySchema = ScanInputSchema.extend({
   mock: z.record(z.any()).optional()
 });
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 🔧 Normalização: aceitar tanto "mint" quanto "tokenMint"
+    // Normalização: aceitar "mint" e "tokenMint"
     const raw = await readJson(req);
     const normalized = {
       ...raw,
@@ -29,23 +29,20 @@ export default async function handler(req, res) {
 
     const body = BodySchema.parse(normalized);
 
-    // MVP: permitir scan por transactionSig sem mint → resposta parcial
+    // MVP: aceitar transactionSig sem mint → resposta parcial
     if (!body.mint && body.transactionSig) {
       return sendJson(res, 201, {
         ok: true,
         txOnly: true,
         transactionSig: body.transactionSig,
-        note:
-          'Scan por transactionSig aceito (MVP). Mint real será resolvido na Fase 4.',
+        note: 'Scan por transactionSig aceito (MVP). Mint real será resolvido na Fase 4.',
         network: body.network,
         ts: new Date().toISOString()
       });
     }
 
-    // Engine de risco mockável (Fase 3)
     const risk = computeRiskFactors(body);
 
-    // Decisão simples por score
     const decision =
       risk.total >= 80 ? 'block' :
       risk.total >= 60 ? 'flag'  :
@@ -68,9 +65,7 @@ export default async function handler(req, res) {
 
     return sendJson(res, 201, resp);
   } catch (err) {
-    // Loga no console da Vercel e retorna erro legível
     console.error('scan_error', err);
     return sendJson(res, 400, { ok: false, error: String(err?.message || err) });
   }
 }
-
