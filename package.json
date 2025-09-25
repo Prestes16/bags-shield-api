@@ -14,14 +14,3 @@
   "dependencies": {},
   "devDependencies": {}
 }
-{
-  "version": 2,
-  "routes": [
-    { "src": "^/$", "dest": "/api/index.js" },
-    { "src": "/api/health", "dest": "/api/health.js" },
-    { "src": "/api/scan", "dest": "/api/scan.js" },
-    { "src": "/api/simulate", "dest": "/api/simulate.js" },
-    { "src": "/api/apply", "dest": "/api/apply.js" },
-    { "src": "/api/bags-check", "dest": "/api/bags-check.js" }
-  ]
-}

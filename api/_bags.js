@@ -1,35 +1,52 @@
 // api/_bags.js
-// Conector Bags — runtime-safe (fetch + timeout), configurável por ENV e com rate-limit headers.
-// Agora SEMPRE inclui `tried` (mesmo em sucesso), para facilitar diagnóstico no cliente.
+// Conector para a Bags API — runtime-safe (fetch + timeout), configurável via ENV.
+// Sempre preenche `tried` (inclusive em SUCESSO 2xx) para facilitar diagnóstico no cliente.
+// Expõe também `hintsFromBags(raw)` para traduzir o JSON da Bags em dicas para o motor de risco.
 
-// ENV (Production na Vercel):
-// - BAGS_API_KEY              (obrigatório)
-// - BAGS_API_BASE             (ex.: https://public-api-v2.bags.fm) — aceita múltiplas, separadas por vírgula
-// - BAGS_API_TOKENS_PATH      (ex.: '/api/v1/token-launch/lifetime-fees' OU '/api/v1/tokens/:mint')
-// - BAGS_API_MINT_PARAM       (ex.: 'tokenMint' — quando o endpoint espera o mint na query)
-// - BAGS_API_NETWORK_PARAM    (ex.: 'network' — só use se o endpoint suportar isso)
-// - BAGS_API_EXTRA_QUERY      (ex.: 'foo=1&bar=2')
-// - BAGS_AUTH_MODE            ('header' | 'bearer' — default 'header')
-// - BAGS_AUTH_HEADER          (default 'x-api-key' quando mode=header)
-// - BAGS_TIMEOUT_MS           (default 7000)
+import { APP_VERSION } from './_version.js';
+
+// =========================
+// ENV / Config
+// =========================
+//
+// Produção (Vercel → Project → Settings → Environment Variables):
+// - BAGS_API_KEY               (obrigatório; auth por header x-api-key por padrão)
+// - BAGS_API_BASE              (ex.: "https://public-api-v2.bags.fm" — pode ser múltiplas separadas por vírgula)
+// - BAGS_API_TOKENS_PATH       (ex.: "/api/v1/token-launch/lifetime-fees" OU "/api/v1/tokens/:mint")
+// - BAGS_API_MINT_PARAM        (ex.: "tokenMint" — quando o endpoint espera o mint como query string)
+// - BAGS_API_NETWORK_PARAM     (ex.: "network" — use SOMENTE se o endpoint suportar isso)
+// - BAGS_API_EXTRA_QUERY       (ex.: "foo=1&bar=2")
+// - BAGS_AUTH_MODE             ("header" | "bearer" — default "header")
+// - BAGS_AUTH_HEADER           (default "x-api-key" quando mode=header)
+// - BAGS_TIMEOUT_MS            (default 7000)
 
 const TIMEOUT_MS = Number(process.env.BAGS_TIMEOUT_MS || 7000);
 
+// =========================
+// Helpers
+// =========================
+
 function parseBases() {
   const raw = (process.env.BAGS_API_BASE || 'https://public-api-v2.bags.fm').trim();
-  return raw.split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
+  return raw
+    .split(',')
+    .map(s => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
 }
-function hasKey() { return !!process.env.BAGS_API_KEY; }
+
+function hasKey() {
+  return !!process.env.BAGS_API_KEY;
+}
 
 function buildAuthHeaders() {
-  const mode = (process.env.BAGS_AUTH_MODE || 'header').toLowerCase(); // default: header x-api-key
+  const mode = (process.env.BAGS_AUTH_MODE || 'header').toLowerCase();
   const key = process.env.BAGS_API_KEY || '';
   if (!key) return {};
   if (mode === 'header') {
     const h = process.env.BAGS_AUTH_HEADER || 'x-api-key';
     return { [h]: key };
   }
-  return { 'Authorization': `Bearer ${key}` };
+  return { Authorization: `Bearer ${key}` };
 }
 
 function applyPathTemplate(tpl, { mint }) {
@@ -75,7 +92,8 @@ async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
   try {
     const res = await fetch(url, { method: 'GET', headers, signal: ctrl.signal });
     const text = await res.text();
-    let json; try { json = JSON.parse(text); } catch {}
+    let json;
+    try { json = JSON.parse(text); } catch {}
     const rateLimit = pickRateLimit(res.headers);
     return { ok: res.ok, status: res.status, text, json, rateLimit };
   } finally {
@@ -83,11 +101,16 @@ async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
   }
 }
 
+// =========================
+// API principal
+// =========================
+
 /**
- * Busca infos na Bags usando a primeira BASE que responder 2xx.
- * Retorna:
- *  - sucesso: { ok:true, raw, base, status, rateLimit, tried:[{...}] }
- *  - falha:   { ok:false, reason, message, tried:[{...}] }
+ * Tenta consultar a Bags em cada base configurada até obter 2xx.
+ * Retorna SEMPRE um array `tried` com as tentativas (base, path, url, status, ok, rateLimit).
+ *
+ * Sucesso:  { ok:true, raw, base, status, rateLimit, tried }
+ * Falha:    { ok:false, reason, message, tried }
  */
 export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
   if (!mint) return { ok: false, skipped: 'no_mint', tried: [] };
@@ -104,7 +127,11 @@ export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
 
     try {
       const res = await getJson(url, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'bags-shield/0.3.8', ...auth }
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': `bags-shield/${APP_VERSION}`,
+          ...auth
+        }
       });
 
       // registra tentativa SEMPRE (inclusive sucesso)
@@ -112,7 +139,14 @@ export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
 
       if (res.ok) {
         // sucesso: devolve tried preenchido
-        return { ok: true, raw: res.json ?? {}, base, status: res.status, rateLimit: res.rateLimit, tried };
+        return {
+          ok: true,
+          raw: res.json ?? {},
+          base,
+          status: res.status,
+          rateLimit: res.rateLimit,
+          tried
+        };
       }
       // 4xx/5xx → tenta próxima base
     } catch (e) {
@@ -130,7 +164,7 @@ export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
 
 /**
  * Converte JSON da Bags em "hints" que o motor de risco entende.
- * Se o endpoint não possuir esses campos, retorna {} (motor cai em SAFE/WARN por falta de sinais).
+ * Se o endpoint não possuir esses campos, retorna {} (o motor cai em SAFE/WARN por dados insuficientes).
  */
 export function hintsFromBags(raw) {
   if (!raw || typeof raw !== 'object') return {};
@@ -143,58 +177,63 @@ export function hintsFromBags(raw) {
     return undefined;
   };
 
-  const liquidityUsd = Number(pick(raw, ['liquidity.usd','market.liquidityUsd','metrics.liquidity.usd']));
-  const liquidityLockedRaw = pick(raw, ['liquidity.locked','locks.hasActiveLock','pool.locked']);
-  const top10HoldersPct = Number(pick(raw, ['holders.top10.pct','ownership.top10Pct','distribution.top10Pct']));
+  const liquidityUsd = Number(pick(raw, ['liquidity.usd', 'market.liquidityUsd', 'metrics.liquidity.usd']));
+  const liquidityLockedRaw = pick(raw, ['liquidity.locked', 'locks.hasActiveLock', 'pool.locked']);
+  const top10HoldersPct = Number(pick(raw, ['holders.top10.pct', 'ownership.top10Pct', 'distribution.top10Pct']));
 
-  const mintAuthActive = pick(raw, ['authorities.mint.active','mintAuthority.active','token.mintAuthorityActive']);
-  const mintAuthRenounced = pick(raw, ['authorities.mint.renounced','mintAuthority.renounced']);
-  const freezeAuthRenounced = pick(raw, ['authorities.freeze.renounced','freezeAuthority.renounced']);
+  const mintAuthActive = pick(raw, ['authorities.mint.active', 'mintAuthority.active', 'token.mintAuthorityActive']);
+  const mintAuthRenounced = pick(raw, ['authorities.mint.renounced', 'mintAuthority.renounced']);
+  const freezeAuthRenounced = pick(raw, ['authorities.freeze.renounced', 'freezeAuthority.renounced']);
 
-  const createdAt = pick(raw, ['createdAt','mintedAt','token.createdAt','metadata.createdAt']);
-  const socials = pick(raw, ['socials','metadata.socials','links.social']);
-  const bagsVerified = !!pick(raw, ['verified','badges.verified','flags.verified']);
-  let creatorReputation = pick(raw, ['creator.reputation','owner.reputation','project.reputation']);
+  const createdAt = pick(raw, ['createdAt', 'mintedAt', 'token.createdAt', 'metadata.createdAt']);
+  const socials = pick(raw, ['socials', 'metadata.socials', 'links.social']);
+  const bagsVerified = !!pick(raw, ['verified', 'badges.verified', 'flags.verified']);
+  let creatorReputation = pick(raw, ['creator.reputation', 'owner.reputation', 'project.reputation']);
 
   const hints = {};
 
+  // Liquidez: se não houver flag explícita, infere por valor numérico
   if (!Number.isNaN(liquidityUsd)) {
     const explicitLock = (typeof liquidityLockedRaw === 'boolean') ? liquidityLockedRaw : undefined;
     hints.liquidityLocked = (explicitLock !== undefined) ? explicitLock : liquidityUsd > 1000;
   }
 
+  // Concentração
   if (typeof top10HoldersPct === 'number' && !Number.isNaN(top10HoldersPct)) {
     hints.top10HoldersPct = top10HoldersPct;
   }
 
+  // Mint authority ativa (preferência: flag ativa; fallback: !renounced)
   const mintAuthorityActiveFinal =
     (typeof mintAuthActive === 'boolean') ? mintAuthActive
     : (typeof mintAuthRenounced === 'boolean') ? !mintAuthRenounced
     : undefined;
   if (typeof mintAuthorityActiveFinal === 'boolean') hints.mintAuthorityActive = mintAuthorityActiveFinal;
 
-  const freezeNotRenounced = (typeof freezeAuthRenounced === 'boolean') ? !freezeNotRenounced : undefined;
+  // Freeze not renounced (BUGFIX: usar !freezeAuthRenounced corretamente)
+  const freezeNotRenounced =
+    (typeof freezeAuthRenounced === 'boolean') ? !freezeAuthRenounced : undefined;
   if (typeof freezeNotRenounced === 'boolean') hints.freezeNotRenounced = freezeNotRenounced;
 
+  // Idade do token
   if (createdAt) {
     const t = Date.parse(createdAt);
     if (!Number.isNaN(t)) hints.tokenAgeDays = Math.max(0, Math.floor((Date.now() - t) / 86400000));
   }
 
+  // Sociais
   if (Array.isArray(socials)) hints.socialsOk = socials.length > 0;
   else if (socials && typeof socials === 'object') hints.socialsOk = Object.values(socials).some(Boolean);
 
+  // Reputação do criador
   if (typeof creatorReputation === 'number') {
     hints.creatorReputation = Math.max(0, Math.min(100, creatorReputation));
   } else if (bagsVerified) {
-    hints.creatorReputation = 65;
+    hints.creatorReputation = 65; // default conservador quando verificado
   }
 
+  // Verificação Bags
   hints.bagsVerified = bagsVerified;
+
   return hints;
 }
-// ...código anterior omitido (o seu já está ok desde a última atualização)
-if (res.ok) {
-  return { ok: true, raw: res.json ?? {}, base, status: res.status, rateLimit: res.rateLimit, tried };
-}
-
