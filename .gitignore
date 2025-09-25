@@ -1,36 +1,26 @@
+# Node / pacote
 node_modules/
 npm-debug.log*
-yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-package-lock.json
-.pnpm-store/
 
+# Build / artefatos
+dist/
+coverage/
+
+# Ambiente / segredos
 .env
 .env.*
 !.env.example
 
-dist/
-build/
-.cache/
-.tmp/
-.eslintcache
-.turbo/
-.swc/
-*.tsbuildinfo
-
+# Vercel / locais
 .vercel/
-.next/
-out/
-
-coverage/
-.nyc_output/
-
 .DS_Store
-Thumbs.db
 .idea/
 .vscode/
 
-.expo/
-.expo-shared/
+# SO / miscelânea
+Thumbs.db
 
+# Logs
+*.log
