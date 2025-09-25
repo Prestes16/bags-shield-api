@@ -193,4 +193,8 @@ export function hintsFromBags(raw) {
   hints.bagsVerified = bagsVerified;
   return hints;
 }
+// ...código anterior omitido (o seu já está ok desde a última atualização)
+if (res.ok) {
+  return { ok: true, raw: res.json ?? {}, base, status: res.status, rateLimit: res.rateLimit, tried };
+}
 
