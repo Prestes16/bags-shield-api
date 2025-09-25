@@ -1,41 +1,37 @@
 // api/_bags.js
-// Conector Bags — versão runtime-safe (fetch + timeout) e 100% configurável por ENV.
-// Variáveis suportadas (Production, na Vercel):
-// - BAGS_API_KEY              (obrigatória)
-// - BAGS_API_BASE             (default: https://public-api-v2.bags.fm/api/v1) — aceita 1+ bases, separadas por vírgula
-// - BAGS_API_TOKENS_PATH      (ex.: '/token-launch/lifetime-fees' OU '/v1/tokens/:mint')
+// Conector Bags — runtime-safe (fetch + timeout), 100% configurável por ENV e com rate-limit headers.
+// ENV (Production na Vercel):
+// - BAGS_API_KEY              (obrigatório)
+// - BAGS_API_BASE             (ex.: https://public-api-v2.bags.fm) — aceita múltiplas, separadas por vírgula
+// - BAGS_API_TOKENS_PATH      (ex.: '/api/v1/token-launch/lifetime-fees' OU '/api/v1/tokens/:mint')
 // - BAGS_API_MINT_PARAM       (ex.: 'tokenMint' — usado quando o endpoint espera o mint na query)
 // - BAGS_API_NETWORK_PARAM    (ex.: 'network' — só use se o endpoint suportar isso)
 // - BAGS_API_EXTRA_QUERY      (ex.: 'foo=1&bar=2')
 // - BAGS_AUTH_MODE            ('header' | 'bearer' — default 'header')
-// - BAGS_AUTH_HEADER          (ex.: 'x-api-key' — default 'x-api-key' quando mode=header)
+// - BAGS_AUTH_HEADER          (default 'x-api-key' quando mode=header)
 // - BAGS_TIMEOUT_MS           (default 7000)
 
 const TIMEOUT_MS = Number(process.env.BAGS_TIMEOUT_MS || 7000);
 
 function parseBases() {
-  const raw = (process.env.BAGS_API_BASE || 'https://public-api-v2.bags.fm/api/v1').trim();
+  const raw = (process.env.BAGS_API_BASE || 'https://public-api-v2.bags.fm').trim();
   return raw.split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
 }
-
-function hasKey() {
-  return !!process.env.BAGS_API_KEY;
-}
+function hasKey() { return !!process.env.BAGS_API_KEY; }
 
 function buildAuthHeaders() {
-  const mode = (process.env.BAGS_AUTH_MODE || 'header').toLowerCase(); // default header (x-api-key)
+  const mode = (process.env.BAGS_AUTH_MODE || 'header').toLowerCase(); // default: header x-api-key
   const key = process.env.BAGS_API_KEY || '';
   if (!key) return {};
   if (mode === 'header') {
     const h = process.env.BAGS_AUTH_HEADER || 'x-api-key';
     return { [h]: key };
   }
-  // fallback: bearer
   return { 'Authorization': `Bearer ${key}` };
 }
 
 function applyPathTemplate(tpl, { mint }) {
-  // Suporta ':mint' no path (ex.: '/v1/tokens/:mint')
+  // Suporta ':mint' no path (ex.: '/api/v1/tokens/:mint')
   return tpl.replace(/:mint/gi, encodeURIComponent(mint));
 }
 
@@ -61,14 +57,25 @@ function buildQuery({ network, mint }) {
   return s ? `?${s}` : '';
 }
 
+function pickRateLimit(headers) {
+  // Headers HTTP são case-insensitive
+  const remaining = headers.get('x-ratelimit-remaining');
+  const reset = headers.get('x-ratelimit-reset');
+  const out = {};
+  if (remaining != null) out.remaining = Number(remaining);
+  if (reset != null) out.reset = reset;
+  return Object.keys(out).length ? out : undefined;
+}
+
 async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { method: 'GET', headers, signal: ctrl.signal });
     const text = await res.text();
-    let json; try { json = JSON.parse(text); } catch { /* body não-JSON */ }
-    return { ok: res.ok, status: res.status, text, json };
+    let json; try { json = JSON.parse(text); } catch {}
+    const rateLimit = pickRateLimit(res.headers);
+    return { ok: res.ok, status: res.status, text, json, rateLimit };
   } finally {
     clearTimeout(t);
   }
@@ -76,14 +83,14 @@ async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
 
 /**
  * Busca infos na Bags usando a primeira BASE que responder 2xx.
- * Nunca derruba sua API: em falha, retorna { ok:false, reason, tried:[...] }.
+ * Em falha, retorna { ok:false, reason, tried:[{ base, path, url, status|error, rateLimit? }...] }.
  */
 export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
   if (!mint) return { ok: false, skipped: 'no_mint' };
   if (!hasKey()) return { ok: false, skipped: 'no_api_key' };
 
   const bases = parseBases();
-  const pathTpl = process.env.BAGS_API_TOKENS_PATH || '/token-launch/lifetime-fees'; // endpoint público com tokenMint
+  const pathTpl = process.env.BAGS_API_TOKENS_PATH || '/api/v1/token-launch/lifetime-fees';
   const auth = buildAuthHeaders();
 
   const tried = [];
@@ -92,11 +99,11 @@ export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
     const url = `${base}${path}${buildQuery({ network, mint })}`;
     try {
       const res = await getJson(url, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'bags-shield/0.3.6', ...auth }
+        headers: { 'Accept': 'application/json', 'User-Agent': 'bags-shield/0.3.7', ...auth }
       });
-      tried.push({ base, path, url, status: res.status, ok: res.ok });
+      tried.push({ base, path, url, status: res.status, ok: res.ok, rateLimit: res.rateLimit });
       if (res.ok) {
-        return { ok: true, raw: res.json ?? {}, base, status: res.status };
+        return { ok: true, raw: res.json ?? {}, base, status: res.status, rateLimit: res.rateLimit };
       }
       // 4xx/5xx → tenta próxima base
     } catch (e) {

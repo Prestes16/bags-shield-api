@@ -1,12 +1,21 @@
 // api/bags-check.js
 import { sendJson } from './_utils.js';
 
+function pickRateLimit(headers) {
+  const remaining = headers.get('x-ratelimit-remaining');
+  const reset = headers.get('x-ratelimit-reset');
+  const out = {};
+  if (remaining != null) out.remaining = Number(remaining);
+  if (reset != null) out.reset = reset;
+  return Object.keys(out).length ? out : undefined;
+}
+
 export default async function handler(req, res) {
   const hasKey = !!process.env.BAGS_API_KEY;
-  const bases = (process.env.BAGS_API_BASE || 'https://public-api-v2.bags.fm/api/v1')
+  const bases = (process.env.BAGS_API_BASE || 'https://public-api-v2.bags.fm')
     .split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
 
-  const statusPaths = (process.env.BAGS_API_STATUS_PATHS || '/ping,/v1/status,/status,/v1/health,/health')
+  const statusPaths = (process.env.BAGS_API_STATUS_PATHS || '/ping,/api/v1/ping,/status,/api/v1/status,/health,/api/v1/health')
     .split(',').map(s => s.trim()).filter(Boolean);
 
   const attempts = [];
@@ -20,7 +29,7 @@ export default async function handler(req, res) {
         if (hasKey) {
           const mode = (process.env.BAGS_AUTH_MODE || 'header').toLowerCase();
           if (mode === 'header') {
-            const h = (process.env.BAGS_AUTH_HEADER || 'x-api-key');
+            const h = process.env.BAGS_AUTH_HEADER || 'x-api-key';
             headers[h] = process.env.BAGS_API_KEY;
           } else {
             headers['Authorization'] = `Bearer ${process.env.BAGS_API_KEY}`;
@@ -28,7 +37,9 @@ export default async function handler(req, res) {
         }
         const r = await fetch(url, { method: 'GET', headers, signal: controller.signal });
         clearTimeout(t);
-        attempts.push({ base, path, status: r.status, ok: r.ok });
+        attempts.push({
+          base, path, status: r.status, ok: r.ok, rateLimit: pickRateLimit(r.headers)
+        });
       } catch (e) {
         attempts.push({ base, path, ok: false, error: String(e?.message || e) });
       }
