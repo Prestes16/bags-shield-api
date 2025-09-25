@@ -3,10 +3,10 @@ import { sendJson } from './_utils.js';
 
 export default async function handler(req, res) {
   const hasKey = !!process.env.BAGS_API_KEY;
-  const bases = (process.env.BAGS_API_BASE || 'https://api.bags.app')
+  const bases = (process.env.BAGS_API_BASE || 'https://public-api-v2.bags.fm/api/v1')
     .split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
 
-  const statusPaths = (process.env.BAGS_API_STATUS_PATHS || '/v1/status,/status,/v1/health,/health')
+  const statusPaths = (process.env.BAGS_API_STATUS_PATHS || '/ping,/v1/status,/status,/v1/health,/health')
     .split(',').map(s => s.trim()).filter(Boolean);
 
   const attempts = [];
@@ -18,9 +18,9 @@ export default async function handler(req, res) {
         const t = setTimeout(() => controller.abort(), 4000);
         const headers = { 'Accept': 'application/json' };
         if (hasKey) {
-          const mode = (process.env.BAGS_AUTH_MODE || 'bearer').toLowerCase();
+          const mode = (process.env.BAGS_AUTH_MODE || 'header').toLowerCase();
           if (mode === 'header') {
-            const h = (process.env.BAGS_AUTH_HEADER || 'x-api-key').toLowerCase();
+            const h = (process.env.BAGS_AUTH_HEADER || 'x-api-key');
             headers[h] = process.env.BAGS_API_KEY;
           } else {
             headers['Authorization'] = `Bearer ${process.env.BAGS_API_KEY}`;
@@ -36,12 +36,5 @@ export default async function handler(req, res) {
   }
 
   const reachable = attempts.some(a => a.ok || (a.status && a.status >= 200 && a.status < 500));
-  return sendJson(res, 200, {
-    ok: true,
-    hasKey,
-    bases,
-    statusPaths,
-    reachable,
-    attempts
-  });
+  return sendJson(res, 200, { ok: true, hasKey, bases, statusPaths, reachable, attempts });
 }
