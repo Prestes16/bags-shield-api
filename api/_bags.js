@@ -1,10 +1,12 @@
 // api/_bags.js
-// Conector Bags — runtime-safe (fetch + timeout), 100% configurável por ENV e com rate-limit headers.
+// Conector Bags — runtime-safe (fetch + timeout), configurável por ENV e com rate-limit headers.
+// Agora SEMPRE inclui `tried` (mesmo em sucesso), para facilitar diagnóstico no cliente.
+
 // ENV (Production na Vercel):
 // - BAGS_API_KEY              (obrigatório)
 // - BAGS_API_BASE             (ex.: https://public-api-v2.bags.fm) — aceita múltiplas, separadas por vírgula
 // - BAGS_API_TOKENS_PATH      (ex.: '/api/v1/token-launch/lifetime-fees' OU '/api/v1/tokens/:mint')
-// - BAGS_API_MINT_PARAM       (ex.: 'tokenMint' — usado quando o endpoint espera o mint na query)
+// - BAGS_API_MINT_PARAM       (ex.: 'tokenMint' — quando o endpoint espera o mint na query)
 // - BAGS_API_NETWORK_PARAM    (ex.: 'network' — só use se o endpoint suportar isso)
 // - BAGS_API_EXTRA_QUERY      (ex.: 'foo=1&bar=2')
 // - BAGS_AUTH_MODE            ('header' | 'bearer' — default 'header')
@@ -83,11 +85,13 @@ async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
 
 /**
  * Busca infos na Bags usando a primeira BASE que responder 2xx.
- * Em falha, retorna { ok:false, reason, tried:[{ base, path, url, status|error, rateLimit? }...] }.
+ * Retorna:
+ *  - sucesso: { ok:true, raw, base, status, rateLimit, tried:[{...}] }
+ *  - falha:   { ok:false, reason, message, tried:[{...}] }
  */
 export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
-  if (!mint) return { ok: false, skipped: 'no_mint' };
-  if (!hasKey()) return { ok: false, skipped: 'no_api_key' };
+  if (!mint) return { ok: false, skipped: 'no_mint', tried: [] };
+  if (!hasKey()) return { ok: false, skipped: 'no_api_key', tried: [] };
 
   const bases = parseBases();
   const pathTpl = process.env.BAGS_API_TOKENS_PATH || '/api/v1/token-launch/lifetime-fees';
@@ -97,13 +101,18 @@ export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
   for (const base of bases) {
     const path = pathTpl.includes(':mint') ? applyPathTemplate(pathTpl, { mint }) : pathTpl;
     const url = `${base}${path}${buildQuery({ network, mint })}`;
+
     try {
       const res = await getJson(url, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'bags-shield/0.3.7', ...auth }
+        headers: { 'Accept': 'application/json', 'User-Agent': 'bags-shield/0.3.8', ...auth }
       });
+
+      // registra tentativa SEMPRE (inclusive sucesso)
       tried.push({ base, path, url, status: res.status, ok: res.ok, rateLimit: res.rateLimit });
+
       if (res.ok) {
-        return { ok: true, raw: res.json ?? {}, base, status: res.status, rateLimit: res.rateLimit };
+        // sucesso: devolve tried preenchido
+        return { ok: true, raw: res.json ?? {}, base, status: res.status, rateLimit: res.rateLimit, tried };
       }
       // 4xx/5xx → tenta próxima base
     } catch (e) {
@@ -164,7 +173,7 @@ export function hintsFromBags(raw) {
     : undefined;
   if (typeof mintAuthorityActiveFinal === 'boolean') hints.mintAuthorityActive = mintAuthorityActiveFinal;
 
-  const freezeNotRenounced = (typeof freezeAuthRenounced === 'boolean') ? !freezeAuthRenounced : undefined;
+  const freezeNotRenounced = (typeof freezeAuthRenounced === 'boolean') ? !freezeNotRenounced : undefined;
   if (typeof freezeNotRenounced === 'boolean') hints.freezeNotRenounced = freezeNotRenounced;
 
   if (createdAt) {
@@ -184,3 +193,4 @@ export function hintsFromBags(raw) {
   hints.bagsVerified = bagsVerified;
   return hints;
 }
+
