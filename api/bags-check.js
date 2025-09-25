@@ -2,31 +2,33 @@
 import { sendJson } from './_utils.js';
 
 export default async function handler(req, res) {
-  // não expõe segredo, só mostra se existe e se a base responde
   const hasKey = !!process.env.BAGS_API_KEY;
   const bases = (process.env.BAGS_API_BASE || 'https://api.bags.app')
+    .split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
+
+  const statusPaths = (process.env.BAGS_API_STATUS_PATHS || '/v1/status,/status,/v1/health,/health')
     .split(',').map(s => s.trim()).filter(Boolean);
 
-  const candidates = ['/v1/status', '/status', '/v1/health', '/health'];
   const attempts = [];
-
   for (const base of bases) {
-    for (const path of candidates) {
-      const url = base.replace(/\/+$/, '') + path;
+    for (const path of statusPaths) {
+      const url = base + path;
       try {
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), 4000);
-        const r = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            ...(hasKey ? { 'Authorization': `Bearer ${process.env.BAGS_API_KEY}` } : {})
-          },
-          signal: controller.signal
-        });
+        const headers = { 'Accept': 'application/json' };
+        if (hasKey) {
+          const mode = (process.env.BAGS_AUTH_MODE || 'bearer').toLowerCase();
+          if (mode === 'header') {
+            const h = (process.env.BAGS_AUTH_HEADER || 'x-api-key').toLowerCase();
+            headers[h] = process.env.BAGS_API_KEY;
+          } else {
+            headers['Authorization'] = `Bearer ${process.env.BAGS_API_KEY}`;
+          }
+        }
+        const r = await fetch(url, { method: 'GET', headers, signal: controller.signal });
         clearTimeout(t);
         attempts.push({ base, path, status: r.status, ok: r.ok });
-        // não precisamos ler o body
       } catch (e) {
         attempts.push({ base, path, ok: false, error: String(e?.message || e) });
       }
@@ -38,6 +40,7 @@ export default async function handler(req, res) {
     ok: true,
     hasKey,
     bases,
+    statusPaths,
     reachable,
     attempts
   });

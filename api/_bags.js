@@ -9,13 +9,37 @@ function hasKey() {
   return !!process.env.BAGS_API_KEY;
 }
 
+function buildAuthHeaders() {
+  const mode = (process.env.BAGS_AUTH_MODE || 'bearer').toLowerCase();
+  const key = process.env.BAGS_API_KEY || '';
+  if (!key) return {};
+  if (mode === 'header') {
+    const h = (process.env.BAGS_AUTH_HEADER || 'x-api-key').toLowerCase();
+    return { [h]: key };
+  }
+  // default bearer
+  return { 'Authorization': `Bearer ${key}` };
+}
+
+function applyPathTemplate(tpl, { mint }) {
+  // suporta :mint no path (ex.: /v1/tokens/:mint)
+  return tpl.replace(/:mint/gi, encodeURIComponent(mint));
+}
+
+function buildQuery(network) {
+  const qp = process.env.BAGS_API_NETWORK_PARAM || 'network';
+  const params = new URLSearchParams();
+  if (network) params.set(qp, network);
+  return `?${params.toString()}`;
+}
+
 async function getJson(url, { headers = {}, timeoutMs = TIMEOUT_MS } = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { method: 'GET', headers, signal: ctrl.signal });
     const text = await res.text();
-    let json; try { json = JSON.parse(text); } catch { /* not json */ }
+    let json; try { json = JSON.parse(text); } catch { /* body não-JSON */ }
     return { ok: res.ok, status: res.status, text, json };
   } finally {
     clearTimeout(t);
@@ -28,25 +52,29 @@ export async function getBagsTokenInfo({ mint, network = 'devnet' }) {
   if (!hasKey()) return { ok: false, skipped: 'no_api_key' };
 
   const bases = parseBases();
+  const pathTpl = process.env.BAGS_API_TOKENS_PATH || '/v1/tokens/:mint';
+  const query = buildQuery(network);
+  const auth = buildAuthHeaders();
+
   const tried = [];
   for (const base of bases) {
-    const url = `${base}/v1/tokens/${encodeURIComponent(mint)}?network=${encodeURIComponent(network)}`;
+    const path = applyPathTemplate(pathTpl, { mint });
+    const url = `${base}${path}${query}`;
     try {
       const res = await getJson(url, {
         headers: {
-          'Authorization': `Bearer ${process.env.BAGS_API_KEY}`,
           'Accept': 'application/json',
-          'User-Agent': 'bags-shield/0.3.6'
+          'User-Agent': 'bags-shield/0.3.6',
+          ...auth
         }
       });
-      tried.push({ base, path: '/v1/tokens/:mint', status: res.status, ok: res.ok });
+      tried.push({ base, path, status: res.status, ok: res.ok });
       if (res.ok) return { ok: true, raw: res.json ?? {}, base, status: res.status };
-      // se 401/403/404/5xx, tenta próxima base
+      // 4xx/5xx → tenta próxima base
     } catch (e) {
-      tried.push({ base, path: '/v1/tokens/:mint', ok: false, error: String(e?.message || e) });
+      tried.push({ base, path, ok: false, error: String(e?.message || e) });
     }
   }
-  // nada deu 2xx
   return {
     ok: false,
     reason: 'http_or_network_error',
