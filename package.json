@@ -9,6 +9,8 @@
     "deploy": "vercel --prod",
     "launch": "npm --prefix scripts run launch"
   },
-  "dependencies": {},
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
   "devDependencies": {}
 }
