@@ -1,11 +1,37 @@
 {
   "version": 2,
+  "regions": ["gru1"],
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs18.x",
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "routes": [
     { "src": "^/$", "dest": "/api/index.js" },
-    { "src": "/api/health", "dest": "/api/health.js" },
-    { "src": "/api/scan", "dest": "/api/scan.js" },
-    { "src": "/api/simulate", "dest": "/api/simulate.js" },
-    { "src": "/api/apply", "dest": "/api/apply.js" },
-    { "src": "/api/bags-check", "dest": "/api/bags-check.js" }
+    { "src": "^/api/health$", "dest": "/api/health.js" },
+    { "src": "^/api/scan$", "dest": "/api/scan.js" },
+    { "src": "^/api/simulate$", "dest": "/api/simulate.js" },
+    { "src": "^/api/apply$", "dest": "/api/apply.js" },
+    { "src": "^/api/tx-resolve$", "dest": "/api/tx-resolve.js" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-BagsShield", "value": "1" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Permissions-Policy", "value": "interest-cohort=()" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }
