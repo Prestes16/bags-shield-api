@@ -1,166 +1,176 @@
 // api/scan.js
-// Handler do scan: recebe { mint | tokenMint | transactionSig, network? }, integra com Bags e calcula decisão.
-// Sem dependências externas. Requer _version.js, _bags.js, _engine.js no mesmo diretório.
+// ESM — Node 18+ (Vercel serverless). Resolve transactionSig→mint (Fase 4) e integra Bags.
+// Mantém resposta estável (id/decision/score/risk/bags/tx), com header X-App-Version.
 
-import { APP_VERSION } from './_version.js';
-import { getBagsTokenInfo, hintsFromBags } from './_bags.js';
-import { evaluateRisk, riskBadge } from './_engine.js';
+import { SOLANA } from './_solana.js';
 
-// ------------------------
-// Utils locais
-// ------------------------
-function setCommonHeaders(res) {
+// --------- util headers & helpers ----------
+const APP_VERSION = process.env.APP_VERSION || '0.3.8';
+
+function applySecurityHeaders(res) {
   res.setHeader('X-App-Version', APP_VERSION);
   res.setHeader('X-Bagsshield', '1');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'interest-cohort=()');
+  // para rotas dinâmicas: não cachear
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 }
 
-function nowIso() {
-  return new Date().toISOString();
+async function readJson(req) {
+  return await new Promise((resolve) => {
+    let data = '';
+    req.on('data', (c) => (data += c));
+    req.on('end', () => {
+      try { resolve(data ? JSON.parse(data) : {}); }
+      catch { resolve({}); }
+    });
+  });
 }
 
-function genId(prefix = 'bsr') {
-  const rnd = Math.random().toString(36).slice(2, 10);
-  return `${prefix}_${rnd}`;
+function decideFromScore(score) {
+  if (score >= 80) return { level: 'block', badge: { text: 'BLOCK', color: '#FF3B30' }, decision: 'block', reason: 'Risco crítico detectado' };
+  if (score >= 40) return { level: 'warn',  badge: { text: 'WARN',  color: '#FFD166' }, decision: 'warn',  reason: 'Sinais moderados de risco' };
+  return                 { level: 'safe',  badge: { text: 'SAFE',  color: '#00FFA3' }, decision: 'safe',  reason: 'Sem sinais relevantes de risco' };
 }
 
-function parseJsonBody(req) {
-  // Vercel normalmente já parseia JSON, mas garantimos:
-  if (req.body && typeof req.body === 'object') return req.body;
-  if (req.body && typeof req.body === 'string') {
-    try { return JSON.parse(req.body); } catch { /* cai no retorno {} */ }
-  }
-  return {};
+function newId(prefix) {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `${prefix}_${s}`;
 }
 
-// ------------------------
-// Handler
-// ------------------------
+// --------- Bags integration (local, estável) ----------
+const BAGS = {
+  base: 'https://public-api-v2.bags.fm',
+  pathCreator: '/api/v1/token-launch/creator/v3', // ?tokenMint=<mint>
+
+  async fetchCreator(mint, { timeoutMs = 8000 } = {}) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const tried = [];
+    try {
+      const url = `${this.base}${this.pathCreator}?tokenMint=${encodeURIComponent(mint)}`;
+      const headers = { 'content-type': 'application/json' };
+      const apiKey = process.env.BAGS_API_KEY;
+      if (apiKey) headers['x-api-key'] = apiKey;
+
+      const res = await fetch(url, { method: 'GET', headers, signal: ctrl.signal });
+      const rateLimit = {
+        remaining: res.headers.get('X-RateLimit-Remaining') || undefined,
+        reset:     res.headers.get('X-RateLimit-Reset') || undefined,
+      };
+
+      let raw;
+      try { raw = await res.json(); } catch { raw = null; }
+
+      tried.push({ base: this.base, path: this.pathCreator, url, status: res.status, ok: res.ok, rateLimit });
+      if (!res.ok) {
+        return { ok: false, base: this.base, status: res.status, rateLimit, tried, raw };
+      }
+
+      // Hints simples (mantém compatibilidade de shape)
+      const hints = {};
+      if (raw && typeof raw === 'object') {
+        // Se no futuro o payload da Bags trouxer sinal de verificação
+        const arr = Array.isArray(raw.response) ? raw.response : [];
+        const first = arr[0] || raw;
+        const verified = Boolean(first?.verified || first?.bagsVerified);
+        hints.bagsVerified = verified;
+      }
+
+      return { ok: true, base: this.base, status: res.status, rateLimit, tried, raw, hints };
+    } catch {
+      tried.push({ base: this.base, path: this.pathCreator, ok: false, error: 'fetch_failed' });
+      return { ok: false, reason: 'http_or_network_error', message: 'Falha ao chamar Bags', tried };
+    } finally {
+      clearTimeout(t);
+    }
+  },
+};
+
+// --------- Handler ----------
 export default async function handler(req, res) {
-  setCommonHeaders(res);
+  applySecurityHeaders(res);
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === 'HEAD') {
     res.status(200).end();
     return;
   }
 
   if (req.method !== 'POST') {
-    res.status(405).send(JSON.stringify({
-      ok: false,
-      error: { code: 405, message: 'Method Not Allowed — use POST' }
-    }));
+    res.status(405).json({ ok: false, error: 'Method Not Allowed' });
     return;
   }
 
+  const ts = new Date().toISOString();
+  const id = newId('bsr');
+
   try {
-    const body = parseJsonBody(req);
-    const requestedBy = (req.headers['x-client'] || 'client:unknown');
+    const body = await readJson(req);
+    let { mint, tokenMint, transactionSig, network = 'devnet', context = {} } = body || {};
+    mint = mint || tokenMint || null;
 
-    // Normaliza campos
-    const network = (body.network || 'devnet').toString();
-    const transactionSig = body.transactionSig ? String(body.transactionSig) : null;
-    let mint = body.mint ? String(body.mint) : null;
+    // Fase 4 — resolver mint a partir de transactionSig
+    let tx = null;
+    if (!mint && transactionSig && typeof transactionSig === 'string') {
+      const txRes = await SOLANA.resolveMintFromTx(transactionSig, { network });
+      tx = txRes;
+      if (txRes?.ok && txRes?.mint) mint = txRes.mint;
+    }
 
-    // alias: tokenMint -> mint
-    if (!mint && body.tokenMint) mint = String(body.tokenMint);
-
-    // MVP: aceitar transactionSig (8+ chars) e retornar txOnly
-    if (transactionSig && transactionSig.length >= 8) {
-      const out = {
+    // Se ainda não temos mint, responder em modo txOnly (compatível com MVP anterior)
+    if (!mint) {
+      res.status(200).json({
         ok: true,
         txOnly: true,
-        transactionSig,
-        note: 'Scan por transactionSig aceito (MVP). Mint real será resolvido na Fase 4.',
+        transactionSig: transactionSig || null,
+        note: 'Assinatura recebida. Não foi possível resolver o mint nesta consulta.',
         network,
-        ts: nowIso()
-      };
-      res.status(200).send(JSON.stringify(out));
+        ts,
+        tx,
+      });
       return;
     }
 
-    // Validação do mint
-    if (!mint) {
-      res.status(400).send(JSON.stringify({
-        ok: false,
-        error: { code: 400, message: 'Campo "mint" (ou alias "tokenMint") é obrigatório' }
-      }));
-      return;
+    // Consultar Bags (não obrigatório para decidir — mas melhora o score)
+    const bags = await BAGS.fetchCreator(mint);
+
+    // Score base: se Bags respondeu 200 → 5 (SAFE baixo), senão 25 (SAFE alto por falta de dados)
+    let score = bags?.ok ? 5 : 25;
+    const factors = [];
+    if (bags?.ok) {
+      factors.push({ key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' });
+    } else {
+      factors.push({ key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' });
+      factors.push({ key: 'insufficient_data', score: 20, detail: 'Poucos sinais disponíveis' });
     }
 
-    if (mint.length < 32) {
-      res.status(400).send(JSON.stringify({
-        ok: false,
-        error: { code: 400, message: 'mint inválido — mínimo de 32 caracteres' }
-      }));
-      return;
-    }
+    const { level, badge, decision, reason } = decideFromScore(score);
 
-    // Consulta Bags (resiliente; _bags.js já garante tried[] SEMPRE no v0.3.8+)
-    const bagsResp = await getBagsTokenInfo({ mint, network });
-
-    // Traduz JSON da Bags em "hints" pro motor
-    const hints = bagsResp.ok ? hintsFromBags(bagsResp.raw) : {};
-
-    // Avalia risco
-    let risk = evaluateRisk(hints);
-
-    // Fallback amigável quando temos poucos sinais (mantém compat com respostas anteriores SAFE 25)
-    const hintKeys = Object.keys(hints);
-    if (hintKeys.length === 0) {
-      // Força "liquidity_unknown" (+5) e "insufficient_data" (+20) para chegar a 25 SAFE
-      risk = {
-        score: 25,
-        decision: 'safe',
-        reason: 'Sem sinais relevantes de risco',
-        risk: {
-          level: 'safe',
-          badge: riskBadge('safe'),
-          factors: [
-            { key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' },
-            { key: 'insufficient_data', score: 20, detail: 'Poucos sinais disponíveis' }
-          ]
-        }
-      };
-    }
-
-    // Monta resposta final
-    const out = {
+    res.status(200).json({
       ok: true,
-      id: genId('bsr'),
-      decision: risk.decision,
-      reason: risk.reason,
-      score: risk.score,
-      risk: risk.risk,
+      id,
+      decision,
+      reason,
+      score,
+      risk: { level, badge, factors },
       network,
       tokenMint: mint,
-      transactionSig: null,
-      requestedBy,
-      ts: nowIso(),
-      bags: {
-        ok: !!bagsResp.ok,
-        base: bagsResp.base,
-        status: bagsResp.status,
-        rateLimit: bagsResp.rateLimit,
-        tried: bagsResp.tried || [],
-        raw: bagsResp.ok ? (bagsResp.raw || {}) : undefined,
-        // opcional: expõe alguns "hints" que vieram da Bags (apenas chave/valor simples)
-        hints: hintKeys.length ? hints : undefined
-      }
-    };
-
-    res.status(200).send(JSON.stringify(out));
+      transactionSig: transactionSig || null,
+      requestedBy: context?.wallet ? `wallet:${context.wallet}` : 'client:unknown',
+      ts,
+      bags: bags || { ok: false, reason: 'not_called' },
+      tx,
+    });
   } catch (err) {
-    // Nunca deixa estourar: converte em 200 com ok:false
-    const message = (err && err.message) ? String(err.message) : 'unexpected_error';
-    res.status(200).send(JSON.stringify({
+    res.status(500).json({
       ok: false,
-      error: { code: 500, message },
-      ts: nowIso()
-    }));
+      error: 'internal_error',
+      message: (err && err.message) || 'unexpected',
+      ts,
+    });
   }
 }
