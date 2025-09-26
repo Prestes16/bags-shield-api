@@ -1,93 +1,86 @@
 // api/scan.js
-import { z } from 'zod';
-import {
-  ScanBaseSchema,
-  computeRiskFactors,
-  buildResponse,
-  readJson,
-  sendJson
-} from './_utils.js';
+// Handler do scan: recebe { mint | tokenMint | transactionSig, network? }, integra com Bags e calcula decisão.
+// Sem dependências externas. Requer _version.js, _bags.js, _engine.js no mesmo diretório.
 
-// Schema: base + mock opcional
-const BodySchema = ScanBaseSchema
-  .extend({ mock: z.record(z.any()).optional() })
-  .transform((data) => ({ ...data, mint: data.mint ?? data.tokenMint ?? undefined }))
-  .refine((data) => data.mint || data.transactionSig, {
-    message: 'Forneça mint/tokenMint ou transactionSig.'
-  });
+import { APP_VERSION } from './_version.js';
+import { getBagsTokenInfo, hintsFromBags } from './_bags.js';
+import { evaluateRisk, riskBadge } from './_engine.js';
 
+// ------------------------
+// Utils locais
+// ------------------------
+function setCommonHeaders(res) {
+  res.setHeader('X-App-Version', APP_VERSION);
+  res.setHeader('X-Bagsshield', '1');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'interest-cohort=()');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function genId(prefix = 'bsr') {
+  const rnd = Math.random().toString(36).slice(2, 10);
+  return `${prefix}_${rnd}`;
+}
+
+function parseJsonBody(req) {
+  // Vercel normalmente já parseia JSON, mas garantimos:
+  if (req.body && typeof req.body === 'object') return req.body;
+  if (req.body && typeof req.body === 'string') {
+    try { return JSON.parse(req.body); } catch { /* cai no retorno {} */ }
+  }
+  return {};
+}
+
+// ------------------------
+// Handler
+// ------------------------
 export default async function handler(req, res) {
+  setCommonHeaders(res);
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
-    return sendJson(res, 405, { ok: false, error: 'Use POST' });
+    res.status(405).send(JSON.stringify({
+      ok: false,
+      error: { code: 405, message: 'Method Not Allowed — use POST' }
+    }));
+    return;
   }
 
   try {
-    const raw = await readJson(req);
-    const body = BodySchema.parse(raw);
+    const body = parseJsonBody(req);
+    const requestedBy = (req.headers['x-client'] || 'client:unknown');
 
-    // txOnly (sem mint)
-    if (!body.mint && body.transactionSig) {
-      return sendJson(res, 201, {
+    // Normaliza campos
+    const network = (body.network || 'devnet').toString();
+    const transactionSig = body.transactionSig ? String(body.transactionSig) : null;
+    let mint = body.mint ? String(body.mint) : null;
+
+    // alias: tokenMint -> mint
+    if (!mint && body.tokenMint) mint = String(body.tokenMint);
+
+    // MVP: aceitar transactionSig (8+ chars) e retornar txOnly
+    if (transactionSig && transactionSig.length >= 8) {
+      const out = {
         ok: true,
         txOnly: true,
-        transactionSig: body.transactionSig,
+        transactionSig,
         note: 'Scan por transactionSig aceito (MVP). Mint real será resolvido na Fase 4.',
-        network: body.network,
-        ts: new Date().toISOString()
-      });
+        network,
+        ts: nowIso()
+      };
+      res.status(200).send(JSON.stringify(out));
+      return;
     }
 
-    // === Bags (lazy import) ===
-    let bags = { ok: false, skipped: 'not_called' };
-    let hints = {};
-    if (body.mint && process.env.BAGS_API_KEY) {
-      try {
-        const mod = await import('./_bags.js');
-        const info = await mod.getBagsTokenInfo({ mint: body.mint, network: body.network });
-        bags = info;
-        if (info.ok && info.raw) {
-          hints = mod.hintsFromBags(info.raw) || {};
-        }
-      } catch (e) {
-        bags = { ok: false, reason: 'import_error', message: String(e?.message || e) };
-      }
-    } else if (body.mint) {
-      bags = { ok: false, skipped: 'no_api_key' };
-    }
-
-    // Merge hints → mock (sem sobrescrever valores explícitos do cliente)
-    const enriched = {
-      ...body,
-      mock: { ...(body.mock || {}), ...Object.fromEntries(Object.entries(hints).filter(([, v]) => v !== undefined)) }
-    };
-
-    const risk = computeRiskFactors(enriched);
-
-    const decision =
-      risk.total >= 80 ? 'block' :
-      risk.total >= 60 ? 'flag'  :
-      risk.total >= 30 ? 'warn'  :
-                         'safe';
-
-    const reason =
-      decision === 'block' ? 'Risco crítico detectado' :
-      decision === 'flag'  ? 'Fatores de alto risco identificados' :
-      decision === 'warn'  ? 'Atenção: riscos moderados' :
-                             'Sem sinais relevantes de risco';
-
-    const resp = buildResponse({
-      id: `bsr_${Math.random().toString(36).slice(2, 10)}`,
-      decision,
-      reason,
-      input: enriched,
-      risk
-    });
-
-    resp.bags = { ...bags, hints };
-
-    return sendJson(res, 201, resp);
-  } catch (err) {
-    console.error('scan_error', err);
-    return sendJson(res, 400, { ok: false, error: String(err?.message || err) });
-  }
-}
+    // Validação
