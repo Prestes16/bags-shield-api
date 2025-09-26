@@ -83,4 +83,84 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Validação
+    // Validação do mint
+    if (!mint) {
+      res.status(400).send(JSON.stringify({
+        ok: false,
+        error: { code: 400, message: 'Campo "mint" (ou alias "tokenMint") é obrigatório' }
+      }));
+      return;
+    }
+
+    if (mint.length < 32) {
+      res.status(400).send(JSON.stringify({
+        ok: false,
+        error: { code: 400, message: 'mint inválido — mínimo de 32 caracteres' }
+      }));
+      return;
+    }
+
+    // Consulta Bags (resiliente; _bags.js já garante tried[] SEMPRE no v0.3.8+)
+    const bagsResp = await getBagsTokenInfo({ mint, network });
+
+    // Traduz JSON da Bags em "hints" pro motor
+    const hints = bagsResp.ok ? hintsFromBags(bagsResp.raw) : {};
+
+    // Avalia risco
+    let risk = evaluateRisk(hints);
+
+    // Fallback amigável quando temos poucos sinais (mantém compat com respostas anteriores SAFE 25)
+    const hintKeys = Object.keys(hints);
+    if (hintKeys.length === 0) {
+      // Força "liquidity_unknown" (+5) e "insufficient_data" (+20) para chegar a 25 SAFE
+      risk = {
+        score: 25,
+        decision: 'safe',
+        reason: 'Sem sinais relevantes de risco',
+        risk: {
+          level: 'safe',
+          badge: riskBadge('safe'),
+          factors: [
+            { key: 'liquidity_unknown', score: 5, detail: 'Status de liquidez desconhecido' },
+            { key: 'insufficient_data', score: 20, detail: 'Poucos sinais disponíveis' }
+          ]
+        }
+      };
+    }
+
+    // Monta resposta final
+    const out = {
+      ok: true,
+      id: genId('bsr'),
+      decision: risk.decision,
+      reason: risk.reason,
+      score: risk.score,
+      risk: risk.risk,
+      network,
+      tokenMint: mint,
+      transactionSig: null,
+      requestedBy,
+      ts: nowIso(),
+      bags: {
+        ok: !!bagsResp.ok,
+        base: bagsResp.base,
+        status: bagsResp.status,
+        rateLimit: bagsResp.rateLimit,
+        tried: bagsResp.tried || [],
+        raw: bagsResp.ok ? (bagsResp.raw || {}) : undefined,
+        // opcional: expõe alguns "hints" que vieram da Bags (apenas chave/valor simples)
+        hints: hintKeys.length ? hints : undefined
+      }
+    };
+
+    res.status(200).send(JSON.stringify(out));
+  } catch (err) {
+    // Nunca deixa estourar: converte em 200 com ok:false
+    const message = (err && err.message) ? String(err.message) : 'unexpected_error';
+    res.status(200).send(JSON.stringify({
+      ok: false,
+      error: { code: 500, message },
+      ts: nowIso()
+    }));
+  }
+}
