@@ -4,8 +4,7 @@
     "api/*.js": {
       "runtime": "nodejs20.x",
       "memory": 128,
-      "maxDuration": 10,
-      "regions": ["gru1"]
+      "maxDuration": 10
     }
   },
   "rewrites": [
@@ -28,3 +27,4 @@
   ],
   "github": { "silent": true }
 }
+
