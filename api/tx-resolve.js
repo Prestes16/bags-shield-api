@@ -1,52 +1,41 @@
-// ESM
-import { APP_VERSION } from "./_version.js";
-import { SOLANA } from "./_solana.js";
-
-function setHeaders(res) {
-  res.setHeader("X-App-Version", APP_VERSION);
-  res.setHeader("X-Bagsshield", "1");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("Permissions-Policy", "interest-cohort=()");
-  res.setHeader("Cache-Control", "no-store");
+@'
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", chunk => (data += chunk));
+    req.on("end", () => {
+      try { resolve(data ? JSON.parse(data) : {}); }
+      catch (e) { reject(e); }
+    });
+    req.on("error", reject);
+  });
 }
 
-export default async function handler(req, res) {
-  setHeaders(res);
+module.exports = async (req, res) => {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
 
   if (req.method !== "POST") {
-    res.status(405).json({ ok: false, error: "method_not_allowed" });
-    return;
-  }
-
-  let body = req.body;
-  if (typeof body !== "object") {
-    try { body = JSON.parse(body ?? "{}"); } catch { body = {}; }
-  }
-
-  const transactionSig = body?.transactionSig;
-  const network = (body?.network || "devnet").toLowerCase();
-
-  if (!transactionSig || typeof transactionSig !== "string" || transactionSig.length < 8) {
-    res.status(400).json({
-      ok: false,
-      error: "invalid_transactionSig",
-      message: "Envie { transactionSig: <string base58 válida> }"
-    });
-    return;
+    res.statusCode = 405;
+    res.setHeader("Allow", "POST");
+    return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
   }
 
   try {
-    const resolved = await SOLANA.resolveMintFromTx(transactionSig, { network });
-    res.status(200).json({ ok: true, network, transactionSig, resolved });
-  } catch (e) {
-    res.status(200).json({
+    const body = await readBody(req);
+    const sig  = body?.transactionSig || null;
+    const net  = body?.network || process.env.SOLANA_NETWORK || "devnet";
+
+    const resolved = {
       ok: false,
-      network,
-      transactionSig,
-      reason: "resolve_failed",
-      message: e?.message || String(e)
-    });
+      reason: "not_implemented",
+      tried: []
+    };
+
+    res.statusCode = 200;
+    res.end(JSON.stringify({ ok: true, network: net, transactionSig: sig, resolved }));
+  } catch (e) {
+    res.statusCode = 400;
+    res.end(JSON.stringify({ ok: false, error: "bad_request" }));
   }
-}
+};
+'@ | Set-Content -Encoding UTF8 .\api\tx-resolve.js

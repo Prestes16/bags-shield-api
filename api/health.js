@@ -1,28 +1,23 @@
-// api/health.js
-import { APP_VERSION } from './_version.js';
-
-export default function handler(req, res) {
-  res.setHeader('X-App-Version', APP_VERSION);
-  res.setHeader('X-Bagsshield', '1');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Permissions-Policy', 'interest-cohort=()');
-  res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-
+@'
+module.exports = (req, res) => {
   try {
-    res.status(200).send(JSON.stringify({
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("X-BagsShield", "1");
+    res.setHeader("X-App-Version", process.env.APP_VERSION || "0.3.8");
+
+    const payload = {
       ok: true,
-      service: 'bags-shield-api',
-      version: APP_VERSION,
+      service: "bags-shield-api",
+      version: process.env.APP_VERSION || "0.3.8",
       time: new Date().toISOString(),
-      network: process.env.SOLANA_NETWORK || 'devnet'
-    }));
+      network: process.env.SOLANA_NETWORK || "devnet",
+    };
+
+    res.statusCode = 200;
+    res.end(JSON.stringify(payload));
   } catch (e) {
-    res.status(200).send(JSON.stringify({
-      ok: false,
-      error: { code: 500, message: String(e?.message || e) }
-    }));
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: "internal_error" }));
   }
-}
+};
+'@ | Set-Content -Encoding UTF8 .\api\health.js
