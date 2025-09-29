@@ -1,16 +1,11 @@
-{
+﻿{
   "name": "bags-shield-api",
-  "version": "0.3.8",
   "private": true,
-  "type": "module",
-  "engines": { "node": "20.x" },
+  "version": "0.3.9",
+  "type": "commonjs",
   "scripts": {
-    "dev": "vercel dev",
-    "deploy": "vercel --prod",
-    "launch": "npm --prefix scripts run launch"
+    "build": "node -e \"console.log('no build step')\"",
+    "vercel-build": "node -e \"console.log('no build step')\""
   },
-  "dependencies": {
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {}
+  "engines": { "node": ">=20 <21" }
 }
