@@ -11,7 +11,7 @@
       network: process.env.SOLANA_NETWORK || "devnet",
       tokenMint: mint,
       transactionSig: null,
-      requestedBy: "cli:local",
+      requestedBy: "api",
       ts: new Date().toISOString(),
       bags: { ok: false }
     });
