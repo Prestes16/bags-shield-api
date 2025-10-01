@@ -1,0 +1,7 @@
+{
+  "mint": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F",
+  "scenario": "apply_flag",
+  "params": {
+    "severity": "high"
+  }
+}

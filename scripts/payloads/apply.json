@@ -1,0 +1,8 @@
+{
+  "mint": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWJw6z9vG9W7fZ5F",
+  "action": "flag",
+  "reason": "análise de risco elevada",
+  "params": {
+    "severity": "high"
+  }
+}
