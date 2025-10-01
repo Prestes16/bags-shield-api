@@ -8,8 +8,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel dev",
+    "local:dev": "vercel dev",
     "deploy": "vercel --prod --yes",
     "deploy:preview": "vercel --yes",
     "type-check": "tsc --noEmit",
