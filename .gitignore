@@ -34,3 +34,4 @@ temp/
 
 # Frameworks comuns (safe)
 .next/
+.vercel
