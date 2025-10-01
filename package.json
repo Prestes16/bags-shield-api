@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "description": "Bags Shield — Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "local:dev": "vercel dev",
     "deploy": "vercel --prod --yes",
     "deploy:preview": "vercel --yes",
     "type-check": "tsc --noEmit",
