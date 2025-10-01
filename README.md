@@ -1,6 +1,6 @@
 # Bags Shield — Fase 4 · API (Vercel)
 
-API serverless do **Bags Shield** para varredura de risco e ações sobre tokens/projetos, conforme “DOCUMENTOS BAGS”. Implementação focada em **Vercel Functions** (Node 20), com rotas REST, CORS aberto para desenvolvimento e respostas padronizadas.
+API serverless do **Bags Shield** para varredura de risco e ações sobre tokens/projetos, conforme “DOCUMENTOS BAGS”. Implementação em **Vercel Functions** (Node 20, TypeScript), com rotas REST, CORS e respostas padronizadas.
 
 ---
 
@@ -9,6 +9,8 @@ API serverless do **Bags Shield** para varredura de risco e ações sobre tokens
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Execução local](#execução-local)
+- [Scripts de teste (opcional)](#scripts-de-teste-opcional)
+- [Variáveis na Vercel](#variáveis-na-vercel)
 - [Padrões de resposta](#padrões-de-resposta)
 - [Rotas](#rotas)
   - [/api/health](#apihealth-get)
@@ -26,9 +28,9 @@ API serverless do **Bags Shield** para varredura de risco e ações sobre tokens
 - **Linguagem:** TypeScript
 - **Infra:** Serverless Functions (região padrão `gru1`)
 - **Empacotamento:** automático via Vercel
-- **Testes rápidos:** cURL / Postman
+- **Testes rápidos:** cURL / Postman / scripts Node
 
-> Observação: `vercel.json` já define memória, duração, CORS básico e rewrite de `/health` → `/api/health`.
+> `vercel.json` define memória, duração, CORS básico e rewrite `/health` → `/api/health`.
 
 ---
 
