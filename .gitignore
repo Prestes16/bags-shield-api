@@ -1,90 +1,36 @@
-# -----------------------------
-# Node & package managers
-# -----------------------------
+# Node / package managers
 node_modules/
-.npm/
-.pnpm-store/
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-
-# (mantenha seus lockfiles versionados)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-
-# -----------------------------
-# Logs & reports
-# -----------------------------
-logs/
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
-report.[0-9]*.json
+.pnpm-store/
 
-# -----------------------------
-# Build / output / caches
-# -----------------------------
+# Build / output
 dist/
-build/
-out/
 .out/
-.next/
-.nuxt/
-.cache/
-.tmp/
-tmp/
 coverage/
-.nyc_output/
-.eslintcache
-.stylelintcache
-*.tsbuildinfo
-
-# -----------------------------
-# Ambiente (.env)
-# -----------------------------
-.env
-.env.local
-.env.*.local
-
-# -----------------------------
-# Vercel (config local)
-# -----------------------------
 .vercel/
 
-# -----------------------------
-# IDE / SO
-# -----------------------------
+# TypeScript
+*.tsbuildinfo
+
+# Env (não versionar segredos)
+.env
+.env.*
+!.env.example
+.env.local
+
+# SO / temporários
+.DS_Store
+Thumbs.db
+tmp/
+temp/
+.cache/
+
+# IDE
 .vscode/
 .idea/
-*.iml
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Spotlight-V100
-.Trashes
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Vim / Editor temporários
-*~
-*.swp
-*.swo
-
-# -----------------------------
-# Projetos com scripts TypeScript locais
-# (mantém os fontes, ignora saídas de build)
-# -----------------------------
-scripts/node_modules/
-scripts/dist/
+# Frameworks comuns (safe)
+.next/
