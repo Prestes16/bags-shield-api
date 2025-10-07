@@ -1,29 +1,7 @@
-﻿{
-  "version": 2,
-  "functions": {
-    "api/**": {
-      "runtime": "nodejs20.x",
-      "memory": 256,
-      "maxDuration": 10
-    }
-  },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,PATCH,DELETE,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization,X-Requested-With,X-Bags-API-Key" },
-        { "key": "Access-Control-Max-Age", "value": "86400" },
-        { "key": "Cache-Control", "value": "no-store" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
-      ]
-    }
-  ],
+{
   "rewrites": [
-    { "source": "/health", "destination": "/api/health" }
-  ],
-  "trailingSlash": false
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/:path*", "destination": "/public/:path*" }
+  ]
 }
