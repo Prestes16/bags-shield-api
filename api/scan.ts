@@ -1,44 +1,39 @@
-﻿export default async function handler(req: any, res: any) {
-  // CORS + cache
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Bags-API-Key");
-  res.setHeader("Cache-Control", "no-store");
+﻿import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { setCors, preflight, guardMethod, noStore } from './_cors.js'
+import { computeRisk } from './_risk.js'
 
-  if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method Not Allowed" });
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(res)
+  noStore(res)
 
-  try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-    const mint = body.mint;
-    const network = (body.network || "devnet").toLowerCase();
+  if (preflight(req, res)) return
+  if (!guardMethod(req, res, ['GET', 'POST', 'OPTIONS'])) return
 
-    if (!mint || typeof mint !== "string") {
-      return res.status(400).json({ ok: false, error: "Invalid 'mint' (string required)" });
+  const body = (() => {
+    try {
+      if (!req.body) return {}
+      if (typeof req.body === 'string') return JSON.parse(req.body)
+      return req.body
+    } catch {
+      return {}
     }
-    if (!/^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(mint)) {
-      return res.status(400).json({ ok: false, error: "Invalid 'mint' format (base58-like required)" });
-    }
-    if (!["devnet", "mainnet", "mainnet-beta", "testnet"].includes(network)) {
-      return res.status(400).json({ ok: false, error: "Invalid 'network' (devnet|mainnet|mainnet-beta|testnet)" });
-    }
+  })()
 
-    // Mock de scoring para dev: determinístico e simples
-    const isWrappedSol = mint.startsWith("So1111"); // Wrapped SOL (conhecido)
-    const score = isWrappedSol ? 95 : 70 + (mint.charCodeAt(0) % 25);
-    const level = score >= 85 ? "low" : score >= 65 ? "medium" : "high";
-    const issues: string[] = [];
-    if (isWrappedSol) issues.push("Well-known mint: Wrapped SOL (not a typical token scan target).");
-
-    return res.status(200).json({
-      ok: true,
-      action: "scan",
-      network,
-      mint,
-      result: { score, level, issues },
-      time: new Date().toISOString()
-    });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: "Internal Error", detail: err?.message ?? String(err) });
+  // Unificar entrada: body > query
+  const q: any = (req as any).query || {}
+  const input = {
+    network: body.network ?? q.network ?? null,
+    mint: body.mint ?? q.mint ?? null,
   }
+
+  const risk = computeRisk(input)
+
+  res.status(200).json({
+    ok: true,
+    endpoint: 'scan',
+    method: req.method,
+    received: input,
+    risk,
+    at: new Date().toISOString(),
+  })
 }
