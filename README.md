@@ -1,37 +1,91 @@
-# Bags Shield — Fase 4 · API (Vercel)
+# Bags Shield API — v1.1.0
 
-API serverless do **Bags Shield** para varredura de risco e ações sobre tokens/projetos, conforme “DOCUMENTOS BAGS”. Implementação em **Vercel Functions** (Node 20, TypeScript), com rotas REST, CORS e respostas padronizadas.
+Camada de confiança para o ecossistema Bags. Endpoints HTTP (serverless) com CORS unificado e avaliação de risco simples.
+
+## 🚀 Como rodar local
+```bash
+npx vercel dev --listen 3000
+```
+Base local: `http://localhost:3000`
+
+Smoke test (PowerShell):
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke.ps1
+```
+
+## 🔌 Endpoints
+
+### GET `/api/health`
+Retorna status da API.
+```bash
+curl -s http://localhost:3000/api/health | jq
+```
+
+### GET/POST `/api/scan`
+Analisa parâmetros básicos e retorna um `risk` (score/label/badges).
+
+**Body (JSON):**
+```json
+{
+  "network": "devnet | mainnet",
+  "mint": "Base58 da mint"
+}
+```
+
+**Exemplo:**
+```bash
+curl -s -X POST http://localhost:3000/api/scan   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112"}' | jq
+```
+
+### GET/POST `/api/simulate`
+Simula uma operação e retorna eco dos dados + `risk`.
+
+**Body (JSON):**
+```json
+{
+  "network": "devnet | mainnet",
+  "mint": "Base58 da mint",
+  "amount": 1.5,
+  "slippageBps": 50
+}
+```
+
+**Exemplo:**
+```bash
+curl -s -X POST http://localhost:3000/api/simulate   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112","amount":1.5,"slippageBps":50}' | jq
+```
+
+### POST `/api/apply`
+Aplica a simulação (mock) e retorna eco + `risk`.
+
+**Exemplo:**
+```bash
+curl -s -X POST http://localhost:3000/api/apply   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112","amount":1.5,"slippageBps":50}' | jq
+```
+
+## 🧠 Sobre o `risk`
+Resposta inclui:
+```json
+{
+  "risk": {
+    "score": 20,
+    "label": "LOW",
+    "reasons": ["..."],
+    "badges": [
+      { "id": "low-risk", "color": "green", "text": "Baixo risco" }
+    ]
+  }
+}
+```
+
+Regras v2 atualmente consideram:
+- `network`: `devnet` (+risco), `mainnet` (−risco), ausente/desconhecida (+risco)
+- `mint`: validação base58/length e casos conhecidos (ex.: Wrapped SOL)
+
+## 🔒 CORS / Cache
+- `Access-Control-Allow-Origin: *`
+- Pré-flight `OPTIONS` com `204`
+- `Cache-Control: no-store`
 
 ---
-
-## Sumário
-- [Stack](#stack)
-- [Estrutura de pastas](#estrutura-de-pastas)
-- [Variáveis de ambiente](#variáveis-de-ambiente)
-- [Execução local](#execução-local)
-- [Scripts de teste (opcional)](#scripts-de-teste-opcional)
-- [Variáveis na Vercel](#variáveis-na-vercel)
-- [Padrões de resposta](#padrões-de-resposta)
-- [Rotas](#rotas)
-  - [/api/health](#apihealth-get)
-  - [/api/scan](#apiskan-post)
-  - [/api/simulate](#apisimulate-post)
-  - [/api/apply](#apiapply-post)
-- [Erros](#erros)
-- [Boas práticas](#boas-práticas)
-- [Licença](#licença)
-
----
-
-## Stack
-- **Runtime:** Node.js 20 (Vercel)
-- **Linguagem:** TypeScript
-- **Infra:** Serverless Functions (região padrão `gru1`)
-- **Empacotamento:** automático via Vercel
-- **Testes rápidos:** cURL / Postman / scripts Node
-
-> `vercel.json` define memória, duração, CORS básico e rewrite `/health` → `/api/health`.
-
----
-
-## Estrutura de pastas
+MIT © Bags Shield
