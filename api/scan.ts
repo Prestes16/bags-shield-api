@@ -1,18 +1,14 @@
 ﻿import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { setCors, preflight, guardMethod, noStore } from './_cors.js'
+import { computeRisk } from './_risk.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Headers padrão
   setCors(res)
   noStore(res)
 
-  // Pré-flight CORS
   if (preflight(req, res)) return
-
-  // Métodos permitidos (mantemos GET/POST/OPTIONS para não quebrar testes)
   if (!guardMethod(req, res, ['GET', 'POST', 'OPTIONS'])) return
 
-  // Parse seguro do body (funciona c/ string ou objeto)
   const body = (() => {
     try {
       if (!req.body) return {}
@@ -23,16 +19,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   })()
 
-  // TODO: aqui entra sua lógica real de "scan"
-  // Mantemos 200 OK para o smoke test
+  // Unificar entrada: body > query
+  const q: any = (req as any).query || {}
+  const input = {
+    network: body.network ?? q.network ?? null,
+    mint: body.mint ?? q.mint ?? null,
+  }
+
+  const risk = computeRisk(input)
+
   res.status(200).json({
     ok: true,
     endpoint: 'scan',
     method: req.method,
-    received: body,
+    received: input,
+    risk,
     at: new Date().toISOString(),
   })
 }
-
-
-
