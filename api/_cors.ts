@@ -12,7 +12,7 @@ export function setCors(
   res.setHeader('Vary', 'Origin')
   res.setHeader('Access-Control-Allow-Methods', methods.join(', '))
   res.setHeader('Access-Control-Allow-Headers', headers.join(', '))
-  res.setHeader('Access-Control-Max-Age', '86400') // 24h
+  res.setHeader('Access-Control-Max-Age', '86400')
 }
 
 export function noStore(res: VercelResponse): void {

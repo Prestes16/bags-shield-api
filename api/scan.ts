@@ -1,5 +1,5 @@
 ﻿import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { setCors, preflight, guardMethod, noStore } from './_cors'
+import { setCors, preflight, guardMethod, noStore } from './_cors.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Headers padrão
@@ -33,4 +33,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     at: new Date().toISOString(),
   })
 }
+
+
 
