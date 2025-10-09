@@ -1,18 +1,42 @@
-﻿/** Lógica simples de risco (placeholder) */
+﻿/** Lógica de risco (versão 2) */
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]+$/;
+
 export function computeRisk(input = {}) {
   const network = String(input.network || '').toLowerCase();
-  const mint = String(input.mint || '').trim();
+  const mint = (input.mint ?? '').toString().trim();
 
   let score = 50;
   const reasons = [];
 
-  // Devnet = mais incerteza
+  // Network
   if (network === 'devnet') {
     score += 10;
     reasons.push('Network: devnet (ambiente de testes)');
+  } else if (network === 'mainnet') {
+    score = Math.max(score - 10, 0);
+    reasons.push('Network: mainnet');
+  } else if (network) {
+    score += 15;
+    reasons.push(`Network desconhecida: ${network}`);
+  } else {
+    score += 15;
+    reasons.push('Network ausente');
   }
 
-  // Mint conhecido (wrapped SOL) = reduz risco
+  // Mint
+  if (!mint) {
+    score += 30;
+    reasons.push('Mint ausente');
+  } else {
+    const len = mint.length;
+    const looksValid = BASE58.test(mint) && len >= 30 && len <= 50;
+    if (!looksValid) {
+      score += 20;
+      reasons.push('Mint com formato atípico (base58/len)');
+    }
+  }
+
+  // Mints conhecidos — heurísticas (ex.: wrapped SOL)
   if (mint === 'So11111111111111111111111111111111111111112') {
     score = Math.max(score - 40, 0);
     reasons.push('Mint conhecido: Wrapped SOL');
