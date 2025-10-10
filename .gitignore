@@ -35,3 +35,4 @@ temp/
 # Frameworks comuns (safe)
 .next/
 .vercel
+.rate-store.json
