@@ -1,41 +1,53 @@
-// api/health.ts
-import type { IncomingMessage, ServerResponse } from 'node:http';
+﻿import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { setCors, preflight, guardMethod, noStore } from './_cors.js'
+import { reqId, computeEtag, logReq } from './_util.js'
 
-type Json = Record<string, unknown>;
+const VERSION = '1.1.0'
+const SERVICE = 'bags-shield-api'
 
-function setCommonHeaders(res: ServerResponse) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-}
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const id = reqId()
+  setCors(res, "*", ["GET","POST","OPTIONS"], ["Content-Type","Authorization","X-Requested-With"], req)
+  noStore(res)
+  res.setHeader('X-Request-Id', id)
 
-function sendJson(res: ServerResponse, status: number, body: Json) {
-  setCommonHeaders(res);
-  res.statusCode = status;
-  res.end(JSON.stringify(body));
-}
-
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  const method = (req.method || 'GET').toUpperCase();
-
-  // Preflight simples (coordenado com vercel.json)
-  if (method === 'OPTIONS') {
-    setCommonHeaders(res);
-    res.statusCode = 204;
-    return res.end();
+  if (preflight(req, res)) {
+    logReq(id, req, { endpoint: 'health', preflight: true })
+    return
   }
 
-  if (method !== 'GET') {
-    res.setHeader('Allow', 'GET, OPTIONS');
-    return sendJson(res, 405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET' } });
+  if (!guardMethod(req, res, ['GET', 'OPTIONS'])) {
+    logReq(id, req, { endpoint: 'health', blocked: true })
+    return
   }
 
-  return sendJson(res, 200, {
+  const payload = {
     ok: true,
-    service: 'bags-shield-api',
-    version: '1.0.0',
+    service: SERVICE,
+    version: VERSION,
     status: 'healthy',
+    env: {
+      runtime: 'node',
+      node: process.version,
+      vercel: !!process.env.VERCEL,
+      vercelEnv: process.env.VERCEL_ENV ?? null,
+      bagsEnv: process.env.BAGS_ENV ?? null,
+      region: process.env.VERCEL_REGION ?? null,
+    },
+    git: {
+      sha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+      message: process.env.VERCEL_GIT_COMMIT_MESSAGE ?? null,
+      ref: process.env.VERCEL_GIT_COMMIT_REF ?? null,
+    },
+    uptimeSec: Math.round(process.uptime()),
+    requestId: id,
     time: new Date().toISOString(),
-  });
+  }
+
+  const etag = computeEtag(payload)
+  if (etag) res.setHeader('ETag', etag)
+
+  logReq(id, req, { endpoint: 'health', status: 200 })
+
+  res.status(200).json(payload)
 }
-
-
