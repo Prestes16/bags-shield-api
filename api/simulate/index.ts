@@ -5,15 +5,10 @@ import _core from "./core";
 const core: any = ( (_core as any)?.default ?? _core );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Guard de Authorization seguro
+  // Authorization tolerante: usa se vier como Bearer, senão continua normal
   const auth = firstString(req.headers?.authorization);
-  if (!safeStartsWith(auth, "Bearer ")) {
-    return res.status(401).json({ ok: false, error: "UNAUTHORIZED", reason: "MISSING_BEARER" });
+  if (safeStartsWith(auth, "Bearer ")) {
+    (req as any).authToken = auth!.slice(7).trim();
   }
-
-  // Disponibiliza o token para o core, sem remover o header original
-  (req as any).authToken = auth!.slice(7).trim();
-
-  // Entrega para a lógica original (teu código antigo)
   return core(req, res);
 }
