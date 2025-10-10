@@ -1,6 +1,6 @@
 {
     "name": "bags-shield-api",
-    "version": "1.1.0",
+    "version": "1.2.1",
     "private": true,
     "description": "Bags Shield â€” Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
     "license": "MIT",
@@ -23,6 +23,6 @@
         "vercel": "^48.2.9"
     },
     "dependencies": {
-        "zod": "^4.1.12"
+        "zod": "^3.23.8"
     }
 }
