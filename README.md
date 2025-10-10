@@ -1,8 +1,8 @@
-# Bags Shield API — v1.1.0
+﻿# Bags Shield API â€” v1.2.0
 
-Camada de confiança para o ecossistema Bags. Endpoints HTTP (serverless) com CORS unificado e avaliação de risco simples.
+Camada de confianÃ§a para o ecossistema Bags. Endpoints HTTP (serverless) com CORS unificado e avaliaÃ§Ã£o de risco simples.
 
-## 🚀 Como rodar local
+## ðŸš€ Como rodar local
 ```bash
 npx vercel dev --listen 3000
 ```
@@ -13,7 +13,7 @@ Smoke test (PowerShell):
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke.ps1
 ```
 
-## 🔌 Endpoints
+## ðŸ”Œ Endpoints
 
 ### GET `/api/health`
 Retorna status da API.
@@ -22,7 +22,7 @@ curl -s http://localhost:3000/api/health | jq
 ```
 
 ### GET/POST `/api/scan`
-Analisa parâmetros básicos e retorna um `risk` (score/label/badges).
+Analisa parÃ¢metros bÃ¡sicos e retorna um `risk` (score/label/badges).
 
 **Body (JSON):**
 ```json
@@ -38,7 +38,7 @@ curl -s -X POST http://localhost:3000/api/scan   -H "Content-Type: application/j
 ```
 
 ### GET/POST `/api/simulate`
-Simula uma operação e retorna eco dos dados + `risk`.
+Simula uma operaÃ§Ã£o e retorna eco dos dados + `risk`.
 
 **Body (JSON):**
 ```json
@@ -56,14 +56,14 @@ curl -s -X POST http://localhost:3000/api/simulate   -H "Content-Type: applicati
 ```
 
 ### POST `/api/apply`
-Aplica a simulação (mock) e retorna eco + `risk`.
+Aplica a simulaÃ§Ã£o (mock) e retorna eco + `risk`.
 
 **Exemplo:**
 ```bash
 curl -s -X POST http://localhost:3000/api/apply   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112","amount":1.5,"slippageBps":50}' | jq
 ```
 
-## 🧠 Sobre o `risk`
+## ðŸ§  Sobre o `risk`
 Resposta inclui:
 ```json
 {
@@ -79,13 +79,14 @@ Resposta inclui:
 ```
 
 Regras v2 atualmente consideram:
-- `network`: `devnet` (+risco), `mainnet` (−risco), ausente/desconhecida (+risco)
-- `mint`: validação base58/length e casos conhecidos (ex.: Wrapped SOL)
+- `network`: `devnet` (+risco), `mainnet` (âˆ’risco), ausente/desconhecida (+risco)
+- `mint`: validaÃ§Ã£o base58/length e casos conhecidos (ex.: Wrapped SOL)
 
-## 🔒 CORS / Cache
+## ðŸ”’ CORS / Cache
 - `Access-Control-Allow-Origin: *`
-- Pré-flight `OPTIONS` com `204`
+- PrÃ©-flight `OPTIONS` com `204`
 - `Cache-Control: no-store`
 
 ---
-MIT © Bags Shield
+MIT Â© Bags Shield
+
