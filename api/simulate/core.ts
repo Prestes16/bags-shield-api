@@ -48,9 +48,29 @@ function safeParseJson(input: unknown): { ok: true; value: any } | { ok: false; 
   return { ok: true, value: {} };
 }
 
+// Evita que o getter req.body da Vercel lance antes da nossa validação
+function tryGetBody(req: VercelRequest): { ok: true; value: any } | { ok: false; message: string } {
+  try {
+    const v: any = (req as any).body;
+    return { ok: true, value: v };
+  } catch (e: any) {
+    return { ok: false, message: e?.message ?? 'Invalid JSON' };
+  }
+}
+
 // Core de /api/simulate: assume auth/método já validados no index.ts
 async function core(req: VercelRequest, res: VercelResponse) {
-  const parsed = safeParseJson((req as any).body);
+  const got = tryGetBody(req);
+  if (!got.ok) {
+    badRequest(res, {
+      code: 'BAD_JSON',
+      message: 'Corpo da requisição não é um JSON válido.',
+      issues: [{ path: '$', message: `Invalid JSON (dev server): ${got.message}` }],
+    });
+    return;
+  }
+
+  const parsed = safeParseJson(got.value);
   if (!parsed.ok) {
     badRequest(res, {
       code: 'BAD_JSON',
@@ -59,6 +79,7 @@ async function core(req: VercelRequest, res: VercelResponse) {
     });
     return;
   }
+
   const payload = parsed.value ?? {};
   ok(res, { note: 'simulate-ok', received: payload });
 }
