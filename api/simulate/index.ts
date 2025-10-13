@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors, preflight } from '../../lib/cors.js';
 import core from './core.js';
 
 type Issue = { path: string; message: string };
@@ -13,6 +14,7 @@ function noStore(res: VercelResponse) {
 
 function send<T>(res: VercelResponse, status: number, body: Ok<T> | Err) {
   noStore(res);
+  applyCors(({} as any), res); // garante CORS mesmo em erros
   res.status(status).json(body as any);
 }
 
@@ -36,27 +38,32 @@ function safeStartsWith(s: unknown, prefix: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Pré-flight simples; CORS completo entra depois
+  // Preflight (CORS completo)
   if (req.method === 'OPTIONS') {
-    res.status(204).end();
+    preflight(req, res);
     return;
   }
 
   if (req.method !== 'POST') {
+    applyCors(req, res);
     methodNotAllowed(res);
     return;
   }
 
   const auth = firstString(req.headers['authorization']);
   if (!safeStartsWith(auth, 'Bearer ')) {
+    applyCors(req, res);
     unauthorized(res);
     return;
   }
 
   try {
+    // aplica CORS antes do core para garantir header em todas as respostas
+    applyCors(req, res);
     await core(req, res);
   } catch (e: any) {
     console.error('simulate/core error:', e);
+    applyCors(req, res);
     send(res, 500, { success: false, error: { code: 'INTERNAL', message: e?.message ?? 'Internal error' }});
   }
 }
