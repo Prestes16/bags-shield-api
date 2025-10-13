@@ -1,78 +1,111 @@
-﻿param(
-  [string]$BaseUrl = "http://localhost:3000"
+param(
+  [string]$BaseUrl = "http://localhost:3000",
+  [string]$Origin  = "http://localhost:5173",
+  [string]$Mint    = "So11111111111111111111111111111111111111112"
 )
 
-Write-Host "== Smoke test Bags Shield ==" -ForegroundColor Cyan
-Write-Host "BaseUrl: $BaseUrl`n"
-
-function Invoke-Json {
-  param(
-    [Parameter(Mandatory)][ValidateSet("GET","POST")][string]$Method,
-    [Parameter(Mandatory)][string]$Url,
-    [string]$RawBody
-  )
-  $code = $null
-  $raw  = $null
-  try {
-    if ($Method -eq "GET") {
-      $resp = Invoke-WebRequest -Uri $Url -Method GET -Headers @{Accept="application/json"}
-    } else {
-      $resp = Invoke-WebRequest -Uri $Url -Method POST -Headers @{ "Content-Type" = "application/json" } -Body $RawBody
-    }
-    $code = $resp.StatusCode
-    $raw  = $resp.Content
-  } catch {
-    $resp2 = $_.Exception.Response
-    if ($resp2 -ne $null) {
-      $code = [int]$resp2.StatusCode
-      $stream = $resp2.GetResponseStream()
-      $reader = New-Object System.IO.StreamReader($stream)
-      $raw = $reader.ReadToEnd()
-    } else {
-      $code = -1
-      $raw = $_.Exception.Message
-    }
-  }
-  try {
-    $json = $raw | ConvertFrom-Json | ConvertTo-Json -Depth 8
-  } catch {
-    $json = $raw
-  }
-  return [PSCustomObject]@{ Code = $code; Body = $json }
+function Log($fh, $text) {
+  $stamp = (Get-Date).ToString("s")
+  $line  = "[$stamp] $text"
+  Write-Host $line
+  Add-Content -Path $fh -Value $line
 }
 
-function Test-Req {
-  param(
-    [Parameter(Mandatory)][string]$Name,
-    [Parameter(Mandatory)][ValidateSet("GET","POST")][string]$Method,
-    [Parameter(Mandatory)][string]$Path,
-    [hashtable]$BodyObj
-  )
-  $url = "$BaseUrl$Path"
-  $rawBody = $null
-  if ($Method -eq "POST" -and $BodyObj) { $rawBody = ($BodyObj | ConvertTo-Json -Depth 8) }
-  $res = Invoke-Json -Method $Method -Url $url -RawBody $rawBody
-
-  # Compatível com Windows PowerShell 5.1 (sem operador ternário)
-  $color = "Red"
-  if ($res.Code -ge 200 -and $res.Code -lt 300) { $color = "Green" }
-
-  Write-Host "### $Name — $($res.Code)" -ForegroundColor $color
-  Write-Output $res.Body
-  Write-Host ""
+function Get-Body($resp) {
+  if ($resp -is [System.Management.Automation.ErrorRecord]) {
+    $r = $_.Exception.Response
+    if ($r) {
+      $reader = New-Object IO.StreamReader($r.GetResponseStream())
+      $text = $reader.ReadToEnd(); $reader.Close()
+      return $text
+    }
+    return ""
+  }
+  return $resp.Content
 }
 
-# 1) health
-Test-Req -Name "GET /api/health" -Method GET -Path "/api/health"
+$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+New-Item -ItemType Directory -Path "logs" -Force | Out-Null
+$fh = "logs/smoke-$ts.txt"
 
-# 2) scan
-$scanBody = @{ mint = "So11111111111111111111111111111111111111112"; network = "devnet" }
-Test-Req -Name "POST /api/scan" -Method POST -Path "/api/scan" -BodyObj $scanBody
+Log $fh "=== SMOKE START BaseUrl=$BaseUrl Origin=$Origin Mint=$Mint ==="
 
-# 3) simulate
-$simulateBody = @{ mint = "So11111111111111111111111111111111111111112"; network = "devnet"; amount = 1.5; slippageBps = 50 }
-Test-Req -Name "POST /api/simulate" -Method POST -Path "/api/simulate" -BodyObj $simulateBody
+# 1) /api/scan
+try {
+  $u = "$BaseUrl/api/scan?foo=bar"
+  $r = Invoke-WebRequest -Method GET -Uri $u -Headers @{ Origin=$Origin } -ErrorAction Stop
+  Log $fh "SCAN GET: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
+  Log $fh $r.Content
+} catch {
+  Log $fh "SCAN GET: ERROR"
+}
 
-# 4) apply
-$applyBody = @{ mint = "So11111111111111111111111111111111111111112"; network = "devnet"; amount = 1.5; slippageBps = 50 }
-Test-Req -Name "POST /api/apply" -Method POST -Path "/api/apply" -BodyObj $applyBody
+# 2) /api/simulate BAD_JSON
+try {
+  $u = "$BaseUrl/api/simulate"
+  Invoke-WebRequest -Method POST -Uri $u -Headers @{ Origin=$Origin; Authorization='Bearer dev' } -ContentType 'application/json' -Body '{ invalid' -ErrorAction Stop | Out-Null
+} catch {
+  $resp = $_.Exception.Response
+  $status  = if ($resp) { [int]$resp.StatusCode } else { 0 }
+  $ct      = if ($resp) { $resp.Headers['Content-Type'] } else { '' }
+  $body    = if ($resp) { (New-Object IO.StreamReader($resp.GetResponseStream())).ReadToEnd() } else { '' }
+  Log $fh "SIMULATE BAD_JSON: $status CT=$ct"
+  Log $fh $body
+}
+
+# 3) /api/simulate OK
+try {
+  $u = "$BaseUrl/api/simulate"
+  $r = Invoke-WebRequest -Method POST -Uri $u -Headers @{ Origin=$Origin; Authorization='Bearer dev' } -ContentType 'application/json' -Body '{ "ping":"pong" }' -ErrorAction Stop
+  Log $fh "SIMULATE OK: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
+  Log $fh $r.Content
+} catch {
+  Log $fh "SIMULATE OK: ERROR"
+}
+
+# 4) /api/apply OPTIONS
+try {
+  $u = "$BaseUrl/api/apply"
+  $r = Invoke-WebRequest -Method OPTIONS -Uri $u -Headers @{ Origin=$Origin; 'Access-Control-Request-Method'='POST'; 'Access-Control-Request-Headers'='Content-Type, Authorization' } -ErrorAction Stop
+  Log $fh "APPLY OPTIONS: $($r.StatusCode) ACAO=$($r.Headers['Access-Control-Allow-Origin'])"
+} catch {
+  Log $fh "APPLY OPTIONS: ERROR"
+}
+
+# 5) /api/apply POST {}
+try {
+  $u = "$BaseUrl/api/apply"
+  $r = Invoke-WebRequest -Method POST -Uri $u -Headers @{ Origin=$Origin; Authorization='Bearer dev' } -ContentType 'application/json' -Body '{}' -ErrorAction Stop
+  Log $fh "APPLY POST {}: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
+  Log $fh $r.Content
+} catch {
+  $resp = $_.Exception.Response
+  $status  = if ($resp) { [int]$resp.StatusCode } else { 0 }
+  $ct      = if ($resp) { $resp.Headers['Content-Type'] } else { '' }
+  $body    = if ($resp) { (New-Object IO.StreamReader($resp.GetResponseStream())).ReadToEnd() } else { '' }
+  Log $fh "APPLY POST {}: $status CT=$ct"
+  Log $fh $body
+}
+
+# 6) /api/token/[mint]/creators
+try {
+  $u = "$BaseUrl/api/token/$Mint/creators"
+  $r = Invoke-WebRequest -Method GET -Uri $u -Headers @{ Origin=$Origin } -ErrorAction Stop
+  Log $fh "TOKEN CREATORS: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
+  Log $fh $r.Content
+} catch {
+  Log $fh "TOKEN CREATORS: ERROR"
+}
+
+# 7) /api/token/[mint]/lifetime-fees
+try {
+  $u = "$BaseUrl/api/token/$Mint/lifetime-fees"
+  $r = Invoke-WebRequest -Method GET -Uri $u -Headers @{ Origin=$Origin } -ErrorAction Stop
+  Log $fh "TOKEN FEES: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
+  Log $fh $r.Content
+} catch {
+  Log $fh "TOKEN FEES: ERROR"
+}
+
+Log $fh "=== SMOKE DONE (arquivo: $fh) ==="
+Write-Host "`nResumo salvo em $fh"
