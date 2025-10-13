@@ -49,11 +49,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     applyCors(req, res);
     noStore(res);
-    // TODO: integrar Bags SDK e calcular taxas reais
-    const data = {
-      mint,
-      lifetimeFees: { total: 0, unit: 'lamports' } // stub
-    };
+    const { getLifetimeFeesLamports } = await import('../../lib/bags.js');
+    const total = await getLifetimeFeesLamports(mint!);
+    const data = { mint, lifetimeFees: { total, unit: 'lamports' } };
     res.status(200).json({ success: true, response: data } satisfies Ok<any>);
   } catch (e: any) {
     console.error('token/lifetime-fees error:', e);
