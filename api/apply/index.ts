@@ -1,69 +1,68 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { z } from "zod";
-import { applyCors, preflight } from "../../lib/cors.js";
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors, preflight } from '../../lib/cors.js';
+import core from './core.js';
 
 type Issue = { path: string; message: string };
-type BadRequest = { ok: false; code: "BAD_REQUEST"; issues: Issue[] };
+type ErrorBody = { code: string; message: string; issues?: Issue[] };
+type Ok<T> = { success: true; response: T };
+type Err = { success: false; error: ErrorBody };
 
-function safeStartsWith(v: unknown, prefix: string): boolean {
-  return typeof v === "string" && v.startsWith(prefix);
+function noStore(res: VercelResponse) {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 }
 
-const toNumber = (v: unknown) => {
-  if (typeof v === "number") return v;
-  if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
-  return v;
-};
+function send<T>(res: VercelResponse, status: number, body: Ok<T> | Err) {
+  noStore(res);
+  applyCors(({} as any), res); // garante CORS mesmo em erros
+  res.status(status).json(body as any);
+}
 
-const Network = z.enum(["mainnet", "devnet"], { required_error: "network obrigatório" });
-const Mint = z.string({ required_error: "mint obrigatória" }).min(1, "mint obrigatória");
+function methodNotAllowed(res: VercelResponse, allow: string[] = ['POST','OPTIONS']) {
+  res.setHeader('Allow', allow.join(', '));
+  send(res, 405, { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: `Use ${allow.join(' | ')}` }});
+}
 
-const TxParamsSchema = z.object({
-  network: Network,
-  mint: Mint,
-  amount: z.preprocess(toNumber, z.number().positive("amount deve ser > 0")).optional(),
-  slippageBps: z.preprocess(toNumber, z.number().int().min(0).max(10_000)).optional(),
-});
+function unauthorized(res: VercelResponse, message = 'Missing or invalid Authorization: Bearer <token>') {
+  send(res, 401, { success: false, error: { code: 'UNAUTHORIZED', message }});
+}
 
-function zodToIssues(err: z.ZodError): Issue[] {
-  return err.issues.map(e => ({
-    path: (Array.isArray(e.path) ? e.path.join(".") : "") || "<root>",
-    message: e.message,
-  }));
+function firstString(x: unknown): string | undefined {
+  if (typeof x === 'string') return x;
+  if (Array.isArray(x)) return typeof x[0] === 'string' ? x[0] as string : undefined;
+  return undefined;
+}
+
+function safeStartsWith(s: unknown, prefix: string): boolean {
+  return typeof s === 'string' && s.startsWith(prefix);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  (res as any).setHeader?.("x-bags-wrapper","apply-zod");
-  // CORS + preflight
-  const ended = preflight(req, res);
-  if (ended) return ended as any;
-  applyCors(req, res);
-
-  // Authorization tolerante
-  const auth = req.headers?.authorization;
-  if (safeStartsWith(auth, "Bearer ")) {
-    (req as any).authToken = (auth as string).slice(7).trim();
+  // Preflight (CORS completo)
+  if (req.method === 'OPTIONS') {
+    preflight(req, res);
+    return;
   }
 
-  if (req.method === "POST") {
-    if (!safeStartsWith(req.headers?.["content-type"], "application/json")) {
-      const issues: Issue[] = [{ path: "headers.content-type", message: "expected application/json" }];
-      return res.status(400).json({ ok: false, code: "BAD_REQUEST", issues } as BadRequest);
-    }
-
-    const parsed = TxParamsSchema.safeParse((req as any).body ?? {});
-    if (!parsed.success) {
-      return res.status(400).json({ ok: false, code: "BAD_REQUEST", issues: zodToIssues(parsed.error) } as BadRequest);
-    }
-
-    return res.status(200).json({
-      ok: true,
-      probe: "apply-zod-ok",
-      received: parsed.data,
-      hasAuth: Boolean((req as any).authToken),
-      ts: Date.now(),
-    });
+  if (req.method !== 'POST') {
+    applyCors(req, res);
+    methodNotAllowed(res);
+    return;
   }
 
-  return res.status(405).json({ ok: false, error: "METHOD_NOT_ALLOWED" });
+  const auth = firstString(req.headers['authorization']);
+  if (!safeStartsWith(auth, 'Bearer ')) {
+    applyCors(req, res);
+    unauthorized(res);
+    return;
+  }
+
+  try {
+    applyCors(req, res);
+    await core(req, res);
+  } catch (e: any) {
+    console.error('apply/core error:', e);
+    applyCors(req, res);
+    send(res, 500, { success: false, error: { code: 'INTERNAL', message: e?.message ?? 'Internal error' }});
+  }
 }
