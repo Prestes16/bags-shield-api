@@ -1,92 +1,41 @@
-﻿# Bags Shield API â€” v1.2.0
+# Bags Shield API
 
-Camada de confianÃ§a para o ecossistema Bags. Endpoints HTTP (serverless) com CORS unificado e avaliaÃ§Ã£o de risco simples.
+### Endpoints
+- `GET /api/scan?foo=bar` — ping de saúde com exemplo de score
+- `POST /api/simulate` — eco seguro (JSON); 400 para JSON inválido
+- `POST /api/apply` — stub com CORS/preflight
+- `GET /api/token/[mint]/creators` — lista de creators (via adapter)
+- `GET /api/token/[mint]/lifetime-fees` — total de taxas vitalícias (lamports)
 
-## ðŸš€ Como rodar local
-```bash
-npx vercel dev --listen 3000
-```
-Base local: `http://localhost:3000`
+### CORS
+Habilitado via `lib/cors.ts` (preflight `OPTIONS`, headers, `Vary: Origin`).
 
-Smoke test (PowerShell):
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke.ps1
-```
+### Rewrites (dev)
+`vercel.json` mapeia rotas dinâmicas para handlers planos:
+/api/token/<mint>/creators -> /api/token/creators?mint=<mint>
+/api/token/<mint>/lifetime-fees -> /api/token/lifetime-fees?mint=<mint>
 
-## ðŸ”Œ Endpoints
+markdown
+Copiar código
 
-### GET `/api/health`
-Retorna status da API.
-```bash
-curl -s http://localhost:3000/api/health | jq
-```
+### Adapter (`lib/bags.ts`)
+- Lê `BAGS_API_BASE` e `BAGS_TIMEOUT_MS`.
+- Se **definido**, consulta o upstream via HTTP (timeout + fallback gracioso).
+- Se **não definido**, retorna **stubs** (creators `[]`, fees `0`).
 
-### GET/POST `/api/scan`
-Analisa parÃ¢metros bÃ¡sicos e retorna um `risk` (score/label/badges).
+### Dev scripts
+- `npm run dev`      → stub (sem upstream)
+- `npm run dev:bags` → mock interno (`BAGS_API_BASE=/api/mock`)
+- `npm run dev:real` → aponte para seu upstream real (edite antes)
 
-**Body (JSON):**
-```json
-{
-  "network": "devnet | mainnet",
-  "mint": "Base58 da mint"
-}
-```
+### Smoke local
+`powershell -ExecutionPolicy Bypass -File scripts\smoke.ps1`
 
-**Exemplo:**
-```bash
-curl -s -X POST http://localhost:3000/api/scan   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112"}' | jq
-```
+### Variáveis na Vercel (produção/preview)
+Use o CLI:
+npx -y vercel@latest env add BAGS_API_BASE production
+npx -y vercel@latest env add BAGS_API_BASE preview
 
-### GET/POST `/api/simulate`
-Simula uma operaÃ§Ã£o e retorna eco dos dados + `risk`.
-
-**Body (JSON):**
-```json
-{
-  "network": "devnet | mainnet",
-  "mint": "Base58 da mint",
-  "amount": 1.5,
-  "slippageBps": 50
-}
-```
-
-**Exemplo:**
-```bash
-curl -s -X POST http://localhost:3000/api/simulate   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112","amount":1.5,"slippageBps":50}' | jq
-```
-
-### POST `/api/apply`
-Aplica a simulaÃ§Ã£o (mock) e retorna eco + `risk`.
-
-**Exemplo:**
-```bash
-curl -s -X POST http://localhost:3000/api/apply   -H "Content-Type: application/json"   -d '{"network":"devnet","mint":"So11111111111111111111111111111111111111112","amount":1.5,"slippageBps":50}' | jq
-```
-
-## ðŸ§  Sobre o `risk`
-Resposta inclui:
-```json
-{
-  "risk": {
-    "score": 20,
-    "label": "LOW",
-    "reasons": ["..."],
-    "badges": [
-      { "id": "low-risk", "color": "green", "text": "Baixo risco" }
-    ]
-  }
-}
-```
-
-Regras v2 atualmente consideram:
-- `network`: `devnet` (+risco), `mainnet` (âˆ’risco), ausente/desconhecida (+risco)
-- `mint`: validaÃ§Ã£o base58/length e casos conhecidos (ex.: Wrapped SOL)
-
-## ðŸ”’ CORS / Cache
-- `Access-Control-Allow-Origin: *`
-- PrÃ©-flight `OPTIONS` com `204`
-- `Cache-Control: no-store`
-
----
-MIT Â© Bags Shield
-
+nginx
+Copiar código
+Cole a URL do seu upstream quando solicitado.
