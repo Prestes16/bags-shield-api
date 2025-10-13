@@ -1,137 +1,105 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
+// api/simulate.ts
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-type Network = 'devnet' | 'mainnet';
+type Issue = { path: string; message: string };
+type ErrorBody = { code: string; message: string; issues?: Issue[] };
+type Ok<T> = { success: true; response: T };
+type Err = { success: false; error: ErrorBody };
 
-type SimulatePayload = {
-  mint?: string;
-  network?: Network;
-  scenario?: string; // e.g., "apply_flag", "unflag", "limit_trading", "freeze"
-  params?: Record<string, unknown>;
-};
-
-type Json = Record<string, unknown>;
-
-function setCommonHeaders(res: ServerResponse) {
+function noStore(res: VercelResponse) {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
 }
 
-function sendJson(res: ServerResponse, status: number, body: Json) {
-  setCommonHeaders(res);
-  res.statusCode = status;
-  res.end(JSON.stringify(body));
+function send<T>(res: VercelResponse, status: number, body: Ok<T> | Err) {
+  noStore(res);
+  res.status(status).json(body as any);
 }
 
-function allow(res: ServerResponse, methods: string) {
-  res.setHeader('Allow', methods);
-}
-
-async function readJson<T = unknown>(req: IncomingMessage): Promise<T | null> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  if (!chunks.length) return null;
-  const raw = Buffer.concat(chunks).toString('utf8').trim();
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function badRequest(res: ServerResponse, message: string) {
-  return sendJson(res, 400, {
-    ok: false,
-    error: { code: 'BAD_REQUEST', message },
-    meta: { service: 'bags-shield-api', version: '1.0.0', time: new Date().toISOString() },
+function methodNotAllowed(res: VercelResponse, allow: string[] = ['POST', 'OPTIONS']) {
+  res.setHeader('Allow', allow.join(', '));
+  send(res, 405, {
+    success: false,
+    error: { code: 'METHOD_NOT_ALLOWED', message: `Use ${allow.join(' | ')}` },
   });
 }
 
-function unauthorized(res: ServerResponse, message = 'Missing or invalid Authorization header') {
-  return sendJson(res, 401, {
-    ok: false,
-    error: { code: 'UNAUTHORIZED', message },
-    meta: { service: 'bags-shield-api', version: '1.0.0', time: new Date().toISOString() },
-  });
+function badRequest(res: VercelResponse, error: ErrorBody) {
+  send(res, 400, { success: false, error });
 }
 
-function simulateScenario(scenario: string, params: Record<string, unknown> = {}) {
-  // Regras de exemplo coerentes com DOCUMENTOS BAGS (placeholder de simulação local)
-  // Retorna um "expectedOutcome" e um "scoreDelta" para orientar a decisão.
-  const s = scenario.toLowerCase();
-
-  if (s === 'apply_flag') {
-    const severity = String(params.severity ?? 'medium').toLowerCase(); // low | medium | high
-    if (severity === 'low')   return { expectedOutcome: 'warning',             scoreDelta: -5 };
-    if (severity === 'high')  return { expectedOutcome: 'trading_restricted',  scoreDelta: -22 };
-    return                        { expectedOutcome: 'restricted',            scoreDelta: -12 }; // medium (default)
-  }
-
-  if (s === 'unflag') {
-    return { expectedOutcome: 'normal', scoreDelta: +15 };
-  }
-
-  if (s === 'limit_trading') {
-    const limit = Number(params.limit ?? 0.5); // 0..1
-    const delta = Math.max(-20, Math.min(-5, Math.round(-10 * limit * 2))); // aprox.
-    return { expectedOutcome: 'limited', scoreDelta: delta };
-  }
-
-  if (s === 'freeze') {
-    return { expectedOutcome: 'frozen', scoreDelta: -30 };
-  }
-
-  // Cenário desconhecido → neutro, mas informado
-  return { expectedOutcome: 'unknown_scenario', scoreDelta: 0 };
+function ok<T>(res: VercelResponse, response: T) {
+  send(res, 200, { success: true, response });
 }
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  const method = (req.method || 'POST').toUpperCase();
-
-  if (method === 'OPTIONS') {
-    setCommonHeaders(res);
-    res.statusCode = 204;
-    return res.end();
+// Parse seguro que não lança exceção; retorna { ok, value?, issues? }
+function safeParseJson(input: unknown): { ok: true; value: any } | { ok: false; issues: Issue[] } {
+  // Se já veio objeto (Next/Vercel muitas vezes já parseiam):
+  if (input && typeof input === 'object' && !Buffer.isBuffer(input)) {
+    return { ok: true, value: input };
   }
 
-  if (method !== 'POST') {
-    allow(res, 'POST, OPTIONS');
-    return sendJson(res, 405, {
-      ok: false,
-      error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST' },
-      meta: { service: 'bags-shield-api', version: '1.0.0', time: new Date().toISOString() },
+  // Buffer -> string
+  if (Buffer.isBuffer(input)) {
+    const raw = input.toString('utf8');
+    try {
+      return { ok: true, value: raw.length ? JSON.parse(raw) : {} };
+    } catch (e: any) {
+      return {
+        ok: false,
+        issues: [{ path: '$', message: `Invalid JSON: ${e?.message ?? 'parse error'}` }],
+      };
+    }
+  }
+
+  // string ou vazio
+  if (typeof input === 'string') {
+    const raw = input.trim();
+    if (raw.length === 0) return { ok: true, value: {} };
+    try {
+      return { ok: true, value: JSON.parse(raw) };
+    } catch (e: any) {
+      return {
+        ok: false,
+        issues: [{ path: '$', message: `Invalid JSON: ${e?.message ?? 'parse error'}` }],
+      };
+    }
+  }
+
+  // Sem corpo => objeto vazio
+  return { ok: true, value: {} };
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Pré-flight simples (CORS detalhado entra no próximo passo)
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    methodNotAllowed(res);
+    return;
+  }
+
+  // Parse tolerante
+  const parsed = safeParseJson(req.body);
+
+  if (!parsed.ok) {
+    badRequest(res, {
+      code: 'BAD_JSON',
+      message: 'Corpo da requisição não é um JSON válido.',
+      issues: parsed.issues,
     });
+    return;
   }
 
-  // Auth mínima
-  const auth = (req.headers['authorization'] || '').toString();
-  if (!auth.startsWith('Bearer ') || auth.trim().length <= 'Bearer '.length) {
-    return unauthorized(res);
-  }
+  const payload = parsed.value ?? {};
 
-  const body = await readJson<SimulatePayload>(req);
-  if (!body) return badRequest(res, 'JSON body obrigatório');
-
-  const mint = (body.mint || '').trim();
-  const scenario = (body.scenario || '').trim();
-  const network = (body.network || process.env.BAGS_ENV || 'devnet') as Network;
-  const params = (body.params && typeof body.params === 'object') ? body.params : {};
-
-  if (!mint) return badRequest(res, "Campo 'mint' é obrigatório");
-  if (!scenario) return badRequest(res, "Campo 'scenario' é obrigatório");
-  if (!['devnet', 'mainnet'].includes(network)) return badRequest(res, "Campo 'network' deve ser 'devnet' ou 'mainnet'");
-
-  const result = simulateScenario(scenario, params);
-
-  return sendJson(res, 200, {
-    ok: true,
-    data: {
-      mint,
-      network,
-      scenario,
-      params,
-      ...result,
-    },
-    meta: { service: 'bags-shield-api', version: '1.0.0', time: new Date().toISOString() },
+  // Aqui manteremos um "eco" mínimo para não quebrar callers existentes.
+  // A lógica real de simulação entra nas próximas etapas do plano.
+  ok(res, {
+    note: 'simulate-ok',
+    received: payload,
   });
 }
