@@ -2,7 +2,7 @@
     "name":  "bags-shield-api",
     "version":  "1.2.1",
     "private":  true,
-    "description":  "Bags Shield Ã¢â‚¬â€ Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
+    "description":  "Bags Shield ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
     "license":  "MIT",
     "type":  "module",
     "engines":  {
@@ -11,6 +11,7 @@
     "scripts":  {
                     "deploy":  "vercel --prod --yes",
                     "dev:vercel":  "cross-env NODE_OPTIONS=--no-deprecation vercel dev",
+                    "dev:bags":  "set \"BAGS_API_BASE=http://localhost:3000/api/mock\" \u0026\u0026 set \"NODE_OPTIONS=--no-deprecation\" \u0026\u0026 npx -y vercel@latest dev",
                     "test":  "echo \"No tests yet\" \u0026\u0026 exit 0",
                     "type-check":  "tsc --noEmit",
                     "deploy:preview":  "vercel --yes",

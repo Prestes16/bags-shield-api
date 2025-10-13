@@ -2,6 +2,9 @@
   "version": 2,
   "routes": [
     { "src": "/api/token/([^/]+)/creators",       "dest": "/api/token/creators?mint=$1" },
-    { "src": "/api/token/([^/]+)/lifetime-fees",  "dest": "/api/token/lifetime-fees?mint=$1" }
+    { "src": "/api/token/([^/]+)/lifetime-fees",  "dest": "/api/token/lifetime-fees?mint=$1" },
+
+    { "src": "/api/mock/token/([^/]+)/creators",      "dest": "/api/mock/creators?mint=$1" },
+    { "src": "/api/mock/token/([^/]+)/lifetime-fees", "dest": "/api/mock/lifetime-fees?mint=$1" }
   ]
 }
