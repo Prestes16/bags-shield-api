@@ -1,29 +1,29 @@
-{
-    "name": "bags-shield-api",
-    "version": "1.2.1",
-    "private": true,
-    "description": "Bags Shield â€” Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
-    "license": "MIT",
-    "type": "module",
-    "engines": {
-        "node": ">=20.0.0"
-    },
-    "scripts": {
-        "deploy": "vercel --prod --yes",
-        "deploy:preview": "vercel --yes",
-        "type-check": "tsc --noEmit",
-        "test": "echo \"No tests yet\" && exit 0",
-        "dev:vercel": "cross-env NODE_OPTIONS=--no-deprecation vercel dev",
-        "dev:trace": "cross-env NODE_OPTIONS=--trace-deprecation vercel dev"
-    },
-    "devDependencies": {
-        "@types/node": "^20.19.20",
-        "@vercel/node": "^5.3.26",
-        "cross-env": "^10.1.0",
-        "typescript": "^5.9.3",
-        "vercel": "^48.2.9"
-    },
-    "dependencies": {
-        "zod": "^3.25.76"
-    }
+﻿{
+    "name":  "bags-shield-api",
+    "version":  "1.2.1",
+    "private":  true,
+    "description":  "Bags Shield Ã¢â‚¬â€ Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
+    "license":  "MIT",
+    "type":  "module",
+    "engines":  {
+                    "node":  "\u003e=20.0.0"
+                },
+    "scripts":  {
+                    "deploy":  "vercel --prod --yes",
+                    "deploy:preview":  "vercel --yes",
+                    "type-check":  "tsc --noEmit",
+                    "test":  "echo \"No tests yet\" \u0026\u0026 exit 0",
+                    "dev:vercel":  "cross-env NODE_OPTIONS=--no-deprecation vercel dev",
+                    "dev:trace":  "cross-env NODE_OPTIONS=--trace-deprecation vercel dev"
+                },
+    "devDependencies":  {
+                            "@types/node":  "^20.19.20",
+                            "@vercel/node":  "^5.3.26",
+                            "cross-env":  "^10.1.0",
+                            "typescript":  "^5.9.3",
+                            "vercel":  "^48.2.9"
+                        },
+    "dependencies":  {
+                         "zod":  "^3.25.76"
+                     }
 }
