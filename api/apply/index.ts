@@ -1,5 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
+import { applyCors, preflight } from "../../lib/cors.js";
 
 type Issue = { path: string; message: string };
 type BadRequest = { ok: false; code: "BAD_REQUEST"; issues: Issue[] };
@@ -33,6 +34,10 @@ function zodToIssues(err: z.ZodError): Issue[] {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   (res as any).setHeader?.("x-bags-wrapper","apply-zod");
+  // CORS + preflight
+  const ended = preflight(req, res);
+  if (ended) return ended as any;
+  applyCors(req, res);
 
   // Authorization tolerante
   const auth = req.headers?.authorization;
@@ -51,7 +56,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ ok: false, code: "BAD_REQUEST", issues: zodToIssues(parsed.error) } as BadRequest);
     }
 
-    // caminho feliz (stub)
     return res.status(200).json({
       ok: true,
       probe: "apply-zod-ok",

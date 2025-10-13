@@ -4,7 +4,10 @@ export type Issue = { path: string; message: string };
 export type BadRequest = { ok: false; code: "BAD_REQUEST"; issues: Issue[] };
 
 export function zodToIssues(err: ZodError): Issue[] {
-  return err.errors.map(e => ({ path: e.path.join(".") || "<root>", message: e.message }));
+  return err.issues.map(e => ({
+    path: (Array.isArray(e.path) ? e.path.join(".") : "") || "<root>",
+    message: e.message,
+  }));
 }
 
 export function parseOrBadRequest<T>(schema: z.ZodType<T>, data: unknown):
