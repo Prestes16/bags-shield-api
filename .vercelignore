@@ -1,0 +1,6 @@
+﻿# Excluir rotas de mock e tralha de dev
+api/mock/**
+logs/**
+scripts/**
+# Aliases que duplicam funções
+api/token/creators.ts
