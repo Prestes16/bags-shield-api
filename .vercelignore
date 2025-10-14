@@ -1,6 +1,19 @@
-﻿# Excluir rotas de mock e tralha de dev
+﻿# === Only-what-we-need on Hobby plan ===
+
+# Ignora tudo dentro de /api
+api/**
+
+# Allow-list das rotas essenciais (mantidas no deploy)
+!api/health.ts
+!api/scan.ts
+!api/simulate.ts
+!api/apply.ts
+!api/token/[mint]/creators.ts
+!api/token/[mint]/lifetime-fees.ts
+
+# Extras redundantes/dev (já cobertos pelo api/**, mas deixo explícito)
 api/mock/**
+api/token/creators.ts
+api/token/lifetime-fees.ts
 logs/**
 scripts/**
-# Aliases que duplicam funções
-api/token/creators.ts
