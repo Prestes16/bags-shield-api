@@ -1,4 +1,4 @@
-﻿import { setCors, preflight, guardMethod, noStore } from "../lib/cors";
+﻿import { setCors, preflight, guardMethod, noStore } from "../lib/cors.js";
 
 // Helpers
 const json = (res: any, status: number, body: unknown) => {
@@ -173,3 +173,4 @@ export default async function handler(req: any, res: any) {
     });
   }
 }
+
