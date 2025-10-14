@@ -1,10 +1,1 @@
-{
-  "version": 2,
-  "builds": [
-    { "src": "api/router.ts", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "^/api/router(?:\\.ts)?$", "dest": "/api/router.ts" },
-    { "src": "^/api/(.*)$", "dest": "/api/router.ts?path=/api/$1" }
-  ]
-}
+﻿{"version":2}
