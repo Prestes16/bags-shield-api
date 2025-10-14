@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.ts": { "runtime": "nodejs18.x" }
-  },
-  "rewrites": [
-    { "source": "/api/health", "destination": "/api/router?path=/api/health" },
-    { "source": "/api/token/:mint/creators", "destination": "/api/router?path=/api/token/:mint/creators&mint=:mint" },
-    { "source": "/api/token/:mint/lifetime-fees", "destination": "/api/router?path=/api/token/:mint/lifetime-fees&mint=:mint" }
+  "builds": [
+    { "src": "api/**/*.ts", "use": "@vercel/node@2.15.10" }
+  ],
+  "routes": [
+    { "src": "/api/health", "dest": "/api/router?path=/api/health" },
+    { "src": "/api/token/(?<mint>[^/]+)/creators", "dest": "/api/router?path=/api/token/%<mint>s/creators&mint=%<mint>s" },
+    { "src": "/api/token/(?<mint>[^/]+)/lifetime-fees", "dest": "/api/router?path=/api/token/%<mint>s/lifetime-fees&mint=%<mint>s" }
   ]
 }
