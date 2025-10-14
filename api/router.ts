@@ -76,7 +76,6 @@ async function upstreamCreators(mint: string) {
   const r = await fetchWithTimeout(url, { headers: stdHeaders() });
   if (!r.ok) return [];
   const data = await r.json().catch(() => ({}));
-  // Aceita {success,response} ou lista direta
   return (data?.response ?? data ?? []) as string[];
 }
 
@@ -87,7 +86,6 @@ async function upstreamLifetimeFees(mint: string): Promise<FeesOut> {
   const r = await fetchWithTimeout(url, { headers: stdHeaders() });
   if (!r.ok) return { lamports: 0, sol: 0 };
   const data = await r.json().catch(() => ({}));
-  // Aceita {lamports, sol} | {response:number} | number
   const raw =
     typeof data === "number"
       ? data
@@ -101,15 +99,18 @@ async function upstreamLifetimeFees(mint: string): Promise<FeesOut> {
 
 // === Handler principal ===
 export default async function handler(req: any, res: any) {
-  // Preflight
   if (req.method === "OPTIONS") return preflight(res);
-
-  // CORS + no-store por padrão
   setCors(res);
 
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const { pathname } = url;
+
+    // Suporte a rewrites: se vier ?path=/api/..., usamos esse caminho
+    let pathname = url.pathname;
+    const rewritePath = url.searchParams.get("path");
+    if (rewritePath) {
+      try { pathname = decodeURIComponent(rewritePath); } catch { pathname = rewritePath; }
+    }
 
     // /api/health  (GET)
     if (pathname === "/api/health") {
@@ -128,7 +129,7 @@ export default async function handler(req: any, res: any) {
     if (pathname.startsWith("/api/token/") && pathname.endsWith("/creators")) {
       guardMethod(req, res, ["GET"]);
       const parts = pathname.split("/").filter(Boolean); // ['api','token',':mint','creators']
-      const mint = decodeURIComponent(parts[2] ?? "");
+      const mint = decodeURIComponent(parts[2] ?? url.searchParams.get("mint") ?? "");
       if (!isMintLike(mint)) {
         return json(res, 400, { success: false, error: "Invalid mint (expected base58 32–44 chars)" });
       }
@@ -140,7 +141,7 @@ export default async function handler(req: any, res: any) {
     if (pathname.startsWith("/api/token/") && pathname.endsWith("/lifetime-fees")) {
       guardMethod(req, res, ["GET"]);
       const parts = pathname.split("/").filter(Boolean); // ['api','token',':mint','lifetime-fees']
-      const mint = decodeURIComponent(parts[2] ?? "");
+      const mint = decodeURIComponent(parts[2] ?? url.searchParams.get("mint") ?? "");
       if (!isMintLike(mint)) {
         return json(res, 400, { success: false, error: "Invalid mint (expected base58 32–44 chars)" });
       }
@@ -148,7 +149,7 @@ export default async function handler(req: any, res: any) {
       return json(res, 200, { success: true, response: fees });
     }
 
-    // (Reservado) /api/scan | /api/simulate | /api/apply
+    // (Reservado) POSTs antigos
     if (pathname === "/api/scan" || pathname === "/api/simulate" || pathname === "/api/apply") {
       return json(res, 501, {
         success: false,
@@ -156,7 +157,6 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 404 padrão
     return json(res, 404, { success: false, error: "Not Found" });
   } catch (err: any) {
     if (err instanceof JsonParseError) {
@@ -166,7 +166,6 @@ export default async function handler(req: any, res: any) {
         issues: [{ code: "invalid_json", message: "Body is not valid JSON", raw: err.raw.slice(0, 256) }],
       });
     }
-    // Fallback 500
     return json(res, 500, {
       success: false,
       error: "Internal Error",

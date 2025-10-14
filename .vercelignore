@@ -1,9 +1,8 @@
 ﻿# === Only-what-we-need on Hobby plan ===
-
-# Ignora tudo dentro de /api
 api/**
 
 # Allow-list das rotas essenciais (mantidas no deploy)
+!api/router.ts
 !api/health.ts
 !api/scan.ts
 !api/simulate.ts
@@ -11,7 +10,7 @@ api/**
 !api/token/[mint]/creators.ts
 !api/token/[mint]/lifetime-fees.ts
 
-# Extras redundantes/dev (já cobertos pelo api/**, mas deixo explícito)
+# Extras redundantes/dev (já cobertos por api/**; explicitamos)
 api/mock/**
 api/token/creators.ts
 api/token/lifetime-fees.ts
