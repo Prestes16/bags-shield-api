@@ -1,18 +1,43 @@
-﻿{
-  "version": 2,
-  "builds": [
-    { "src": "api/**/*.ts", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/api/router", "dest": "/api/router.ts" },
-    { "src": "/api/router/(.*)", "dest": "/api/router.ts" },
-
-    { "src": "/api/health", "dest": "/api/router.ts?path=/api/health" },
-    { "src": "/api/token/([^/]+)/creators", "dest": "/api/router.ts?path=/api/token/$1/creators&mint=$1" },
-    { "src": "/api/token/([^/]+)/lifetime-fees", "dest": "/api/router.ts?path=/api/token/$1/lifetime-fees&mint=$1" },
-
-    { "src": "/api/scan", "dest": "/api/router.ts?path=/api/scan" },
-    { "src": "/api/simulate", "dest": "/api/router.ts?path=/api/simulate" },
-    { "src": "/api/apply", "dest": "/api/router.ts?path=/api/apply" }
-  ]
+{
+    "version":  2,
+    "builds":  [
+                   {
+                       "src":  "api/**/*.ts",
+                       "use":  "@vercel/node"
+                   }
+               ],
+    "routes":  [
+                   {
+                       "src":  "/api/router",
+                       "dest":  "/api/router.ts"
+                   },
+                   {
+                       "src":  "/api/router/(.*)",
+                       "dest":  "/api/router.ts"
+                   },
+                   {
+                       "src":  "/api/health",
+                       "dest":  "/api/router.ts?path=/api/health"
+                   },
+                   {
+                       "src":  "/api/token/([^/]+)/creators",
+                       "dest":  "/api/router.ts?path=/api/token//creators\u0026mint="
+                   },
+                   {
+                       "src":  "/api/token/([^/]+)/lifetime-fees",
+                       "dest":  "/api/router.ts?path=/api/token//lifetime-fees\u0026mint="
+                   },
+                   {
+                       "src":  "/api/scan",
+                       "dest":  "/api/router.ts?path=/api/scan"
+                   },
+                   {
+                       "src":  "/api/simulate",
+                       "dest":  "/api/router.ts?path=/api/simulate"
+                   },
+                   {
+                       "src":  "/api/apply",
+                       "dest":  "/api/router.ts?path=/api/apply"
+                   }
+               ]
 }
