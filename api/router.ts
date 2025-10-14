@@ -1,6 +1,7 @@
 ﻿/**
- * Bags Shield — Router unificado (versão self-contained)
- * Remove imports externos para evitar falhas ESM no runtime.
+ * Bags Shield — Router unificado (self-contained)
+ * Agora com delegação p/ /api/scan, /api/simulate e /api/apply.
+ * Mantém CORS inline p/ evitar problemas ESM.
  */
 
 type Res = any; type Req = any;
@@ -47,7 +48,7 @@ const text = (res: Res, status: number, body: string) => {
   res.end(body);
 };
 
-// --- JSON body reader ---
+// --- JSON body reader (mantido p/ futuros POSTs diretos no router) ---
 class JsonParseError extends Error { raw: string; constructor(raw: string) { super("Invalid JSON"); this.raw = raw; } }
 async function readJson(req: Req) {
   const chunks: Buffer[] = [];
@@ -98,6 +99,21 @@ async function upstreamLifetimeFees(mint: string): Promise<FeesOut> {
   return { lamports, sol: lamports / 1_000_000_000 };
 }
 
+// --- Delegation helpers ---
+async function delegateTo(filename: string, req: Req, res: Res) {
+  try {
+    // Import dinâmico dos handlers legados (compilados p/ .js)
+    const mod: any = await import(`./${filename}.js`);
+    const fn = mod?.default || mod;
+    if (typeof fn !== "function") {
+      return json(res, 500, { success: false, error: `Handler inválido em ${filename}.js` });
+    }
+    return await fn(req, res);
+  } catch (e: any) {
+    return json(res, 500, { success: false, error: `Falha ao carregar ${filename}.js`, detail: e?.message || String(e) });
+  }
+}
+
 // --- Handler principal ---
 export default async function handler(req: Req, res: Res) {
   if (req.method === "OPTIONS") return preflight(res);
@@ -109,13 +125,13 @@ export default async function handler(req: Req, res: Res) {
     const rewritePath = url.searchParams.get("path");
     if (rewritePath) { try { pathname = decodeURIComponent(rewritePath); } catch { pathname = rewritePath; } }
 
-    // /api/health
+    // GET /api/health
     if (pathname === "/api/health") {
       if (!guardMethod(req, res, ["GET"])) return;
       return json(res, 200, { success: true, response: { status: "ok", ts: new Date().toISOString(), env: process.env.BAGS_ENV ?? "unknown" } });
     }
 
-    // /api/token/:mint/creators
+    // GET /api/token/:mint/creators
     if (pathname.startsWith("/api/token/") && pathname.endsWith("/creators")) {
       if (!guardMethod(req, res, ["GET"])) return;
       const parts = pathname.split("/").filter(Boolean);
@@ -125,7 +141,7 @@ export default async function handler(req: Req, res: Res) {
       return json(res, 200, { success: true, response: creators });
     }
 
-    // /api/token/:mint/lifetime-fees
+    // GET /api/token/:mint/lifetime-fees
     if (pathname.startsWith("/api/token/") && pathname.endsWith("/lifetime-fees")) {
       if (!guardMethod(req, res, ["GET"])) return;
       const parts = pathname.split("/").filter(Boolean);
@@ -135,9 +151,22 @@ export default async function handler(req: Req, res: Res) {
       return json(res, 200, { success: true, response: fees });
     }
 
-    // placeholders
-    if (pathname === "/api/scan" || pathname === "/api/simulate" || pathname === "/api/apply") {
-      return json(res, 501, { success: false, error: "Router: endpoint ainda não migrado. Use as rotas atuais diretamente." });
+    // POST /api/scan
+    if (pathname === "/api/scan") {
+      if (!guardMethod(req, res, ["POST"])) return;
+      return await delegateTo("scan", req, res);
+    }
+
+    // POST /api/simulate
+    if (pathname === "/api/simulate") {
+      if (!guardMethod(req, res, ["POST"])) return;
+      return await delegateTo("simulate", req, res);
+    }
+
+    // POST /api/apply
+    if (pathname === "/api/apply") {
+      if (!guardMethod(req, res, ["POST"])) return;
+      return await delegateTo("apply", req, res);
     }
 
     return json(res, 404, { success: false, error: "Not Found" });
