@@ -6,7 +6,7 @@
     "license":  "MIT",
     "type":  "module",
     "engines":  {
-                    "node":  "18.x"
+                    "node":  "22.x"
                 },
     "scripts":  {
                     "dev:real":  "set \"BAGS_API_BASE=https://YOUR-UPSTREAM.example/api\" \u0026\u0026 set \"NODE_OPTIONS=--no-deprecation\" \u0026\u0026 npx -y vercel@latest dev",

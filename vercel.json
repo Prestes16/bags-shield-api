@@ -1,11 +1,11 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/**/*.ts", "use": "@vercel/node@2.15.10" }
+    { "src": "api/**/*.ts", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/health", "dest": "/api/router?path=/api/health" },
-    { "src": "/api/token/(?<mint>[^/]+)/creators", "dest": "/api/router?path=/api/token/%<mint>s/creators&mint=%<mint>s" },
-    { "src": "/api/token/(?<mint>[^/]+)/lifetime-fees", "dest": "/api/router?path=/api/token/%<mint>s/lifetime-fees&mint=%<mint>s" }
+    { "src": "/api/token/([^/]+)/creators", "dest": "/api/router?path=/api/token/$1/creators&mint=$1" },
+    { "src": "/api/token/([^/]+)/lifetime-fees", "dest": "/api/router?path=/api/token/$1/lifetime-fees&mint=$1" }
   ]
 }
