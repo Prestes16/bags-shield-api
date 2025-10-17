@@ -3,7 +3,7 @@
 /* scan: monolithic + env-auth */
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "authorization,content-type,x-requested-with");
   res.setHeader("Access-Control-Max-Age", "86400");
 }
@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = (req.method || "GET").toUpperCase();
   if (method === "OPTIONS") return preflight(req, res);
   setCors(res);
-  if (method !== "GET" && method !== "HEAD") { res.setHeader("Allow", "GET, OPTIONS"); return res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET | OPTIONS" } }); }
+  if (method !== "GET" && method !== "HEAD") { res.setHeader("Allow", "GET, HEAD, OPTIONS"); return res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET | OPTIONS" } }); }
 
   const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
   const IS_PROD = (process.env.VERCEL_ENV === "production");
