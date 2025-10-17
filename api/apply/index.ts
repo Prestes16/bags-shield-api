@@ -1,6 +1,7 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { z } from "zod";
 
-/* monolith apply: CORS + no-store + try/catch + readBody + idem-cache */
+/* monolith apply: CORS + no-store + try/catch + readBody + idem-cache + Zod */
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 type ApplyData = {
@@ -15,10 +16,22 @@ type ApplyData = {
   effects: { state: string; severity: string };
 };
 
-// cache global por processo (v0): reseta em cold start; suficiente p/ demo
+// cache global por processo (v0)
 const G: any = globalThis as any;
 if (!G.__bags_idem) G.__bags_idem = new Map<string, { ts: number; data: ApplyData }>();
 const idemStore: Map<string, { ts: number; data: ApplyData }> = G.__bags_idem;
+
+// === Zod Schema ===
+// Mantém contrato atual; você pode afinar os enums depois (ex.: action flag|unflag|update)
+const ApplySchema = z.object({
+  mint: z.string().min(1, "mint obrigatório"),
+  network: z.enum(["devnet","testnet","mainnet"]).default("devnet"),
+  action: z.string().min(1, "action obrigatório"),
+  reason: z.string().optional(),
+  idempotencyKey: z.string().uuid("idempotencyKey deve ser UUID").optional(),
+  // aceita qualquer shape em params
+  params: z.record(z.any()).optional()
+});
 
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -28,9 +41,13 @@ function setCors(res: VercelResponse) {
 }
 function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res); res.status(204).end(); }
 function noStore(res: VercelResponse) { res.setHeader("Cache-Control","no-store"); }
-function badRequest(res: VercelResponse, message: string) {
+function badRequest(res: VercelResponse, message: string, details?: any[]) {
   setCors(res); noStore(res);
-  res.status(400).json({ ok:false, error:{ code:"BAD_REQUEST", message }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
+  res.status(400).json({
+    ok:false,
+    error:{ code:"BAD_REQUEST", message, details },
+    meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }
+  });
 }
 function unauthorized(res: VercelResponse, msg="Missing or invalid Authorization: Bearer <token>") {
   setCors(res); noStore(res);
@@ -44,7 +61,7 @@ function methodNotAllowed(res: VercelResponse, allow: string[]) {
 
 function sweepIdem() {
   const now = Date.now();
-  if (idemStore.size > 256) { // limpeza simples quando crescer
+  if (idemStore.size > 256) {
     for (const [k, v] of idemStore) {
       if (now - v.ts > CACHE_TTL_MS) idemStore.delete(k);
     }
@@ -110,10 +127,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const body = await readBody(req as any);
     if (!body) return badRequest(res, "JSON body obrigatório");
 
-    const { mint, network, action, reason, idempotencyKey, ...params } = body as any;
-    if (!mint || !network || !action) return badRequest(res, "Campos obrigatórios: mint, network, action");
+    // === valida com Zod ===
+    const parsed = ApplySchema.safeParse(body);
+    if (!parsed.success) {
+      const details = parsed.error.issues.map(i => ({
+        path: i.path.join("."),
+        message: i.message,
+        code: i.code
+      }));
+      return badRequest(res, "Payload inválido", details);
+    }
+    const { mint, network, action, reason, idempotencyKey, params } = parsed.data;
 
-    // idempotência v0: se já vimos essa key no TTL, retorna memoizado
+    // idempotência v0
     const cached = getIdem(idempotencyKey);
     if (cached) {
       noStore(res);
@@ -126,18 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const id = "act_" + Math.random().toString(36).slice(2, 16);
     const effects = { state: action === "flag" ? "flagged" : "updated", severity: action === "flag" ? "medium" : "low" };
-
-    const data: ApplyData = {
-      id,
-      idempotencyKey,
-      mint,
-      network,
-      action,
-      reason,
-      params: params ?? {},
-      result: "applied",
-      effects
-    };
+    const data: ApplyData = { id, idempotencyKey, mint, network, action, reason, params: params ?? {}, result: "applied", effects };
 
     putIdem(idempotencyKey, data);
 

@@ -1,33 +1,33 @@
 {
-    "name":  "bags-shield-api",
-    "version":  "1.2.1",
-    "private":  true,
-    "description":  "Bags Shield ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
-    "license":  "MIT",
-    "type":  "module",
-    "engines":  {
-                    "node":  "22.x"
-                },
-    "scripts":  {
-                    "dev:real":  "set \"BAGS_API_BASE=https://YOUR-UPSTREAM.example/api\" \u0026\u0026 set \"NODE_OPTIONS=--no-deprecation\" \u0026\u0026 npx -y vercel@latest dev",
-                    "deploy":  "vercel --prod --yes",
-                    "dev:vercel":  "cross-env NODE_OPTIONS=--no-deprecation vercel dev",
-                    "dev:bags":  "set \"BAGS_API_BASE=http://localhost:3000/api/mock\" \u0026\u0026 set \"NODE_OPTIONS=--no-deprecation\" \u0026\u0026 npx -y vercel@latest dev",
-                    "test":  "echo \"No tests yet\" \u0026\u0026 exit 0",
-                    "dev:stub":  "set \"BAGS_API_BASE=\" \u0026\u0026 set \"NODE_OPTIONS=--no-deprecation\" \u0026\u0026 npx -y vercel@latest dev",
-                    "type-check":  "tsc --noEmit",
-                    "deploy:preview":  "vercel --yes",
-                    "dev:trace":  "cross-env NODE_OPTIONS=--trace-deprecation vercel dev",
-                    "dev":  "set \"NODE_OPTIONS=--no-deprecation\" \u0026\u0026 npx -y vercel@latest dev"
-                },
-    "devDependencies":  {
-                            "@types/node":  "^20.19.20",
-                            "@vercel/node":  "^5.3.26",
-                            "cross-env":  "^10.1.0",
-                            "typescript":  "^5.9.3",
-                            "vercel":  "^48.2.9"
-                        },
-    "dependencies":  {
-                         "zod":  "^3.25.76"
-                     }
+  "name": "bags-shield-api",
+  "version": "1.2.1",
+  "private": true,
+  "description": "Bags Shield ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Fase 4: API serverless (Vercel Functions, Node 20). Rotas: /api/health, /api/scan, /api/simulate, /api/apply.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
+  "scripts": {
+    "dev:real": "set \"BAGS_API_BASE=https://YOUR-UPSTREAM.example/api\" && set \"NODE_OPTIONS=--no-deprecation\" && npx -y vercel@latest dev",
+    "deploy": "vercel --prod --yes",
+    "dev:vercel": "cross-env NODE_OPTIONS=--no-deprecation vercel dev",
+    "dev:bags": "set \"BAGS_API_BASE=http://localhost:3000/api/mock\" && set \"NODE_OPTIONS=--no-deprecation\" && npx -y vercel@latest dev",
+    "test": "echo \"No tests yet\" && exit 0",
+    "dev:stub": "set \"BAGS_API_BASE=\" && set \"NODE_OPTIONS=--no-deprecation\" && npx -y vercel@latest dev",
+    "type-check": "tsc --noEmit",
+    "deploy:preview": "vercel --yes",
+    "dev:trace": "cross-env NODE_OPTIONS=--trace-deprecation vercel dev",
+    "dev": "set \"NODE_OPTIONS=--no-deprecation\" && npx -y vercel@latest dev"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.20",
+    "@vercel/node": "^5.3.26",
+    "cross-env": "^10.1.0",
+    "typescript": "^5.9.3",
+    "vercel": "^48.2.9"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
 }
