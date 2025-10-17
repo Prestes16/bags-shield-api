@@ -1,6 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-/* monolith scan + env-auth */
+/* scan: monolithic + env-auth */
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
   const IS_PROD = (process.env.VERCEL_ENV === "production");
-  const EXPECTED = process.env.BAGS_BEARER || (IS_PROD ? undefined : "dev-123");
+  const EXPECTED = process.env.BAGS_BEARER || (!IS_PROD ? "dev-123" : undefined);
   const token = (auth && auth.toLowerCase().startsWith("bearer ")) ? auth.slice(7).trim() : "";
   if (!EXPECTED || token !== EXPECTED) return unauthorized(res);
 
