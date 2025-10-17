@@ -7,18 +7,34 @@ function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "authorization,content-type,x-requested-with");
   res.setHeader("Access-Control-Max-Age", "86400");
 }
-function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res); res.status(204).end(); }
+function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res);
+    const _rid = newRequestId(res);
+    res.status(204).end(); }
 function noStore(res: VercelResponse) { res.setHeader("Cache-Control","no-store"); }
+
+function newRequestId(res: VercelResponse) {
+  let rid = "";
+  try { rid = (globalThis as any).crypto?.randomUUID?.() || ""; } catch {}
+  if (!rid) rid = "req_" + Math.random().toString(36).slice(2,10) + "_" + Date.now().toString(36);
+  res.setHeader("X-Request-Id", rid);
+  return rid;
+}
 function badRequest(res: VercelResponse, message: string) {
-  setCors(res); noStore(res);
+  setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
   res.status(400).json({ ok:false, error:{ code:"BAD_REQUEST", message }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
 }
 function unauthorized(res: VercelResponse, msg="Missing or invalid Authorization: Bearer <token>") {
-  setCors(res); noStore(res);
+  setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
   res.status(401).json({ success:false, error:{ code:"UNAUTHORIZED", message: msg }});
 }
 function methodNotAllowed(res: VercelResponse, allow: string[]) {
-  setCors(res); noStore(res);
+  setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
   res.setHeader("Allow", allow.join(", "));
   res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:`Use ${allow.join(" | ")}` }});
 }
@@ -56,7 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = (req.method || "POST").toUpperCase();
   if (method === "OPTIONS") return preflight(req, res);
   setCors(res);
-  if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
+    const _rid = newRequestId(res);
+    if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
 
   const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
   const IS_PROD = (process.env.VERCEL_ENV === "production");

@@ -7,15 +7,25 @@ function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "authorization,content-type,x-requested-with");
   res.setHeader("Access-Control-Max-Age", "86400");
 }
-function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res); res.status(204).end(); }
+function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res);
+    const _rid = newRequestId(res);
+    res.status(204).end(); }
 function noStore(res: VercelResponse) { res.setHeader("Cache-Control","no-store"); }
 
+
+function newRequestId(res: VercelResponse) {
+  let rid = "";
+  try { rid = (globalThis as any).crypto?.randomUUID?.() || ""; } catch {}
+  if (!rid) rid = "req_" + Math.random().toString(36).slice(2,10) + "_" + Date.now().toString(36);
+  res.setHeader("X-Request-Id", rid);
+  return rid;
+}
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = (req.method || "GET").toUpperCase();
   if (method === "OPTIONS") return preflight(req, res);
   setCors(res);
-
-  // HEAD curto-circuito (200 sem corpo)
+    const _rid = newRequestId(res);
+    // HEAD curto-circuito (200 sem corpo)
   if (method === "HEAD") { noStore(res); return res.status(200).end(); }
 
   if (method !== "GET") {

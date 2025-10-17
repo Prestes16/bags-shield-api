@@ -37,18 +37,34 @@ function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "authorization,content-type,x-requested-with");
   res.setHeader("Access-Control-Max-Age", "86400");
 }
-function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res); res.status(204).end(); }
+function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res);
+    const _rid = newRequestId(res);
+    res.status(204).end(); }
 function noStore(res: VercelResponse) { res.setHeader("Cache-Control","no-store"); }
+
+function newRequestId(res: VercelResponse) {
+  let rid = "";
+  try { rid = (globalThis as any).crypto?.randomUUID?.() || ""; } catch {}
+  if (!rid) rid = "req_" + Math.random().toString(36).slice(2,10) + "_" + Date.now().toString(36);
+  res.setHeader("X-Request-Id", rid);
+  return rid;
+}
 function badRequest(res: VercelResponse, message: string, details?: any[]) {
-  setCors(res); noStore(res);
+  setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
   res.status(400).json({ ok:false, error:{ code:"BAD_REQUEST", message, details }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
 }
 function unauthorized(res: VercelResponse, msg="Missing or invalid Authorization: Bearer <token>") {
-  setCors(res); noStore(res);
+  setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
   res.status(401).json({ ok:false, error:{ code:"UNAUTHORIZED", message: msg }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
 }
 function methodNotAllowed(res: VercelResponse, allow: string[]) {
-  setCors(res); noStore(res);
+  setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
   res.setHeader("Allow", allow.join(", "));
   res.status(405).json({ ok:false, error:{ code:"METHOD_NOT_ALLOWED", message:`Use ${allow.join(" | ")}` }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
 }
@@ -109,6 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const method = (req.method || "POST").toUpperCase();
     if (method === "OPTIONS") return preflight(req, res);
     setCors(res);
+    const _rid = newRequestId(res);
     if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
 
     // === Auth via ENV ===
@@ -145,7 +162,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     noStore(res);
     return res.status(200).json({ ok: true, data, meta: { service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString(), idempotent:false }});
   } catch (err: any) {
-    setCors(res); noStore(res);
+    setCors(res);
+    const _rid = newRequestId(res);
+    noStore(res);
     const msg = err?.message || String(err);
     const stack = (err?.stack ? String(err.stack).split("\n").slice(0,6) : []);
     return res.status(500).json({ ok:false, error:{ code:"INTERNAL", message: msg, stack }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
