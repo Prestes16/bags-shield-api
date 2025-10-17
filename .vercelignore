@@ -1,0 +1,12 @@
+﻿# Excluir pastas e arquivos que não precisam ir pro deploy
+api/mock/**
+tests/**
+__tests__/**
+scripts/**
+docs/**
+*.md
+*.ps1
+
+# Garantir que utilidades auxiliares não criem funções
+api/**/_util.ts
+api/**/_shared.ts
