@@ -18,13 +18,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = (req.method || "GET").toUpperCase();
   if (method === "OPTIONS") return preflight(req, res);
   setCors(res);
-  if (method !== "GET") { res.setHeader("Allow", "GET, OPTIONS"); return res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET | OPTIONS" } }); }
+  if (method !== "GET" && method !== "HEAD") { res.setHeader("Allow", "GET, OPTIONS"); return res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET | OPTIONS" } }); }
 
   const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
   const IS_PROD = (process.env.VERCEL_ENV === "production");
   const EXPECTED = process.env.BAGS_BEARER || (!IS_PROD ? "dev-123" : undefined);
   const token = (auth && auth.toLowerCase().startsWith("bearer ")) ? auth.slice(7).trim() : "";
   if (!EXPECTED?.trim() || token !== EXPECTED.trim()) return unauthorized(res);
+  if (method === "HEAD") { noStore(res); return res.status(200).end(); }
 
   let query: Record<string, string> = {};
   try {
