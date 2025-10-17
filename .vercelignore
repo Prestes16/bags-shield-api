@@ -9,4 +9,5 @@ docs/**
 
 # Garantir que utilidades auxiliares não criem funções
 api/**/_util.ts
-api/**/_shared.ts
+api/**/_shared.tsapi/**/_util.js
+api/_util.js

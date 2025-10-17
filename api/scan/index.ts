@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const IS_PROD = (process.env.VERCEL_ENV === "production");
   const EXPECTED = process.env.BAGS_BEARER || (!IS_PROD ? "dev-123" : undefined);
   const token = (auth && auth.toLowerCase().startsWith("bearer ")) ? auth.slice(7).trim() : "";
-  if (!EXPECTED || token !== EXPECTED) return unauthorized(res);
+  if (!EXPECTED?.trim() || token !== EXPECTED.trim()) return unauthorized(res);
 
   let query: Record<string, string> = {};
   try {
