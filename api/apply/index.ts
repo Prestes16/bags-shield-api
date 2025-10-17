@@ -31,12 +31,13 @@ const ApplySchema = z.object({
   params: z.record(z.any()).optional()
 });
 
-function setCors(res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "authorization,content-type,x-requested-with");
-  res.setHeader("Access-Control-Max-Age", "86400");
-}
+ param($m)
+        $body = $m.Groups[1].Value
+        if ($body -notmatch 'Access-Control-Expose-Headers') {
+          $body += "`r`n  res.setHeader(""Access-Control-Expose-Headers"", ""X-Request-Id"");`r`n"
+        }
+        $body + "}"
+      
 function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res);
     const _rid = newRequestId(res);
     res.status(204).end(); }
