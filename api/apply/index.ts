@@ -1,6 +1,25 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-/* monolith apply: CORS + no-store + try/catch + readBody */
+/* monolith apply: CORS + no-store + try/catch + readBody + idem-cache */
+
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+type ApplyData = {
+  id: string;
+  idempotencyKey?: string;
+  mint: string;
+  network: string;
+  action: string;
+  reason?: string;
+  params: Record<string, any>;
+  result: "applied";
+  effects: { state: string; severity: string };
+};
+
+// cache global por processo (v0): reseta em cold start; suficiente p/ demo
+const G: any = globalThis as any;
+if (!G.__bags_idem) G.__bags_idem = new Map<string, { ts: number; data: ApplyData }>();
+const idemStore: Map<string, { ts: number; data: ApplyData }> = G.__bags_idem;
+
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -22,6 +41,28 @@ function methodNotAllowed(res: VercelResponse, allow: string[]) {
   res.setHeader("Allow", allow.join(", "));
   res.status(405).json({ ok:false, error:{ code:"METHOD_NOT_ALLOWED", message:`Use ${allow.join(" | ")}` }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
 }
+
+function sweepIdem() {
+  const now = Date.now();
+  if (idemStore.size > 256) { // limpeza simples quando crescer
+    for (const [k, v] of idemStore) {
+      if (now - v.ts > CACHE_TTL_MS) idemStore.delete(k);
+    }
+  }
+}
+function getIdem(key?: string): ApplyData | null {
+  if (!key) return null;
+  const entry = idemStore.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { idemStore.delete(key); return null; }
+  return entry.data;
+}
+function putIdem(key: string | undefined, data: ApplyData) {
+  if (!key) return;
+  sweepIdem();
+  idemStore.set(key, { ts: Date.now(), data });
+}
+
 async function readBody(req: any): Promise<any|null> {
   const ct = String(req?.headers?.["content-type"] || "");
   if (req && "body" in req) {
@@ -69,28 +110,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const body = await readBody(req as any);
     if (!body) return badRequest(res, "JSON body obrigatório");
 
-    // Validação mínima preservando contrato original
     const { mint, network, action, reason, idempotencyKey, ...params } = body as any;
     if (!mint || !network || !action) return badRequest(res, "Campos obrigatórios: mint, network, action");
+
+    // idempotência v0: se já vimos essa key no TTL, retorna memoizado
+    const cached = getIdem(idempotencyKey);
+    if (cached) {
+      noStore(res);
+      return res.status(200).json({
+        ok: true,
+        data: cached,
+        meta: { service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString(), idempotent:true }
+      });
+    }
 
     const id = "act_" + Math.random().toString(36).slice(2, 16);
     const effects = { state: action === "flag" ? "flagged" : "updated", severity: action === "flag" ? "medium" : "low" };
 
+    const data: ApplyData = {
+      id,
+      idempotencyKey,
+      mint,
+      network,
+      action,
+      reason,
+      params: params ?? {},
+      result: "applied",
+      effects
+    };
+
+    putIdem(idempotencyKey, data);
+
     noStore(res);
     return res.status(200).json({
       ok: true,
-      data: {
-        id,
-        idempotencyKey,
-        mint,
-        network,
-        action,
-        reason,
-        params: params ?? {},
-        result: "applied",
-        effects
-      },
-      meta: { service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }
+      data,
+      meta: { service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString(), idempotent:false }
     });
   } catch (err: any) {
     setCors(res); noStore(res);
