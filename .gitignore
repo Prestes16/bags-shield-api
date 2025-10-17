@@ -1,38 +1,19 @@
-# Node / package managers
+﻿# Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-.pnpm-store/
+pnpm-lock.yaml
+package-lock.json
 
-# Build / output
-dist/
-.out/
-coverage/
+# Vercel
 .vercel/
+.vercel/cache/
 
-# TypeScript
-*.tsbuildinfo
-
-# Env (não versionar segredos)
-.env
-.env.*
-!.env.example
-.env.local
-
-# SO / temporários
+# Build / IDE
+dist/
+out/
+*.log
 .DS_Store
-Thumbs.db
-tmp/
-temp/
-.cache/
-
-# IDE
 .vscode/
 .idea/
-
-# Frameworks comuns (safe)
-.next/
-.vercel
-.rate-store.json
