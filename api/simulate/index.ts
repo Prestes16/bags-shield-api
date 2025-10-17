@@ -1,6 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-/* diag: monolith + try/catch */
+/* monolith simulate + env-auth */
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -22,7 +22,6 @@ function methodNotAllowed(res: VercelResponse, allow: string[]) {
   res.setHeader("Allow", allow.join(", "));
   res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:`Use ${allow.join(" | ")}` }});
 }
-
 async function readBody(req: any): Promise<any|null> {
   const ct = String(req?.headers?.["content-type"] || "");
   if (req && "body" in req) {
@@ -35,9 +34,7 @@ async function readBody(req: any): Promise<any|null> {
     const chunks: Buffer[] = [];
     for await (const chunk of req as any) chunks.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk));
     if (!chunks.length) return null;
-    let txt = Buffer.concat(chunks).toString("utf8");
-    if (txt.charCodeAt(0)===0xFEFF) txt = txt.slice(1);
-    txt = txt.trim();
+    let txt = Buffer.concat(chunks).toString("utf8"); if (txt.charCodeAt(0)===0xFEFF) txt = txt.slice(1); txt = txt.trim();
     if (!txt) return null;
     if (ct.toLowerCase().includes("application/x-www-form-urlencoded")) {
       const p=new URLSearchParams(txt); const obj:Record<string,string>={}; for(const [k,v] of p.entries()) obj[k]=v; return obj;
@@ -51,31 +48,25 @@ async function readBody(req: any): Promise<any|null> {
       req.on('data',onData);req.on('end',onEnd);req.on('error',onErr);req.on('aborted',onErr);
     });
     if (!chunks.length) return null;
-    const txt = Buffer.concat(chunks).toString("utf8").trim();
-    if (!txt) return null;
-    try { return JSON.parse(txt); } catch { return null; }
+    const txt = Buffer.concat(chunks).toString("utf8").trim(); if (!txt) return null; try { return JSON.parse(txt); } catch { return null; }
   }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  try {
-    const method = (req.method || "POST").toUpperCase();
-    if (method === "OPTIONS") return preflight(req, res);
-    setCors(res);
-    if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
+  const method = (req.method || "POST").toUpperCase();
+  if (method === "OPTIONS") return preflight(req, res);
+  setCors(res);
+  if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
 
-    const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
-    if (!auth || !auth.toLowerCase().startsWith("bearer ")) return unauthorized(res);
+  const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
+  const IS_PROD = (process.env.VERCEL_ENV === "production");
+  const EXPECTED = process.env.BAGS_BEARER || (IS_PROD ? undefined : "dev-123");
+  const token = (auth && auth.toLowerCase().startsWith("bearer ")) ? auth.slice(7).trim() : "";
+  if (!EXPECTED || token !== EXPECTED) return unauthorized(res);
 
-    const body = await readBody(req as any);
-    if (!body) return badRequest(res, "JSON body obrigatório");
+  const body = await readBody(req as any);
+  if (!body) return badRequest(res, "JSON body obrigatório");
 
-    noStore(res);
-    return res.status(200).json({ success:true, response:{ note:"simulate-ok", received: body }});
-  } catch (err: any) {
-    setCors(res); noStore(res);
-    const msg = err?.message || String(err);
-    const stack = (err?.stack ? String(err.stack).split("\n").slice(0,6) : []);
-    return res.status(500).json({ success:false, error:{ code:"INTERNAL", message: msg, stack }});
-  }
+  noStore(res);
+  return res.status(200).json({ success:true, response:{ note:"simulate-ok", received: body }});
 }

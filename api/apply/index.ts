@@ -52,6 +52,7 @@ function badRequest(res: VercelResponse, message: string, details?: any[]) {
 function unauthorized(res: VercelResponse, msg="Missing or invalid Authorization: Bearer <token>") {
   setCors(res); noStore(res);
   res.status(401).json({ ok:false, error:{ code:"UNAUTHORIZED", message: msg }, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
+}, meta:{ service:"bags-shield-api", version:"1.0.0", time:new Date().toISOString() }});
 }
 function methodNotAllowed(res: VercelResponse, allow: string[]) {
   setCors(res); noStore(res);
@@ -121,8 +122,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     setCors(res);
     if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
 
-    const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
-    if (!auth || !auth.toLowerCase().startsWith("bearer ")) return unauthorized(res);
+        const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
+    const IS_PROD = (process.env.VERCEL_ENV === "production");
+    const EXPECTED = process.env.BAGS_BEARER || (IS_PROD ? undefined : "dev-123");
+    const token = (auth && auth.toLowerCase().startsWith("bearer ")) ? auth.slice(7).trim() : "";
+    if (!EXPECTED || token !== EXPECTED) return unauthorized(res);
 
     const body = await readBody(req as any);
     if (!body) return badRequest(res, "JSON body obrigatório");

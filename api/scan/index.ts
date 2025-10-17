@@ -1,6 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-/* diag: monolith + try/catch */
+/* monolith scan + env-auth */
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
@@ -9,26 +9,29 @@ function setCors(res: VercelResponse) {
 }
 function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res); res.status(204).end(); }
 function noStore(res: VercelResponse) { res.setHeader("Cache-Control","no-store"); }
+function unauthorized(res: VercelResponse, msg="Missing or invalid Authorization: Bearer <token>") {
+  setCors(res); noStore(res);
+  res.status(401).json({ success:false, error:{ code:"UNAUTHORIZED", message: msg }});
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const method = (req.method || "GET").toUpperCase();
+  if (method === "OPTIONS") return preflight(req, res);
+  setCors(res);
+  if (method !== "GET") { res.setHeader("Allow", "GET, OPTIONS"); return res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET | OPTIONS" } }); }
+
+  const auth = (req.headers?.authorization || (req.headers as any)?.Authorization) as string | undefined;
+  const IS_PROD = (process.env.VERCEL_ENV === "production");
+  const EXPECTED = process.env.BAGS_BEARER || (IS_PROD ? undefined : "dev-123");
+  const token = (auth && auth.toLowerCase().startsWith("bearer ")) ? auth.slice(7).trim() : "";
+  if (!EXPECTED || token !== EXPECTED) return unauthorized(res);
+
+  let query: Record<string, string> = {};
   try {
-    const method = (req.method || "GET").toUpperCase();
-    if (method === "OPTIONS") return preflight(req, res);
-    setCors(res);
-    if (method !== "GET") { res.setHeader("Allow", "GET, OPTIONS"); return res.status(405).json({ success:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET | OPTIONS" } }); }
+    const u = new URL(req.url || "", "https://dummy");
+    u.searchParams.forEach((v,k)=>{ query[k]=v; });
+  } catch {}
 
-    let query: Record<string, string> = {};
-    try {
-      const u = new URL(req.url || "", "https://dummy");
-      u.searchParams.forEach((v,k)=>{ query[k]=v; });
-    } catch {}
-
-    noStore(res);
-    return res.status(200).json({ success:true, response:{ note:"scan-ok", query }});
-  } catch (err: any) {
-    setCors(res); noStore(res);
-    const msg = err?.message || String(err);
-    const stack = (err?.stack ? String(err.stack).split("\n").slice(0,6) : []);
-    return res.status(500).json({ success:false, error:{ code:"INTERNAL", message: msg, stack }});
-  }
+  noStore(res);
+  return res.status(200).json({ success:true, response:{ note:"scan-ok", query }});
 }
