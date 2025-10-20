@@ -2,7 +2,6 @@
 import { z } from "zod";
 
 /* apply: CORS + no-store + try/catch + readBody + idem-cache + Zod + auth ENV + X-Request-Id */
-
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 type ApplyData = {
   id: string;
@@ -49,6 +48,7 @@ function newRequestId(res: VercelResponse) {
   }
   return rid;
 }
+function preflight(_req: VercelRequest, res: VercelResponse) { setCors(res); newRequestId(res); res.status(204).end(); }
 function badRequest(res: VercelResponse, message: string, details?: any[]) {
   setCors(res); const rid = newRequestId(res); noStore(res);
   res.status(400).json({ ok:false, error:{ code:"BAD_REQUEST", message, details },
@@ -102,15 +102,13 @@ async function readBody(req: any): Promise<any|null> {
       const p=new URLSearchParams(txt); const obj:Record<string,string>={}; for(const [k,v] of p.entries()) obj[k]=v; return obj;
     }
     try { return JSON.parse(txt); } catch { return null; }
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const method = (req.method || "POST").toUpperCase();
-    if (method === "OPTIONS") { setCors(res); newRequestId(res); return res.status(204).end(); }
+    if (method === "OPTIONS") return preflight(req, res);
     setCors(res); const _rid = newRequestId(res);
     if (method !== "POST") return methodNotAllowed(res, ["POST","OPTIONS"]);
 
