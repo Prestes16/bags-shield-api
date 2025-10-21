@@ -1,53 +1,61 @@
-type Creator = { address: string; share: number };
+export type BagsClientConfig = {
+  baseUrl?: string;
+  timeoutMs?: number;
+  apiKey?: string;
+};
 
-function pick<T>(x: any, ...path: string[]): T | undefined {
-  let cur = x;
-  for (const k of path) cur = cur?.[k];
-  return cur as T | undefined;
-}
+const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%–112.5%
 
-function toBaseUrl(s: string) {
-  return s.replace(/\/+$/, "");
-}
-
-async function fetchJson(url: string, ms = Number(process.env.BAGS_TIMEOUT_MS ?? 5000)) {
-  const f: any = (globalThis as any).fetch;
-  if (!f) return undefined;
-  const ac = typeof AbortController !== "undefined" ? new AbortController() : undefined;
-  const timer = ac ? setTimeout(() => ac.abort(), ms) : undefined;
-  try {
-    const r = await f(url, ac ? { signal: ac.signal } : undefined);
-    if (!r.ok) return undefined;
-    return await r.json();
-  } catch {
-    return undefined;
-  } finally {
-    if (timer) clearTimeout(timer);
+export async function fetchJsonWithRetry(input: string, init: (RequestInit & { timeoutMs?: number; retries?: number }) = {}) {
+  const { timeoutMs = 5000, retries = 2, ...rest } = init;
+  let lastErr: any;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(new Error("timeout")), timeoutMs);
+    try {
+      const res = await fetch(input, { ...rest, signal: ctrl.signal });
+      const retryable = res.status >= 500 || res.status === 429;
+      const data = await res.json().catch(() => ({}));
+      const upstreamRequestId = res.headers.get("x-request-id") || data?.meta?.requestId || null;
+      if (!res.ok && retryable && attempt < retries) {
+        const backoff = jitter(200 * Math.pow(2, attempt));
+        await sleep(backoff);
+        continue;
+      }
+      return { ok: res.ok, status: res.status, data, headers: Object.fromEntries(res.headers), upstreamRequestId };
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        const backoff = jitter(200 * Math.pow(2, attempt));
+        await sleep(backoff);
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(t);
+    }
   }
+  throw lastErr;
 }
 
-export async function getTokenCreators(mint: string): Promise<Creator[]> {
-  const base = process.env.BAGS_API_BASE?.trim();
-  if (!base) return [];
-  const url = toBaseUrl(base) + `/token/${encodeURIComponent(mint)}/creators`;
-  const j = await fetchJson(url);
-  const arr = (Array.isArray(j?.creators) ? j?.creators
-             : Array.isArray(pick<any[]>(j, "response", "creators")) ? pick<any[]>(j, "response", "creators")
-             : []) as any[];
-  const mapped = (arr ?? []).map((c: any) => ({
-    address: String(c?.address ?? c?.pubkey ?? ""),
-    share: Number(c?.share ?? c?.percent ?? 0),
-  })).filter(c => c.address && Number.isFinite(c.share));
-  return mapped;
+export function envConfigFromProcess(): BagsClientConfig {
+  return {
+    baseUrl: process.env.BAGS_API_BASE || undefined,
+    timeoutMs: Number(process.env.BAGS_TIMEOUT_MS || "5000") || 5000,
+    apiKey: process.env.BAGS_API_KEY || undefined,
+  };
 }
 
-export async function getLifetimeFeesLamports(mint: string): Promise<number> {
-  const base = process.env.BAGS_API_BASE?.trim();
-  if (!base) return 0;
-  const url = toBaseUrl(base) + `/token/${encodeURIComponent(mint)}/lifetime-fees`;
-  const j = await fetchJson(url);
-  const fee = pick<number>(j, "lifetimeFees", "total")
-          ?? pick<number>(j, "response", "lifetimeFees", "total")
-          ?? 0;
-  return Number.isFinite(fee) ? fee : 0;
+export async function getTokenInfo(mint: string, cfg: BagsClientConfig = envConfigFromProcess()) {
+  if (!cfg.baseUrl) {
+    return { ok: false, status: 501, data: { error: { code: "NOT_CONFIGURED", message: "BAGS_API_BASE não configurado" } } };
+  }
+  const url = new URL("/token-info", cfg.baseUrl);
+  url.searchParams.set("mint", mint);
+  const headers: Record<string,string> = { accept: "application/json" };
+  if (cfg.apiKey) headers["authorization"] = `Bearer ${cfg.apiKey}`;
+  const r = await fetchJsonWithRetry(url.toString(), { headers, timeoutMs: cfg.timeoutMs });
+  return r;
 }
+
