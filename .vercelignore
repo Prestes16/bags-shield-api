@@ -1,13 +1,10 @@
-﻿# Excluir pastas e arquivos que não precisam ir pro deploy
-api/mock/**
-tests/**
-__tests__/**
-scripts/**
-docs/**
-*.md
-*.ps1
+# Não suba tralha para a Vercel
+logs/
+tmp/
+*.bak
+*.tmp
+.env
+.env.*
 
-# Garantir que utilidades auxiliares não criem funções
-api/**/_util.ts
-api/**/_shared.tsapi/**/_util.js
-api/_util.js
+# Em prod, não precisamos dos mocks (se quiser usar local, estão no repo)
+api/mock/

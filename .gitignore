@@ -1,4 +1,4 @@
-﻿# Node
+# Node / Package managers
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -6,14 +6,34 @@ yarn-error.log*
 pnpm-lock.yaml
 package-lock.json
 
-# Vercel
-.vercel/
-.vercel/cache/
-
 # Build / IDE
 dist/
 out/
 *.log
 .DS_Store
+Thumbs.db
 .vscode/
 .idea/
+
+# Vercel
+.vercel/
+.vercel/cache/
+.vercel
+
+# Env & secrets (nunca comitar chaves)
+.env
+.env.*
+!.env.example
+
+# Dados locais / temporários
+logs/
+tmp/
+*.bak
+*.tmp
+.rate-store.json
+
+# Artefatos de smoke/tests
+logs/smoke-*.txt
+
+# SO
+desktop.ini
