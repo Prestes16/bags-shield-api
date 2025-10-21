@@ -5,7 +5,7 @@ export type BagsClientConfig = {
 };
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%–112.5%
+const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%â€“112.5%
 
 export async function fetchJsonWithRetry(input: string, init: (RequestInit & { timeoutMs?: number; retries?: number }) = {}) {
   const { timeoutMs = 5000, retries = 2, ...rest } = init;
@@ -49,9 +49,9 @@ export function envConfigFromProcess(): BagsClientConfig {
 
 export async function getTokenInfo(mint: string, cfg: BagsClientConfig = envConfigFromProcess()) {
   if (!cfg.baseUrl) {
-    return { ok: false, status: 501, data: { error: { code: "NOT_CONFIGURED", message: "BAGS_API_BASE não configurado" } } };
+    return { ok: false, status: 501, data: { error: { code: "NOT_CONFIGURED", message: "BAGS_API_BASE nÃ£o configurado" } } };
   }
-  const url = new URL("/token-info", cfg.baseUrl);
+  let base = cfg.baseUrl || ""; if (!base.endsWith("/")) base += "/"; const url = new URL("token-info", base);
   url.searchParams.set("mint", mint);
   const headers: Record<string,string> = { accept: "application/json" };
   if (cfg.apiKey) headers["authorization"] = `Bearer ${cfg.apiKey}`;
