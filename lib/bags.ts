@@ -5,7 +5,7 @@ export type BagsClientConfig = {
 };
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%â€“112.5%
+const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%Ã¢â‚¬â€œ112.5%
 
 export async function fetchJsonWithRetry(input: string, init: (RequestInit & { timeoutMs?: number; retries?: number }) = {}) {
   const { timeoutMs = 5000, retries = 2, ...rest } = init;
@@ -23,7 +23,7 @@ export async function fetchJsonWithRetry(input: string, init: (RequestInit & { t
         await sleep(backoff);
         continue;
       }
-      return { ok: res.ok, status: res.status, data, headers: Object.fromEntries(res.headers), upstreamRequestId };
+      return { ok: res.ok, status: res.status, data, headers: (() => { const h:any = {}; try { (res as any).headers?.forEach?.((v:any,k:any)=>h[k]=v); } catch { } return h; })(), upstreamRequestId };
     } catch (err) {
       lastErr = err;
       if (attempt < retries) {
@@ -49,7 +49,7 @@ export function envConfigFromProcess(): BagsClientConfig {
 
 export async function getTokenInfo(mint: string, cfg: BagsClientConfig = envConfigFromProcess()) {
   if (!cfg.baseUrl) {
-    return { ok: false, status: 501, data: { error: { code: "NOT_CONFIGURED", message: "BAGS_API_BASE nÃ£o configurado" } } };
+    return { ok: false, status: 501, data: { error: { code: "NOT_CONFIGURED", message: "BAGS_API_BASE nÃƒÂ£o configurado" } } };
   }
   let base = cfg.baseUrl || ""; if (!base.endsWith("/")) base += "/"; const url = new URL("token-info", base);
   url.searchParams.set("mint", mint);
