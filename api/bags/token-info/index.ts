@@ -1,6 +1,6 @@
-export const config = { runtime: "edge" };
+export const config = { runtime: "nodejs" };
 
-import { getTokenInfo } from "../../lib/bags";
+import { getTokenInfo } from "../../../lib/bags";
 
 function baseHeaders(requestId: string) {
   return new Headers({
@@ -33,7 +33,7 @@ export default async function handler(req: Request) {
 
   const mint = url.searchParams.get("mint")?.trim() || "";
   if (!mint) {
-    const body = JSON.stringify({ ok: false, error: { code: "BAD_REQUEST", message: "Parâmetro mint é obrigatório" }, meta: meta(requestId) });
+    const body = JSON.stringify({ ok: false, error: { code: "BAD_REQUEST", message: "ParÃ¢metro mint Ã© obrigatÃ³rio" }, meta: meta(requestId) });
     return new Response(body, { status: 400, headers });
   }
 
