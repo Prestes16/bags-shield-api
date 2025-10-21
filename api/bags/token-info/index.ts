@@ -27,7 +27,10 @@ export default async function handler(req: any, res: any) {
     res.status(405).send(JSON.stringify({ ok:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET" }, meta: meta(requestId) }));
     return;
   }
-  const mint = (req.query && req.query.mint ? String(req.query.mint) : "").trim();
+
+  // Parse seguro da query sem depender de req.query
+  const url = new URL(String(req.url || "/"), "http://local");
+  const mint = (url.searchParams.get("mint") || "").trim();
   if (!mint) {
     res.status(400).send(JSON.stringify({ ok:false, error:{ code:"BAD_REQUEST", message:"Parameter mint is required" }, meta: meta(requestId) }));
     return;
@@ -47,3 +50,4 @@ export default async function handler(req: any, res: any) {
     res.status(502).send(JSON.stringify({ ok:false, error:{ code:"UPSTREAM_FETCH_FAILED", message:String(err?.message || err) }, meta: meta(requestId) }));
   }
 }
+
