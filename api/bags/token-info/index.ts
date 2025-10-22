@@ -1,6 +1,6 @@
 export const config = { runtime: "nodejs" };
 
-import { getTokenInfo } from "../../../lib/bags";
+import { getTokenInfo } from "../../../lib/bags.js";
 
 function setBaseHeaders(res: any, requestId: string) {
   res.setHeader("Access-Control-Allow-Origin", "*");
