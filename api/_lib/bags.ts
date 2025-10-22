@@ -5,7 +5,7 @@ export type BagsClientConfig = {
 };
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%–112.5%
+const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%â€“112.5%
 
 function resolveBaseFromEnv(): string | undefined {
   const raw = (process.env.BAGS_API_BASE_OVERRIDE ?? process.env.BAGS_API_BASE ?? '').trim();
@@ -66,10 +66,11 @@ export async function getTokenInfo(mint: string, cfg?: BagsClientConfig) {
     return {
       ok: false,
       status: 501,
-      data: { error: { code: 'NOT_CONFIGURED', message: 'BAGS_API_BASE não configurado' } }
+      data: { error: { code: 'NOT_CONFIGURED', message: 'BAGS_API_BASE nÃ£o configurado' } }
     };
   }
-  const u = new URL('token-info', base);
+  const baseWithSlash = base.endsWith('/') ? base : (base + '/');
+  const u = new URL('token-info', baseWithSlash);
   u.searchParams.set('mint', mint);
 
   const headers: Record<string,string> = { accept: 'application/json' };
