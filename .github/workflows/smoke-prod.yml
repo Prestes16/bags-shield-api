@@ -10,24 +10,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Smoke checks (production)
+      - name: Smoke checks (production, verbose on failure)
         run: |
           set -euo pipefail
           alias="https://bags-shield-api.vercel.app"
           mint="So11111111111111111111111111111111111111112"
           expect="https://bags-shield-api-cleiton-prestes-s-projects.vercel.app/api/bags/mock"
 
-          code=$(curl -sS -o /dev/null -w '%{http_code}' "$alias/api/bags/token-info?mint=$mint")
-          test "$code" = "200" || { echo "GET != 200"; exit 1; }
+          echo "::group::GET /api/bags/token-info"
+          # captura headers e body SEM abortar, para imprimir diagnóstico
+          code=$(curl -sS -D hdr.txt -o body.txt -w '%{http_code}' "$alias/api/bags/token-info?mint=$mint") || true
+          echo "HTTP=$code"
+          head -n1 hdr.txt || true
+          if [ "$code" != "200" ]; then
+            echo "=== HEADERS"; sed -n '1,200p' hdr.txt || true
+            echo "=== BODY (primeiras linhas)"; sed -n '1,200p' body.txt || true
+            exit 1
+          fi
+          echo "::endgroup::"
 
-          json=$(curl -sS "$alias/api/bags/token-info?mint=$mint")
+          json=$(cat body.txt)
           ok=$(printf '%s' "$json" | jq -r '.ok')
           base=$(printf '%s' "$json" | jq -r '.meta.baseUrlUsed')
 
           test "$ok" = "true" || { echo "ok != true"; exit 1; }
           test "$base" = "$expect" || { echo "baseUrlUsed divergente: $base"; exit 1; }
 
-          hc=$(curl -sS -o /dev/null -w '%{http_code}' "$alias/api/health")
+          echo "::group::GET /api/health"
+          hc=$(curl -sS -o /dev/null -w '%{http_code}' "$alias/api/health") || true
+          echo "HTTP=$hc"
           test "$hc" = "200" || { echo "health != 200"; exit 1; }
+          echo "::endgroup::"
 
           echo "SMOKE OK"
