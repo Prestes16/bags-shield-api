@@ -2,10 +2,11 @@ export type BagsClientConfig = {
   baseUrl?: string;
   timeoutMs?: number;
   apiKey?: string;
+  allowMockFallback?: boolean;
 };
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%Ã¢â‚¬â€œ112.5%
+const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%–112.5%
 
 function resolveBaseFromEnv(): string | undefined {
   const raw = (process.env.BAGS_API_BASE_OVERRIDE ?? process.env.BAGS_API_BASE ?? '').trim();
@@ -14,11 +15,18 @@ function resolveBaseFromEnv(): string | undefined {
   return fixed || undefined;
 }
 
+function resolveBool(v: any): boolean {
+  if (v == null) return false;
+  const s = String(v).trim().toLowerCase();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'on';
+}
+
 export function envConfigFromProcess(): BagsClientConfig {
   return {
     baseUrl: resolveBaseFromEnv(),
     timeoutMs: Number(process.env.BAGS_TIMEOUT_MS || '5000') || 5000,
     apiKey: process.env.BAGS_API_KEY || undefined,
+    allowMockFallback: resolveBool(process.env.BAGS_ALLOW_MOCK_FALLBACK),
   };
 }
 
@@ -59,23 +67,49 @@ export async function fetchJsonWithRetry(
   throw lastErr;
 }
 
+function withSlash(base: string) {
+  return base.endsWith('/') ? base : (base + '/');
+}
+
+function isMockBase(base: string) {
+  return /\/mock\/?$/.test(base);
+}
+
+function shouldFallback(status: number) {
+  return status === 404 || status === 501 || status >= 500;
+}
+
 export async function getTokenInfo(mint: string, cfg?: BagsClientConfig) {
   const env = envConfigFromProcess();
   const base = (cfg?.baseUrl ?? env.baseUrl ?? '').trim();
+
   if (!base) {
     return {
       ok: false,
       status: 501,
-      data: { error: { code: 'NOT_CONFIGURED', message: 'BAGS_API_BASE nÃƒÂ£o configurado' } }
+      data: { error: { code: 'NOT_CONFIGURED', message: 'BAGS_API_BASE não configurado' } }
     };
   }
-  const baseWithSlash = base.endsWith('/') ? base : (base + '/');
-  const u = new URL('token-info', baseWithSlash);
-  u.searchParams.set('mint', mint);
 
+  const primaryBase = withSlash(base);
   const headers: Record<string,string> = { accept: 'application/json' };
   if (cfg?.apiKey ?? env.apiKey) headers['authorization'] = 'Bearer ' + (cfg?.apiKey ?? env.apiKey);
 
-  const r = await fetchJsonWithRetry(u.toString(), { headers, timeoutMs: (cfg?.timeoutMs ?? env.timeoutMs) });
-  return r;
+  // 1ª tentativa: base “real”
+  const u1 = new URL('token-info', primaryBase);
+  u1.searchParams.set('mint', mint);
+  const r1 = await fetchJsonWithRetry(u1.toString(), { headers, timeoutMs: (cfg?.timeoutMs ?? env.timeoutMs) });
+  if (r1.ok) return r1;
+
+  // fallback opcional para /mock
+  const allowFallback = cfg?.allowMockFallback ?? !!env.allowMockFallback;
+  if (allowFallback && !isMockBase(primaryBase) && shouldFallback(r1.status)) {
+    const mockBase = withSlash(primaryBase + 'mock');
+    const u2 = new URL('token-info', mockBase);
+    u2.searchParams.set('mint', mint);
+    const r2 = await fetchJsonWithRetry(u2.toString(), { headers, timeoutMs: (cfg?.timeoutMs ?? env.timeoutMs) });
+    return r2;
+  }
+
+  return r1;
 }
