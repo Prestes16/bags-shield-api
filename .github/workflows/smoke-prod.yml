@@ -1,0 +1,33 @@
+name: smoke-prod
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Smoke checks (production)
+        run: |
+          set -euo pipefail
+          alias="https://bags-shield-api.vercel.app"
+          mint="So11111111111111111111111111111111111111112"
+          expect="https://bags-shield-api-cleiton-prestes-s-projects.vercel.app/api/bags/mock"
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' "$alias/api/bags/token-info?mint=$mint")
+          test "$code" = "200" || { echo "GET != 200"; exit 1; }
+
+          json=$(curl -sS "$alias/api/bags/token-info?mint=$mint")
+          ok=$(printf '%s' "$json" | jq -r '.ok')
+          base=$(printf '%s' "$json" | jq -r '.meta.baseUrlUsed')
+
+          test "$ok" = "true" || { echo "ok != true"; exit 1; }
+          test "$base" = "$expect" || { echo "baseUrlUsed divergente: $base"; exit 1; }
+
+          hc=$(curl -sS -o /dev/null -w '%{http_code}' "$alias/api/health")
+          test "$hc" = "200" || { echo "health != 200"; exit 1; }
+
+          echo "SMOKE OK"
