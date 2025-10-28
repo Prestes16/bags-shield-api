@@ -23,7 +23,11 @@
   "devDependencies": {
     "@types/node": "^20.19.23",
     "@vercel/node": "^5.3.26",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "body-parser": "^2.2.0",
     "cross-env": "^10.1.0",
+    "express": "^5.1.0",
     "typescript": "^5.9.3",
     "vercel": "^48.2.9"
   },
