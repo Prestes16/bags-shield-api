@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
@@ -14,13 +16,27 @@
     "useUnknownInCatchVariables": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@api/*": ["api/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@api/*": [
+        "api/*"
+      ]
     }
   },
-  "include": ["api/**/*.ts", "scripts/**/*.ts", "types/**/*.d.ts"],
-  "exclude": ["node_modules", ".vercel", "dist"]
+  "include": [
+    "api/**/*.ts",
+    "scripts/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".vercel",
+    "dist"
+  ]
 }
