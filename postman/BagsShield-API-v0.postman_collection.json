@@ -1,0 +1,49 @@
+﻿{
+  "info": {
+    "name": "Bags Shield API v0 (local)",
+    "_postman_id": "8f7a2b26-a9f7-4e5c-9c42-9d2d2b3f7c01",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4000" }],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/health", "host": ["{{baseUrl}}"], "path": ["api","health"] }
+      }
+    },
+    {
+      "name": "Scan v0",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-shield-api-version", "value": "v0" },
+          { "key": "x-shield-schema-version", "value": "v0" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chain\":\"solana\",\n  \"cluster\":\"mainnet\",\n  \"tokenMint\":\"So11111111111111111111111111111111111111112\",\n  \"options\":{\"deepScan\":true},\n  \"context\":{\"locale\":\"pt-BR\"}\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v0/scan", "host": ["{{baseUrl}}"], "path": ["api","v0","scan"] }
+      }
+    },
+    {
+      "name": "Simulate v0",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-shield-api-version", "value": "v0" },
+          { "key": "x-shield-schema-version", "value": "v0" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\":\"BUY\",\n  \"chain\":\"solana\",\n  \"cluster\":\"mainnet\",\n  \"mint\":\"So11111111111111111111111111111111111111112\",\n  \"input\":{\"sol\":0.5},\n  \"slippageBps\":50,\n  \"context\":{\"locale\":\"pt-BR\"}\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v0/simulate", "host": ["{{baseUrl}}"], "path": ["api","v0","simulate"] }
+      }
+    }
+  ]
+}

@@ -13,7 +13,7 @@
     "deploy": "vercel --prod --yes",
     "dev:vercel": "cross-env NODE_OPTIONS=--no-deprecation vercel dev",
     "dev:bags": "set \"BAGS_API_BASE=http://localhost:3000/api/mock\" && set \"NODE_OPTIONS=--no-deprecation\" && npx -y vercel@latest dev",
-    "test": "echo \"No tests yet\" && exit 0",
+    "test": "powershell -ExecutionPolicy Bypass -File scripts/test.ps1",
     "dev:stub": "set \"BAGS_API_BASE=\" && set \"NODE_OPTIONS=--no-deprecation\" && npx -y vercel@latest dev",
     "type-check": "tsc --noEmit",
     "deploy:preview": "vercel --yes",
