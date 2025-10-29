@@ -1,89 +1,176 @@
-const crypto = require("node:crypto");
-const fs = require("node:fs");
-const path = require("node:path");
+﻿/**
+ * Bags Shield — Dev Server v0 (refactor limpo)
+ * - Express + body-parser
+ * - AJV com formats
+ * - Envelope consistente { success, response|error, meta }
+ * - X-Request-Id e Cache-Control: no-store em TODAS as respostas
+ * - Rotas: /api/health, /api/v0/scan, /api/v0/simulate (+ 405)
+ */
 const express = require("express");
 const bodyParser = require("body-parser");
+const crypto = require("crypto");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
 
-function newRequestId(){ try { return crypto.randomUUID(); } catch { return Math.random().toString(36).slice(2); } }
-function ok(response, requestId, started){ return { success:true, response, meta:{ requestId, version:"v0", timestamp:new Date().toISOString(), processingMs: Date.now()-started } }; }
-function err(code, message, details, requestId, started){ return { success:false, error:{ code, message, details }, meta:{ requestId, version:"v0", timestamp:new Date().toISOString(), processingMs: Date.now()-started } }; }
+const app = express();
+const PORT = Number(process.env.PORT || 4000);
 
-function abs(rel){ return path.resolve(process.cwd(), rel); }
-function loadSchema(rel){
-  const p = abs(rel);
-  if (!fs.existsSync(p)){ const e=new Error("SchemaNotFound: "+p); e.code="SCHEMA_NOT_FOUND"; throw e; }
-  try { return JSON.parse(fs.readFileSync(p, "utf8")); }
-  catch (e){ e.code="SCHEMA_PARSE"; e.path=p; throw e; }
+// ---- Utils
+function newRequestId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Math.random().toString(36).slice(2);
+}
+function issueFromAjvError(e) {
+  const path = e.instancePath || e.dataPath || "/";
+  return { path: path || "/", message: e.message || "invalid", code: e.keyword || "invalid" };
+}
+function ok(response, rid, started) {
+  return { success: true, response, meta: { requestId: rid, started, durationMs: Date.now() - started } };
+}
+function errorPayload(errCode, message, issues, rid, started) {
+  const meta = { requestId: rid, started, durationMs: Date.now() - started };
+  const base = { success: false, error: errCode, message, meta };
+  if (issues && issues.length) base.issues = issues;
+  return base;
 }
 
-const ajv = new Ajv({ allErrors:true, strict:false });
+// ---- AJV
+const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
-function validate(schema, data){
-  try{
-    const clone = JSON.parse(JSON.stringify(schema));
-    if (clone && typeof clone === "object"){ delete clone.$id; delete clone.$schema; }
-    const v = ajv.compile(clone);
-    const valid = v(data);
-    return { valid, errors: v.errors || [] };
-  }catch(e){
-    return { valid:false, errors:[{ message:"SCHEMA_COMPILE: " + (e && e.message || "unknown") }] };
+// Schemas mínimos v0 (alinhados aos testes atuais)
+const scanReqSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["chain", "cluster", "tokenMint"],
+  properties: {
+    chain: { type: "string", enum: ["solana"] },
+    cluster: { type: "string", enum: ["mainnet", "devnet", "testnet"] },
+    tokenMint: { type: "string", minLength: 32 },
+    options: { type: "object", additionalProperties: true },
+    context: { type: "object", additionalProperties: true }
   }
-}
+};
+const simulateReqSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["action", "chain", "cluster", "mint", "input", "slippageBps"],
+  properties: {
+    action: { type: "string", enum: ["BUY", "SELL"] },
+    chain: { type: "string", enum: ["solana"] },
+    cluster: { type: "string", enum: ["mainnet", "devnet", "testnet"] },
+    mint: { type: "string", minLength: 32 },
+    input: {
+      type: "object",
+      required: ["sol"],
+      additionalProperties: false,
+      properties: { sol: { type: "number", minimum: 0 } }
+    },
+    slippageBps: { type: "integer", minimum: 0, maximum: 10000 },
+    context: { type: "object", additionalProperties: true }
+  }
+};
+const validateScan = ajv.compile(scanReqSchema);
+const validateSim = ajv.compile(simulateReqSchema);
 
-const app = express();
-app.use((req,_res,next)=>{ console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`); next(); });
+// ---- Middlewares base
+// 1) Request-Id + cache-control + cronômetro
+app.use((req, res, next) => {
+  const rid = String(req.headers["x-request-id"] || newRequestId());
+  res.set("X-Request-Id", rid);
+  res.set("Cache-Control", "no-store");
+  res.locals.requestId = rid;
+  res.locals.started = Date.now();
+  next();
+});
+
+// 2) Body parsers
 app.use(bodyParser.json({ limit: "1mb" }));
-app.get("/api/health", (_req,res) => res.json({ ok:true, ts:new Date().toISOString(), cwd:process.cwd() }));
+app.use(bodyParser.urlencoded({ extended: false }));
 
-function withEnvelope(handler){
-  return async (req,res)=>{
-    const started = Date.now(); const requestId = newRequestId();
-    res.setHeader("X-Request-Id", requestId);
-    res.setHeader("Cache-Control", "no-store");
-    try{ await handler(req,res,{ started, requestId }); }
-    catch(e){ console.error("HANDLER_ERROR:", e?.stack || e); try{ res.status(500).type("application/json").send(JSON.stringify(err("INTERNAL_ERROR", e?.message||"Erro interno", { code:e?.code, path:e?.path }, requestId, started))); }catch{} }
-  };
+// ---- Health
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ ok: true, ts: new Date().toISOString() });
+});
+
+// ---- Helpers 405
+function methodNotAllowed(req, res) {
+  const rid = res.get("X-Request-Id") || newRequestId();
+  const started = res.locals.started || Date.now();
+  return res
+    .status(405)
+    .json(errorPayload("METHOD_NOT_ALLOWED", "Método não permitido", [], rid, started));
 }
 
-app.post("/api/v0/scan", withEnvelope((req,res,ctx)=>{
-  const body = req.body ?? {};
-  const schema = loadSchema("schemas/v0/scan.request.schema.json");
-  const { valid, errors } = validate(schema, body);
-  if (!valid) return res.status(400).json(err("BAD_REQUEST","Payload inválido",{ issues: errors }, ctx.requestId, ctx.started));
+// ---- /api/v0/scan
+app.post("/api/v0/scan", (req, res) => {
+  const rid = res.get("X-Request-Id") || newRequestId();
+  const started = res.locals.started || Date.now();
+  const body = req.body || {};
+
+  const valid = validateScan(body);
+  if (!valid) {
+    const issues = (validateScan.errors || []).map(issueFromAjvError);
+    return res.status(400).json(errorPayload("BAD_REQUEST", "Payload inválido", issues, rid, started));
+  }
+
   const resp = {
-    token: { mint: body.tokenMint, name:"Unknown", symbol:"UNK", decimals:9 },
-    badges: [{ key:"POOL_AGE_LOW", title:"Pool Age Low", severity:"low", impact:"neutral", tags:["pool"] }],
-    shieldScore: { grade:"B", score:80, rationale:"Baseline v0", rulesTriggered:["baseline"] },
+    token: { mint: body.tokenMint, name: "Unknown", symbol: "UNK", decimals: 9 },
+    badges: [{ key: "POOL_AGE_LOW", title: "Pool Age Low", severity: "low", impact: "neutral", tags: ["pool"] }],
+    shieldScore: { grade: "B", score: 80, rationale: "Baseline v0", rulesTriggered: ["baseline"] },
     summary: "Contrato v0 ativo (dev JS CJS)."
   };
-  return res.status(200).json(ok(resp, ctx.requestId, ctx.started));
-}));
+  return res.status(200).json(ok(resp, rid, started));
+});
+app.all("/api/v0/scan", methodNotAllowed);
 
-app.post("/api/v0/simulate", withEnvelope((req,res,ctx)=>{
-  const body = req.body ?? {};
-  const schema = loadSchema("schemas/v0/simulate.request.schema.json");
-  const { valid, errors } = validate(schema, body);
-  if (!valid) return res.status(400).json(err("BAD_REQUEST","Payload inválido",{ issues: errors }, ctx.requestId, ctx.started));
+// ---- /api/v0/simulate
+app.post("/api/v0/simulate", (req, res) => {
+  const rid = res.get("X-Request-Id") || newRequestId();
+  const started = res.locals.started || Date.now();
+  const body = req.body || {};
+
+  const valid = validateSim(body);
+  if (!valid) {
+    const issues = (validateSim.errors || []).map(issueFromAjvError);
+    return res.status(400).json(errorPayload("BAD_REQUEST", "Payload inválido", issues, rid, started));
+  }
+
   const resp = {
-    actionEcho: body.action, mint: body.mint,
+    actionEcho: body.action,
+    mint: body.mint,
     tx: { estimatedFeesLamports: 5000, canExecute: true, blockers: [] },
     outcomeRisk: {
-      badges: [{ key:"LOW_LIQUIDITY", title:"Low Liquidity", severity:"high", impact:"negative", tags:["liquidity"] }],
-      shieldScore: { grade:"C", score:68, rationale:"Slippage potencial", rulesTriggered:["liquidity.depth<input"] }
+      badges: [{ key: "LOW_LIQUIDITY", title: "Low Liquidity", severity: "high", impact: "negative", tags: ["liquidity"] }],
+      shieldScore: { grade: "C", score: 68, rationale: "Slippage potencial", rulesTriggered: ["liquidity.depthInput"] }
     },
     notes: "Dev server v0."
   };
-  return res.status(200).json(ok(resp, ctx.requestId, ctx.started));
-}));
+  return res.status(200).json(ok(resp, rid, started));
+});
+app.all("/api/v0/simulate", methodNotAllowed);
 
-app.use((errObj,_req,res,_next)=>{
-  console.error("UNCAUGHT_MW:", errObj?.stack || errObj);
-  const rid = newRequestId();
-  res.status(500).json(err("UNCAUGHT", errObj?.message || "Erro", null, rid, Date.now()));
+// ---- Error handler final
+app.use((err, req, res, next) => {
+  try {
+    const rid = res.get("X-Request-Id") || newRequestId();
+    const started = res.locals.started || Date.now();
+    const status = Number(err.statusCode || err.status || 500);
+    let issues = [];
+
+    if (Array.isArray(err.errors)) issues = err.errors.map(issueFromAjvError);
+    else if (Array.isArray(err.issues)) issues = err.issues;
+
+    return res
+      .status(status)
+      .json(errorPayload(err.code || err.name || "INTERNAL_ERROR", err.message || "Erro interno", issues, rid, started));
+  } catch (e) {
+    const rid = newRequestId();
+    return res.status(500).json({ success: false, error: "INTERNAL_ERROR", meta: { requestId: rid } });
+  }
 });
 
-const PORT = Number(process.env.PORT || 4000);
-app.listen(PORT, ()=> console.log(`>> Dev server JS v0 ouvindo em http://localhost:${PORT}`));
+// ---- Boot
+app.listen(PORT, () => {
+  console.log(`>> Dev server JS v0 ouvindo em http://localhost:${PORT}`);
+});
