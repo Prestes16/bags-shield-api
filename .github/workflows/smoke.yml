@@ -1,0 +1,48 @@
+﻿name: Bags Shield — Smoke CI v0
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+        shell: pwsh
+
+      - name: Start dev-server and wait for /health
+        run: |
+           = '4000'
+          Start-Process -FilePath node -ArgumentList 'scripts/dev-server.cjs' -WindowStyle Minimized
+          http://localhost:4000 = 'http://localhost:4000'
+          for (0=0; 0 -lt 40; 0++) {
+            try { @{ok=True; ts=2025-10-29T20:45:01.363Z} = Invoke-RestMethod "http://localhost:4000/api/health" -TimeoutSec 2; if (@{ok=True; ts=2025-10-29T20:45:01.363Z}.ok) { Write-Host "HEALTH OK: 2025-10-29T20:45:01.363Z"; break } }
+            catch { Start-Sleep -Milliseconds 300 }
+          }
+        shell: pwsh
+
+      - name: Run smoke tests
+        run: npm test
+        shell: pwsh
+
+      - name: Teardown dev-server (port 4000)
+        if: always()
+        run: |
+          try {
+            Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction Stop |
+              ForEach-Object { if (.OwningProcess) { Stop-Process -Id .OwningProcess -Force } }
+          } catch {}
+        shell: pwsh
