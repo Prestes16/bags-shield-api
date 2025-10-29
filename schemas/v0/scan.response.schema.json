@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scan.response.v0",
+  "title": "Bags Shield — scan.response.v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["token", "badges", "shieldScore", "summary"],
+  "properties": {
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mint", "name", "symbol", "decimals"],
+      "properties": {
+        "mint": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 44,
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+        },
+        "name": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "symbol": { "type": "string", "minLength": 1, "maxLength": 10 },
+        "decimals": { "type": "integer", "minimum": 0, "maximum": 18 }
+      }
+    },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "title", "severity", "impact", "tags"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "impact": { "type": "string", "enum": ["negative", "neutral", "positive"] },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 32 },
+            "maxItems": 16
+          }
+        }
+      }
+    },
+    "shieldScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grade", "score", "rationale", "rulesTriggered"],
+      "properties": {
+        "grade": { "type": "string", "enum": ["A", "B", "C", "D", "E"] },
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "rationale": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "rulesTriggered": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "maxItems": 64
+        }
+      }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 }
+  }
+}
