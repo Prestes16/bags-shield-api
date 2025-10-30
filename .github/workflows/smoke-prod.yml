@@ -1,0 +1,26 @@
+name: Bags Shield — Smoke PROD (conditional)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  smoke-prod:
+    if: ${{ secrets.BAGS_API_BASE != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Echo masked
+        run: echo "BAGS_API_BASE está configurado (mascarado)."
+
+      - name: Hit /api/bags/token-info
+        env:
+          BASE: ${{ secrets.BAGS_API_BASE }}
+        run: |
+          set -e
+          echo "GET $BASE/api/bags/token-info"
+          code=$(curl -sS -o resp.json -w "%{http_code}" "$BASE/api/bags/token-info")
+          echo "HTTP=$code"
+          head -c 400 resp.json || true
+          test "$code" -eq 200
