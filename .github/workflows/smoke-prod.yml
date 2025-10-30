@@ -1,13 +1,19 @@
-name: ci(prod): fumaça condicional — health + token-info opcional
-
+name: ci(prod): fumaÃ§a condicional â€” health + token-info opcional
 on:
   workflow_dispatch:
     inputs:
       RUN_TOKEN_INFO:
-        description: 'Executa /api/bags/token-info (requer secret BAGS_API_BASE)'
+        description: 'Run token-info step?'
         required: false
         default: 'false'
-
+      PROD_BASE_URL:
+        description: 'Base URL override'
+        required: false
+        default: ''
+  push:
+    branches:
+      - main
+      - feat/v0-schemas-and-dev-server
 jobs:
   smoke-prod:
     runs-on: windows-latest
