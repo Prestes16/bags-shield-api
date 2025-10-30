@@ -1,0 +1,25 @@
+name: smoke-prod v2 (manual)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  health:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: GET /api/health (prod)
+        shell: pwsh
+        run: |
+           = 'https://bags-shield-api.vercel.app/api/health'
+          Write-Host "Ping: "
+          try {
+              = Invoke-WebRequest  -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+              = [int].StatusCode
+          } catch {
+            if (.Exception.Response) {  = [int].Exception.Response.StatusCode } else {  = 0 }
+          }
+          Write-Host "HTTP="
+          if ( -ne 200) { throw "health not 200 (HTTP )" }
