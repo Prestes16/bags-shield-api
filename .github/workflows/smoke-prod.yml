@@ -1,26 +1,65 @@
-name: Bags Shield — Smoke PROD (conditional)
+name: Bags Shield — Prod Smoke (guarded)
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
-  smoke-prod:
-    if: ${{ secrets.BAGS_API_BASE != '' }}
-    runs-on: ubuntu-latest
+  check-env:
+    runs-on: windows-latest
+    outputs:
+      has_base: ${{ steps.guard.outputs.has_base }}
+    steps:
+      - name: Guard: checa presença do secret
+        id: guard
+        shell: pwsh
+        run: |
+          if ("${{ secrets.BAGS_API_BASE }}" -and "${{ secrets.BAGS_API_BASE }}" -ne "") {
+            'has_base=true'  | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            Write-Host "✅ BAGS_API_BASE presente — vamos rodar o smoke."
+          } else {
+            'has_base=false' | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            Write-Host "ℹ️ BAGS_API_BASE ausente — workflow concluirá como SUCCESS (nada a testar)."
+          }
+
+  prod-smoke:
+    needs: check-env
+    if: needs.check-env.outputs.has_base == 'true'
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - name: Echo masked
-        run: echo "BAGS_API_BASE está configurado (mascarado)."
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Hit /api/bags/token-info
-        env:
-          BASE: ${{ secrets.BAGS_API_BASE }}
+      - name: Setup Node 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Exporta BASE do secret
+        shell: pwsh
         run: |
-          set -e
-          echo "GET $BASE/api/bags/token-info"
-          code=$(curl -sS -o resp.json -w "%{http_code}" "$BASE/api/bags/token-info")
-          echo "HTTP=$code"
-          head -c 400 resp.json || true
-          test "$code" -eq 200
+          "BAGS_API_BASE=${{ secrets.BAGS_API_BASE }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Smoke /api/bags/token-info (retries)
+        shell: pwsh
+        run: |
+          $base = $env:BAGS_API_BASE
+          $uri  = "$base/api/bags/token-info"
+          Write-Host "Testando: $uri"
+          for ($i=1; $i -le 12; $i++) {
+            try {
+              $rid = [guid]::NewGuid().ToString()
+              $r = Invoke-WebRequest -Uri $uri -Headers @{ 'x-request-id' = $rid } -TimeoutSec 5 -ErrorAction Stop
+              Write-Host "Try #$i  HTTP=$($r.StatusCode)  X-Request-Id=$rid"
+              if ([int]$r.StatusCode -eq 200) { Write-Host "🎯 OK 200"; exit 0 }
+            } catch {
+              Write-Host "Try #$i falhou: $($_.Exception.Message)"; Start-Sleep -Seconds 5
+            }
+          }
+          throw "Timeout/falha ao validar token-info após 12 tentativas"
