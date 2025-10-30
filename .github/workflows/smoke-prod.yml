@@ -1,22 +1,13 @@
-name: ci(prod): fumaÃ§a (condicional + tolerante 501/NOT_CONFIGURED)
+name: ci(prod): fumaÃƒÂ§a (condicional + tolerante 501/NOT_CONFIGURED)
 on:
   workflow_dispatch:
-    inputs:
-      RUN_TOKEN_INFO:
-        description: 'Executa o passo /bags/token-info (requer secret BAGS_API_BASE)'
-        required: false
-        default: 'false'
-      PROD_BASE_URL:
-        description: 'Override da base URL (opcional)'
-        required: false
-        default: ''
   push:
     branches:
       - main
       - feat/v0-schemas-and-dev-server
 jobs:
   smoke-prod:
-    # SÃ³ roda se existir o secret (porta de seguranÃ§a),
+    # SÃƒÂ³ roda se existir o secret (porta de seguranÃƒÂ§a),
     # mas o script abaixo trata 501/NOT_CONFIGURED como sucesso.
     if: ${{ secrets.BAGS_API_BASE != '' }}
     runs-on: windows-latest
@@ -32,7 +23,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://bags-shield-api.vercel.app' }
           $url  = "$base/api/bags/token-info"
 
-          # RequisiÃ§Ã£o â€œÃ  prova de PS 5/7â€: HttpWebRequest captura 2xx/4xx/5xx sem explodir
+          # RequisiÃƒÂ§ÃƒÂ£o Ã¢â‚¬Å“ÃƒÂ  prova de PS 5/7Ã¢â‚¬Â: HttpWebRequest captura 2xx/4xx/5xx sem explodir
           $enc = [System.Text.Encoding]::UTF8
           $req = [System.Net.HttpWebRequest]::Create($url)
           $req.Method = 'GET'
@@ -52,12 +43,12 @@ jobs:
             [ "$hc" = "200" ] && break
             sleep 5
           done
-          [ "$hc" = "200" ] || { echo "health != 200 apÃƒÂ³s retries"; exit 1; }
+          [ "$hc" = "200" ] || { echo "health != 200 apÃƒÆ’Ã‚Â³s retries"; exit 1; }
           echo "::endgroup::"
 >>>>>>> 7777e76 (ci(prod): habilita workflow_dispatch e push na main (smoke-prod))
 
           if ($null -eq $resp) {
-            Write-Host "Sem resposta do servidor â€” FAIL hard."
+            Write-Host "Sem resposta do servidor Ã¢â‚¬â€ FAIL hard."
             exit 1
           }
 
@@ -67,7 +58,7 @@ jobs:
           $sr   = New-Object System.IO.StreamReader($resp.GetResponseStream(), $enc)
           $body = $sr.ReadToEnd(); $sr.Close()
 =======
-          # AsserÃƒÂ§ÃƒÂµes finais (se chegou aqui, deve estar OK)
+          # AsserÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes finais (se chegou aqui, deve estar OK)
           ok=$(jq -r '.ok' body.txt)
           base=$(jq -r '.meta.baseUrlUsed' body.txt)
           test "$ok" = "true" || { echo "ok != true"; exit 1; }
@@ -77,14 +68,14 @@ jobs:
           Write-Host "HTTP: $code"
           Write-Host "X-Request-Id: $xrid"
 
-          # TolerÃ¢ncia: produÃ§Ã£o sem BAGS_API_BASE configurado ainda
+          # TolerÃƒÂ¢ncia: produÃƒÂ§ÃƒÂ£o sem BAGS_API_BASE configurado ainda
           if ($code -eq 501 -and ($body -match 'NOT_CONFIGURED')) {
-            Write-Host "BAGS_API_BASE nÃ£o configurado em produÃ§Ã£o â€” marcando como SUCESSO (skip suave)."
+            Write-Host "BAGS_API_BASE nÃƒÂ£o configurado em produÃƒÂ§ÃƒÂ£o Ã¢â‚¬â€ marcando como SUCESSO (skip suave)."
             exit 0
           }
 
           if ($code -ge 200 -and $code -lt 300) {
-            Write-Host "OK 2xx â€” sucesso real."
+            Write-Host "OK 2xx Ã¢â‚¬â€ sucesso real."
             exit 0
           }
 
