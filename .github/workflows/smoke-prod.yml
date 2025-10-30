@@ -1,39 +1,42 @@
-name: ci(prod): fumaça condicional — leve
+name: ci(prod): fumaça condicional — health + token-info opcional
+
 on:
   workflow_dispatch:
+    inputs:
+      RUN_TOKEN_INFO:
+        description: 'Executa /api/bags/token-info (requer secret BAGS_API_BASE)'
+        required: false
+        default: 'false'
 
 jobs:
   smoke-prod:
     runs-on: windows-latest
-    # só roda se o secret existir
-    if: ${{ secrets.BAGS_API_BASE != '' }}
-
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Health check (prod)
+      - name: Health (prod)
         shell: pwsh
+        env:
+          PROD_BASE_URL: ${{ vars.PROD_BASE_URL }}
         run: |
-          $base = '${{ vars.PROD_BASE_URL }}'
+          $base = "${{ env.PROD_BASE_URL }}"
           if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://bags-shield-api.vercel.app' }
           Write-Host "Base = $base"
-          $r = Invoke-RestMethod "$base/api/health" -TimeoutSec 10 -ErrorAction Stop
-          if (-not $r.ok) { throw "health not ok" }
-          Write-Host "HEALTH OK: $($r.ts)"
+          $h = Invoke-RestMethod "$base/api/health" -TimeoutSec 10
+          if (-not $h.ok) { throw "health not ok: $($h | ConvertTo-Json -Compress)" }
+          Write-Host "HEALTH OK: $($h.ts)"
 
-      - name: Token-info (condicional)
-        # só roda se você ligar explicitamente via variável do repositório
-        if: ${{ vars.RUN_TOKEN_INFO == 'true' }}
+      - name: Token-info (opcional)
+        if: ${{ inputs.RUN_TOKEN_INFO == 'true' && secrets.BAGS_API_BASE != '' }}
         shell: pwsh
+        env:
+          PROD_BASE_URL: ${{ vars.PROD_BASE_URL }}
+          BAGS_API_BASE: ${{ secrets.BAGS_API_BASE }}
         run: |
-          $base = '${{ vars.PROD_BASE_URL }}'
+          $base = "${{ env.PROD_BASE_URL }}"
           if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://bags-shield-api.vercel.app' }
-          Write-Host "Base = $base"
-          try {
-            $resp = Invoke-WebRequest "$base/api/bags/token-info" -TimeoutSec 10 -ErrorAction Stop
-            Write-Host "token-info HTTP $([int]$resp.StatusCode)"
-            if ($resp.StatusCode -ne 200) { throw "token-info not 200" }
-          } catch {
-            Write-Host "::warning:: token-info falhou — provavelmente sem BAGS_API_BASE na Vercel. Pulando."
-          }
+          $resp = Invoke-WebRequest -Method GET -Uri "$base/api/bags/token-info" -TimeoutSec 15 -ErrorAction Stop
+          if ($resp.StatusCode -ne 200) { throw "token-info HTTP $($resp.StatusCode)" }
+          Write-Host "token-info 200"
