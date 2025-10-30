@@ -5,6 +5,8 @@ on:
 jobs:
   smoke-prod:
     runs-on: windows-latest
+    # só roda se o secret existir
+    if: ${{ secrets.BAGS_API_BASE != '' }}
 
     steps:
       - name: Checkout
@@ -21,13 +23,13 @@ jobs:
           Write-Host "HEALTH OK: $($r.ts)"
 
       - name: Token-info (condicional)
-        if: ${{ secrets.BAGS_API_BASE != '' && vars.RUN_TOKEN_INFO == 'true' }}
+        # só roda se você ligar explicitamente via variável do repositório
+        if: ${{ vars.RUN_TOKEN_INFO == 'true' }}
         shell: pwsh
-        env:
-          BAGS_API_BASE: ${{ secrets.BAGS_API_BASE }}
         run: |
           $base = '${{ vars.PROD_BASE_URL }}'
           if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://bags-shield-api.vercel.app' }
+          Write-Host "Base = $base"
           try {
             $resp = Invoke-WebRequest "$base/api/bags/token-info" -TimeoutSec 10 -ErrorAction Stop
             Write-Host "token-info HTTP $([int]$resp.StatusCode)"
