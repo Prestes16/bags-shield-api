@@ -3,24 +3,21 @@ name: ci(smoke): v3 (tag smoke-*) + health-only
 on:
   push:
     tags:
-      - 'smoke-*'
+      - "smoke-*"
 
 jobs:
   health:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: GET /api/health (prod)
-        shell: pwsh
         run: |
-          \Stop = 'Stop'
-          \ = 'https://bags-shield-api.vercel.app/api/health'
-          Write-Host "Ping: \"
-          try {
-            \ = Invoke-WebRequest \ -UseBasicParsing -TimeoutSec 20 -ErrorAction Stop
-            \ = [int]\.StatusCode
-          } catch {
-            if (\.Exception.Response) { \ = [int]\.Exception.Response.StatusCode } else { \ = 0 }
-          }
-          Write-Host "HTTP=\"
-          if (\ -ne 200) { throw "health not 200 (HTTP \)" }
+          set -euo pipefail
+          url="https://bags-shield-api.vercel.app/api/health"
+          echo "Ping: $url"
+          code=$(curl -s -S -o /tmp/body -w "%{http_code}" "$url" || true)
+          echo "HTTP=$code"
+          echo "--- body tail ---"
+          tail -c 400 /tmp/body 2>/dev/null || true
+          echo "-----------------"
+          test "$code" = "200"
