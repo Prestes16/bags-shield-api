@@ -1,0 +1,23 @@
+name: ci(smoke): v3 (tag smoke-*) + health-only
+
+on:
+  push:
+    tags:
+      - "smoke-*"
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: GET /api/health (prod)
+        run: |
+          set -euo pipefail
+          url="https://bags-shield-api.vercel.app/api/health"
+          echo "Ping: $url"
+          code=$(curl -s -S -o /tmp/body -w "%{http_code}" "$url" || true)
+          echo "HTTP=$code"
+          echo "--- body tail ---"
+          tail -c 400 /tmp/body 2>/dev/null || true
+          echo "-----------------"
+          test "$code" = "200"
