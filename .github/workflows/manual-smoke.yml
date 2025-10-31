@@ -9,7 +9,6 @@ permissions:
 jobs:
   hello:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
       - name: Hello
         shell: bash
