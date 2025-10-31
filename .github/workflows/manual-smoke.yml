@@ -1,7 +1,9 @@
-name: ci(smoke): manual-hello
+name: ci(smoke): manual-smoke (v6)
 
 on:
   workflow_dispatch: {}
+  repository_dispatch:
+    types: [manual_smoke]
 
 permissions:
   contents: read
@@ -9,9 +11,8 @@ permissions:
 jobs:
   hello:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Hello
         shell: bash
-        run: |
-          set -euo pipefail
-          echo "Hello from manual workflow @ $(date -u)"
+        run: echo "hello $GITHUB_SHA @ $(date -u)"
