@@ -1,0 +1,17 @@
+name: ci(smoke): manual-hello
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hello
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Hello from manual workflow @ $(date -u)"
