@@ -1,0 +1,16 @@
+name: poke — minimal
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: hi
+        shell: bash
+        run: echo "hi $GITHUB_SHA @ $(date -u)"
