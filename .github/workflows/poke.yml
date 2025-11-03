@@ -17,7 +17,7 @@ jobs:
           set -Eeuo pipefail
           URL="https://bags-shield-api.vercel.app/api/health"
           echo "Ping: ${URL}"
-          # captura HTTP mesmo se o curl falhar (sem usar '|| true')
+          # captura HTTP mesmo se o curl falhar
           set +e
           HTTP=$(curl -sS -o /dev/null -w "%{http_code}" "${URL}")
           CURL_EXIT=$?
