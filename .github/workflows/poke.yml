@@ -1,4 +1,4 @@
-name: poke — minimal
+name: poke — health
 
 on:
   workflow_dispatch: {}
@@ -7,10 +7,33 @@ permissions:
   contents: read
 
 jobs:
-  hello:
+  health:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: hi
+      - name: Ping /api/health (prod)
         shell: bash
-        run: echo "hi $GITHUB_SHA @ $(date -u)"
+        run: |
+          set -Eeuo pipefail
+          URL="https://bags-shield-api.vercel.app/api/health"
+          echo "Ping: ${URL}"
+          # captura HTTP mesmo se o curl falhar (sem usar '|| true')
+          set +e
+          HTTP=$(curl -sS -o /dev/null -w "%{http_code}" "${URL}")
+          CURL_EXIT=$?
+          set -e
+          echo "HTTP=${HTTP} exit=${CURL_EXIT}"
+          if [ "${CURL_EXIT}" -ne 0 ] || [ "${HTTP}" != "200" ]; then
+            echo "::error:: /api/health falhou (exit=${CURL_EXIT}, http=${HTTP})"
+            echo "Body ↓"
+            set +e; curl -sS "${URL}"; set -e
+            exit 1
+          fi
+
+      - name: Dump contexto (sempre)
+        if: always()
+        shell: bash
+        run: |
+          echo "ref=$GITHUB_REF"
+          echo "sha=$GITHUB_SHA"
+          echo "event=$GITHUB_EVENT_NAME"
