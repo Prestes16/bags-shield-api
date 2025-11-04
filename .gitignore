@@ -42,3 +42,9 @@ android/signing/*
 *.keystore
 *.jks
 *.p12
+
+# Android signing
+android/signing/*
+*.keystore
+*.jks
+*.p12
