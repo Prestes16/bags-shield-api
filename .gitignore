@@ -37,3 +37,8 @@ logs/smoke-*.txt
 
 # SO
 desktop.ini
+# --- Android signing (não commitar) ---
+android/signing/*
+*.keystore
+*.jks
+*.p12
