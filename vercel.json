@@ -6,6 +6,9 @@
                                       }
                   },
     "rewrites":  [
-
+                     {
+                         "source":  "/.well-known/assetlinks.json",
+                         "destination":  "/api/well-known/assetlinks"
+                     }
                  ]
 }
