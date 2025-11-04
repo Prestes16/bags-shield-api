@@ -1,73 +1,52 @@
-export type BagsClientConfig = {
-  baseUrl?: string;
+import { BAGS_API_BASE, BAGS_TIMEOUT_MS } from './constants';
+
+export type Json = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
+
+export interface BagsFetchInit extends RequestInit {
   timeoutMs?: number;
-  apiKey?: string;
-};
-
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const jitter = (ms: number) => Math.round(ms * (0.875 + Math.random() * 0.25)); // 87.5%–112.5%
-
-export async function fetchJsonWithRetry(input: string, init: (RequestInit & { timeoutMs?: number; retries?: number }) = {}) {
-  const { timeoutMs = 5000, retries = 2, ...rest } = init;
-  let lastErr: any;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(new Error("timeout")), timeoutMs);
-    try {
-      const res = await fetch(input, { ...rest, signal: ctrl.signal });
-      const retryable = res.status >= 500 || res.status === 429;
-      const data = await res.json().catch(() => ({} as any));
-      // Headers -> objeto simples (compat)
-      const headersAny: any = {};
-      try { (res as any).headers?.forEach?.((v:any,k:any)=>headersAny[k]=v); } catch {}
-      const upstreamRequestId = headersAny["x-request-id"] || (data?.meta?.requestId ?? null);
-      if (!res.ok && retryable && attempt < retries) {
-        const backoff = jitter(200 * Math.pow(2, attempt));
-        await sleep(backoff);
-        continue;
-      }
-      return { ok: res.ok, status: res.status, data, headers: headersAny, upstreamRequestId };
-    } catch (err) {
-      lastErr = err;
-      if (attempt < retries) {
-        const backoff = jitter(200 * Math.pow(2, attempt));
-        await sleep(backoff);
-        continue;
-      }
-      throw err;
-    } finally {
-      clearTimeout(t);
-    }
-  }
-  throw lastErr;
 }
 
-function resolveBaseFromEnv(): string | undefined {
-  const raw = (process.env.BAGS_API_BASE_OVERRIDE ?? process.env.BAGS_API_BASE ?? '').trim();
-  if (!raw) return undefined;
-  // Corrige legado: "_mock" -> "mock"
-  const fixed = raw.replace(/\/_mock\b/, '/mock').trim();
-  return fixed || undefined;
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), ms);
+  return Promise.race([
+    p.finally(() => clearTimeout(t)),
+  ]) as any;
 }
 
-export function envConfigFromProcess(): BagsClientConfig {
-  return {
-    baseUrl: resolveBaseFromEnv(),
-    timeoutMs: Number(process.env.BAGS_TIMEOUT_MS || "5000") || 5000,
-    apiKey: process.env.BAGS_API_KEY || undefined,
+export async function bagsFetch<T=any>(path: string, init: BagsFetchInit = {}) {
+  const key = process.env.BAGS_API_KEY ?? '';
+  const url = new URL(path.replace(/^\//,''), BAGS_API_BASE).toString();
+  const headers: Record<string,string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': key,
+    ...(init.headers as any || {}),
   };
-}
-
-export async function getTokenInfo(mint: string, cfg: BagsClientConfig = envConfigFromProcess()) {
-  if (!cfg.baseUrl) {
-    return { ok: false, status: 501, data: { error: { code: "NOT_CONFIGURED", message: "BAGS_API_BASE não configurado" } } };
+  if (!('authorization' in Object.fromEntries(Object.entries(headers).map(([k,v])=>[k.toLowerCase(), v as string])))) {
+    headers['Authorization'] = Bearer ;
   }
-  let base = cfg.baseUrl || "";
-  if (!base.endsWith("/")) base += "/";
-  const url = new URL("token-info", base);
-  url.searchParams.set("mint", mint);
-  const headers: Record<string,string> = { accept: "application/json" };
-  if (cfg.apiKey) headers["authorization"] = `Bearer ${cfg.apiKey}`;
-  const r = await fetchJsonWithRetry(url.toString(), { headers, timeoutMs: cfg.timeoutMs });
-  return r;
+
+  const res = await withTimeout(fetch(url, { ...init, headers }), init.timeoutMs ?? BAGS_TIMEOUT_MS)
+    .catch((e: any) => {
+      const err: any = new Error(
+etwork_error: );
+      err.status = 0;
+      throw err;
+    });
+
+  let data: any = null;
+  try { data = await (res as Response).json(); } catch { /* ignore json parse */ }
+
+  const ok = data?.success === true;
+  if (!ok) {
+    const err: any = new Error(data?.error ?? data?.response ?? \HTTP \\);
+    err.status = (res as Response).status;
+    err.rate = {
+      limit: (res as Response).headers.get('X-RateLimit-Limit'),
+      remaining: (res as Response).headers.get('X-RateLimit-Remaining'),
+      reset: (res as Response).headers.get('X-RateLimit-Reset'),
+    };
+    throw err;
+  }
+  return { data: data.response as T, res: res as Response };
 }
