@@ -1,23 +1,24 @@
 {
-  "name": "bags-shield-api",
-  "version": "1.0.0",
-  "description": "API Gateway for Bags Shield project on Vercel",
-  "scripts": {
-    "start": "echo 'Vercel usa a pasta /api'",
-    "build": "echo 'Vercel usa o builder padrao @vercel/node'",
-    "dev-v0": "node scripts/dev-server.cjs"
-  },
-  "engines": {
-    "node": "22.x"
-  },
-  "dependencies": {
-    "@vercel/node": "3.1.1"
-  },
-  "devDependencies": {
-    "@types/node": "20.14.9",
-    "ajv": "^8.17.1",
-    "express": "^5.1.0",
-    "newman": "^6.2.1",
-    "typescript": "5.5.3"
-  }
+    "name":  "bags-shield-api",
+    "version":  "1.0.0",
+    "description":  "API Gateway for Bags Shield project on Vercel",
+    "scripts":  {
+                    "start":  "echo \u0027Vercel usa a pasta /api\u0027",
+                    "build":  "echo \u0027Vercel usa o builder padrao @vercel/node\u0027",
+                    "dev-v0":  "node scripts/dev-server.cjs",
+                    "test:prod":  "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api-4.vercel.app --reporters cli"
+                },
+    "engines":  {
+                    "node":  "22.x"
+                },
+    "dependencies":  {
+                         "@vercel/node":  "3.1.1"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "20.14.9",
+                            "ajv":  "^8.17.1",
+                            "express":  "^5.1.0",
+                            "newman":  "^6.2.1",
+                            "typescript":  "5.5.3"
+                        }
 }
