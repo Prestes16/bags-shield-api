@@ -38,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 💡 Chamada real à Bags API para a rota 'scan' (Endpoint 'scan' revalidado como o mais simples)
-    const { data, res: upstream } = await bagsFetch<ScanResponse>\('analytics/scan', {
+    // 💡 Chamada real à Bags API para a rota 'scan' (o caminho mais simples e provável)
+    const { data, res: upstream } = await bagsFetch<ScanResponse>('scan', {
       method: 'POST',
       body: JSON.stringify({ rawTransaction }),
       headers: { 'Content-Type': 'application/json' },
