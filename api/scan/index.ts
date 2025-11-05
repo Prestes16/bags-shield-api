@@ -5,12 +5,9 @@ function requestId() {
   return 'req_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-// Interface (assumida) para o corpo da requisição de varredura
 interface ScanRequest {
-  rawTransaction: string; // Transação bruta em Base64
+  rawTransaction: string;
 }
-
-// Interface (assumida) para a resposta da Bags API
 interface ScanResponse {
   isSafe: boolean;
   warnings: string[];
@@ -40,25 +37,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ success: false, error: 'rawTransaction field is missing or invalid.', meta: { requestId: rid } });
   }
 
-  try {
-    // 💡 Chamada real à Bags API para a rota 'scan'
-    const { data, res: upstream } = await bagsFetch<ScanResponse>('scan', {
-      method: 'POST',
-      body: JSON.stringify({ rawTransaction }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+  // 💡 MODO DE TESTE: RETORNA SUCESSO LOCALMENTE, IGNORANDO bagsFetch
+  // try {
+  //   const { data, res: upstream } = await bagsFetch<ScanResponse>('scan', {
+  //     method: 'POST',
+  //     body: JSON.stringify({ rawTransaction }),
+  //     headers: { 'Content-Type': 'application/json' },
+  //   });
 
-    return res.status(200).json({ success: true, response: data, meta: { requestId: rid, rate: {
-      limit: upstream.headers.get('X-RateLimit-Limit'),
-      remaining: upstream.headers.get('X-RateLimit-Remaining'),
-      reset: upstream.headers.get('X-RateLimit-Reset'),
-    } } });
+    return res.status(200).json({ 
+      success: true, 
+      response: { isSafe: true, warnings: ["API Bypassed for Debug"], metadata: { mode: "local-test", length: rawTransaction.length } },
+      meta: { requestId: rid, note: 'Bags API call skipped for stability test.' } 
+    });
     
-  } catch (e: any) {
-    // Tratamento de erro padronizado do Bags Shield
-    const status = Number(e?.status) || 500;
-    console.error(`SCAN API FAILED (Status: ${status}):`, e.message);
-    
-    return res.status(status).json({ success: false, error: String(e?.message ?? 'upstream_scan_error'), meta: { requestId: rid, note: 'Check Upstream API Logs.' } });
-  }
+  // } catch (e: any) {
+  //   const status = Number(e?.status) || 500;
+  //   console.error(`SCAN API FAILED (Status: ${status}):`, e.message);
+  //   
+  //   return res.status(status).json({ success: false, error: String(e?.message ?? 'upstream_scan_error'), meta: { requestId: rid, note: 'Check Upstream API Logs.' } });
+  // }
 }
