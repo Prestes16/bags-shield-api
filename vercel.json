@@ -1,12 +1,6 @@
 {
   "version": 2,
-  "builds": [
-    { 
-      "src": "api/**/*.ts", 
-      "use": "@vercel/node",
-      "config": {
-        "runtime": "nodejs20.x"
-      }
-    }
-  ]
+  "functions": {
+    "api/**/*.ts": { "runtime": "nodejs" }
+  }
 }
