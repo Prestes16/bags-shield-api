@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const newRequestId = () => 'req_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+const MODE = String(process.env.BAGS_SCAN_MODE ?? 'mock').toLowerCase();
 
 interface ScanRequest { rawTransaction: string }
 type Grade = 'A'|'B'|'C'|'D'|'E';
@@ -37,12 +38,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
   if (req.method !== 'POST') {
-    return res.status(405).json({ success:false, error:'Method Not Allowed', meta:{ requestId: rid }});
+    return res.status(405).json({ success:false, error:'Method Not Allowed', meta:{ requestId: rid, mode: MODE }});
   }
 
   const raw = (req.body as Partial<ScanRequest> | undefined)?.rawTransaction;
   if (!raw || typeof raw !== 'string') {
-    return res.status(400).json({ success:false, error:'rawTransaction field is missing or invalid.', meta:{ requestId: rid }});
+    return res.status(400).json({ success:false, error:'rawTransaction field is missing or invalid.', meta:{ requestId: rid, mode: MODE }});
+  }
+
+  // ==== Toggle de modo por env ====
+  if (MODE !== 'mock') {
+    // Futuro: implementar modo 'real' aqui (quando houver upstream apropriado)
+    return res.status(501).json({
+      success: false,
+      error: 'scan_real_mode_not_implemented_yet',
+      meta: { requestId: rid, mode: MODE }
+    });
   }
 
   // === Stub determinístico (modo: mock) ===
@@ -67,5 +78,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   };
 
-  return res.status(200).json({ success:true, response, meta:{ requestId: rid }});
+  return res.status(200).json({ success:true, response, meta:{ requestId: rid, mode: MODE }});
 }
