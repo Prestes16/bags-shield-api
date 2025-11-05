@@ -1,13 +1,16 @@
 {
   "name": "bags-shield-api",
   "version": "1.0.0",
-  "description": "API Gateway for Bags Shield project on Vercel",
-  "main": "api/ping.js",
+  "description": "API Gateway para Bags Shield project",
   "scripts": {
-    "start": "node api/ping.js",
-    "build": "echo 'No build step required for CJS functions.'"
+    "start": "echo 'Vercel usa a pasta /api'",
+    "build": "echo 'Vercel usa o builder padrao @vercel/node'"
   },
   "engines": {
     "node": "20.x"
+  },
+  "dependencies": {
+    "@vercel/node": "3.1.1",
+    "@types/node": "20.14.9"
   }
 }
