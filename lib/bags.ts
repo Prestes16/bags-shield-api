@@ -1,52 +1,70 @@
-import { BAGS_API_BASE, BAGS_TIMEOUT_MS } from './constants';
+import { BAGS_API_BASE, BAGS_API_KEY } from './constants';
 
-export type Json = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
+// Classe de erro customizada para facilitar o tratamento de status HTTP não-2xx ou erros de rede
+export class UpstreamError extends Error {
+  status: number;
 
-export interface BagsFetchInit extends RequestInit {
-  timeoutMs?: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'UpstreamError';
+    this.status = status;
+  }
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), ms);
-  return Promise.race([
-    p.finally(() => clearTimeout(t)),
-  ]) as any;
-}
-
-export async function bagsFetch<T=any>(path: string, init: BagsFetchInit = {}) {
-  const key = process.env.BAGS_API_KEY ?? '';
+export async function bagsFetch<T>(path: string, options: RequestInit = {}): Promise<{ data: T, res: Response }> {
+  // Constrói a URL completa
   const url = new URL(path.replace(/^\//,''), BAGS_API_BASE).toString();
-  const headers: Record<string,string> = {
+  
+  if (!BAGS_API_KEY) {
+      throw new UpstreamError('BAGS_API_KEY is not configured in Vercel environment variables.', 500);
+  }
+
+  const defaultHeaders = {
+    // A API Bags usa x-api-key
+    'x-api-key': BAGS_API_KEY,
+    // Garante que o tipo de conteúdo padrão seja JSON, se não for sobrescrito
     'Content-Type': 'application/json',
-    'x-api-key': key,
-    ...(init.headers as any || {}),
   };
-  if (!('authorization' in Object.fromEntries(Object.entries(headers).map(([k,v])=>[k.toLowerCase(), v as string])))) {
-    headers['Authorization'] = Bearer ;
-  }
 
-  const res = await withTimeout(fetch(url, { ...init, headers }), init.timeoutMs ?? BAGS_TIMEOUT_MS)
-    .catch((e: any) => {
-      const err: any = new Error(
-etwork_error: );
-      err.status = 0;
-      throw err;
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...defaultHeaders,
+        ...options.headers,
+      },
     });
+  
+    // Se a resposta for 4xx ou 5xx
+    if (!response.ok) {
+      let errorDetails: string = response.statusText;
+      try {
+          // Tenta ler o corpo do erro como JSON para pegar a mensagem detalhada
+          const errorBody = await response.json();
+          errorDetails = errorBody.error || errorBody.message || errorDetails;
+      } catch (e) {
+          // Se falhar, usa o statusText padrão
+      }
+      
+      // Lança o UpstreamError com o status correto
+      throw new UpstreamError(`Bags API Error: ${response.status} ${errorDetails}`, response.status); 
+    }
+  
+    // Tenta ler o corpo da resposta como JSON
+    const data: T = await response.json();
+    return { data, res: response };
 
-  let data: any = null;
-  try { data = await (res as Response).json(); } catch { /* ignore json parse */ }
+  } catch (e: any) {
+    if (e instanceof UpstreamError) {
+      throw e;
+    }
+    
+    // Captura erros de rede (DNS, timeout, etc.)
+    if (e.name === 'FetchError' || e.name === 'TypeError') {
+         throw new UpstreamError(`Network Error: Failed to connect to Bags API. ${e.message}`, 0);
+    }
 
-  const ok = data?.success === true;
-  if (!ok) {
-    const err: any = new Error(data?.error ?? data?.response ?? \HTTP \\);
-    err.status = (res as Response).status;
-    err.rate = {
-      limit: (res as Response).headers.get('X-RateLimit-Limit'),
-      remaining: (res as Response).headers.get('X-RateLimit-Remaining'),
-      reset: (res as Response).headers.get('X-RateLimit-Reset'),
-    };
-    throw err;
+    // Lança qualquer outro erro desconhecido como 500
+    throw new UpstreamError(`Unexpected Error in bagsFetch: ${e.message}`, 500);
   }
-  return { data: data.response as T, res: res as Response };
 }
