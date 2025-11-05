@@ -4,7 +4,8 @@
   "description": "API Gateway for Bags Shield project on Vercel",
   "scripts": {
     "start": "echo 'Vercel usa a pasta /api'",
-    "build": "echo 'Vercel usa o builder padrao @vercel/node'"
+    "build": "echo 'Vercel usa o builder padrao @vercel/node'",
+    "dev-v0": "node scripts/dev-server.cjs"
   },
   "engines": {
     "node": "22.x"
@@ -14,6 +15,8 @@
   },
   "devDependencies": {
     "@types/node": "20.14.9",
+    "ajv": "^8.17.1",
+    "express": "^5.1.0",
     "typescript": "5.5.3"
   }
 }
