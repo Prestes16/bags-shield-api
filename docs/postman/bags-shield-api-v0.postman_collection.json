@@ -1,0 +1,140 @@
+{
+  "info": {
+    "_postman_id": "c2c12f4a-6c6f-4d0e-9b3f-9b3ad3d7a9f0",
+    "name": "Bags Shield API v0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Scan & Simulate em modo mock, com rotas de Produção e Dev local (AJV)."
+  },
+  "variable": [
+    { "key": "baseUrlProd",  "value": "https://bags-shield-api-4.vercel.app" },
+    { "key": "baseUrlLocal", "value": "http://127.0.0.1:8787" }
+  ],
+  "item": [
+    {
+      "name": "Production",
+      "item": [
+        {
+          "name": "POST /api/scan (prod)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrlProd}}/api/scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rawTransaction\": \"AQAAAAAAAAAAAAAA\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function(){ pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('success true', function(){ pm.expect(json.success).to.eql(true); });",
+                  "pm.test('has meta.mode', function(){ pm.expect(json).to.have.property('meta'); pm.expect(json.meta).to.have.property('mode'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/simulate (prod)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrlProd}}/api/simulate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mint\": \"So11111111111111111111111111111111111111112\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function(){ pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('success true', function(){ pm.expect(json.success).to.eql(true); });",
+                  "pm.test('has meta.mode', function(){ pm.expect(json).to.have.property('meta'); pm.expect(json.meta).to.have.property('mode'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Local Dev (AJV)",
+      "item": [
+        {
+          "name": "POST /api/v0/scan (local)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrlLocal}}/api/v0/scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rawTransaction\": \"AQAAAAAAAAAAAAAA\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function(){ pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('success true', function(){ pm.expect(json.success).to.eql(true); });",
+                  "pm.test('has meta.mode', function(){ pm.expect(json).to.have.property('meta'); pm.expect(json.meta).to.have.property('mode'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/v0/simulate (local)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrlLocal}}/api/v0/simulate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mint\": \"So11111111111111111111111111111111111111112\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function(){ pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('success true', function(){ pm.expect(json.success).to.eql(true); });",
+                  "pm.test('has meta.mode', function(){ pm.expect(json).to.have.property('meta'); pm.expect(json.meta).to.have.property('mode'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
