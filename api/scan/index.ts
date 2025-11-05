@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bagsFetch } from '../../lib/bags'; // Caminho: ../../lib/bags
+import { bagsFetch } from '\.\.\/\.\.\/\.\.\/lib\/bags'; // Caminho: ../../lib/bags
 
 function requestId() {
   return 'req_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
