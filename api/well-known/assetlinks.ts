@@ -1,16 +1,22 @@
-export const config = { runtime: 'nodejs20.x' };
+import { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default function handler(req: any, res: any) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  res.status(200).json([
+// Conteúdo simulado para o arquivo assetlinks.ts
+// Nota: O runtime será herdado do package.json (nodejs22.x)
+export default (request: VercelRequest, response: VercelResponse) => {
+  // Configura os cabeçalhos para o JSON (necessário para assetlinks)
+  response.setHeader('Content-Type', 'application/json');
+
+  // Substitua este objeto pelo JSON assetlinks.json real do seu projeto
+  const assetLinksJson = [
     {
       relation: ["delegate_permission/common.handle_all_urls"],
       target: {
         namespace: "android_app",
-        package_name: "app.bagsshield",
-        sha256_cert_fingerprints: ["97:D3:90:DE:36:9B:23:85:38:1E:2F:66:6D:0A:5D:46:B6:8D:94:CC:08:9F:E2:38:3B:CA:FB:84:19:7D:06:A5"]
+        package_name: "com.bags_shield.app",
+        sha256_cert_fingerprints: ["SUA_CHAVE_SHA_256_AQUI"]
       }
     }
-  ]);
-}
+  ];
+
+  response.status(200).send(JSON.stringify(assetLinksJson, null, 2));
+};
