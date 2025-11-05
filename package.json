@@ -7,7 +7,7 @@
     "build": "echo 'Vercel usa o builder padrao @vercel/node'"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@vercel/node": "3.1.1"
