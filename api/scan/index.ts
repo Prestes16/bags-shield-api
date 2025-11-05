@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bagsFetch } from '\.\.\/\.\.\/\.\.\/lib\/bags'; // Caminho: ../../lib/bags
+import { bagsFetch } from '../../../lib/bags'; // Caminho Corrigido (3 níveis)
 
 function requestId() {
   return 'req_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -38,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 💡 Chamada real à Bags API para a rota 'scan' (REINTEGRADO)
-    const { data, res: upstream } = await bagsFetch<ScanResponse>\('transaction/scan', {
+    // 💡 Chamada real à Bags API para a rota 'scan' (Endpoint 'scan' revalidado)
+    const { data, res: upstream } = await bagsFetch<ScanResponse>('scan', {
       method: 'POST',
       body: JSON.stringify({ rawTransaction }),
       headers: { 'Content-Type': 'application/json' },
