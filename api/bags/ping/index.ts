@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bagsFetch } from '../../../lib/bags'; // Assumindo que este caminho está correto
+import { bagsFetch } from '../../lib/bags'; // Caminho CORRIGIDO
 
 function requestId() {
   return 'req_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -18,10 +18,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const rid = requestId();
   res.setHeader('X-Request-Id', rid);
-  res.setHeader('Cache-Control', 'no-store'); // Header padrão do projeto
+  res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
-  res.setHeader('Access-Control-Allow-Origin', '*'); // CORS unificado
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
     const { data, res: upstream } = await bagsFetch<{ message: string }>('ping', { method: 'GET' });
@@ -32,6 +32,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } } });
   } catch (e: any) {
     const status = Number(e?.status) || 500;
+    // Tenta capturar 401/403 de chave de API inválida
+    if (e?.status === 401 || e?.status === 403) {
+      console.error('API Key may be invalid or missing:', e.message);
+    }
     return res.status(status).json({ success: false, error: String(e?.message ?? 'unknown_error'), meta: { requestId: rid } });
   }
 }
