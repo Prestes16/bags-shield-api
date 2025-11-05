@@ -1,25 +1,35 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bagsFetch } from '../../../lib/bags'; // Caminho Corrigido (3 níveis)
 
-function requestId() {
-  return 'req_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+const newRequestId = () => 'req_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+interface ScanRequest { rawTransaction: string }
+type Grade = 'A'|'B'|'C'|'D'|'E';
+
+function simpleHash(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 101; // 0..100
 }
 
-interface ScanRequest {
-  rawTransaction: string;
-}
-interface ScanResponse {
-  isSafe: boolean;
-  warnings: string[];
-  metadata: Record<string, any>;
+function gradeFromScore(score: number): Grade {
+  if (score >= 85) return 'A';
+  if (score >= 70) return 'B';
+  if (score >= 55) return 'C';
+  if (score >= 40) return 'D';
+  return 'E';
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const rid = requestId();
+  const rid = newRequestId();
+
   res.setHeader('X-Request-Id', rid);
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
-  res.setHeader('Access-Control-Allow-Origin', '*'); // CORS
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -27,41 +37,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
   if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+    return res.status(405).json({ success:false, error:'Method Not Allowed', meta:{ requestId: rid }});
   }
 
-  const { rawTransaction } = req.body as ScanRequest;
-
-  // 🚨 Validação Crítica da Entrada
-  if (!rawTransaction || typeof rawTransaction !== 'string') {
-    return res.status(400).json({ success: false, error: 'rawTransaction field is missing or invalid.', meta: { requestId: rid } });
+  const raw = (req.body as Partial<ScanRequest> | undefined)?.rawTransaction;
+  if (!raw || typeof raw !== 'string') {
+    return res.status(400).json({ success:false, error:'rawTransaction field is missing or invalid.', meta:{ requestId: rid }});
   }
 
-  try {
-    // 💡 Chamada real à Bags API com o endpoint 'scan'
-    const { data, res: upstream } = await bagsFetch<ScanResponse>('scan', {
-      method: 'POST',
-      body: JSON.stringify({ rawTransaction }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+  // === Stub determinístico (modo: mock) ===
+  const score = simpleHash(raw);
+  const grade = gradeFromScore(score);
+  const warnings: string[] = [];
+  if (raw.length < 40) warnings.push('short_base64_input');
+  if (raw.includes('==')) warnings.push('padded_base64');
+  if (/[^A-Za-z0-9+/=]/.test(raw)) warnings.push('non_base64_chars');
 
-    return res.status(200).json({ success: true, response: data, meta: { requestId: rid, rate: {
-      limit: upstream.headers.get('X-RateLimit-Limit'),
-      remaining: upstream.headers.get('X-RateLimit-Remaining'),
-      reset: upstream.headers.get('X-RateLimit-Reset'),
-    } } });
-    
-  } catch (e: any) {
-    // Tratamento de erro padronizado do Bags Shield
-    const status = Number(e?.status) || 500;
-    
-    // Log do erro completo no console do Vercel
-    console.error(`SCAN FAILED: Status=${status}. Error details:`, e.message);
+  const isSafe = score >= 70 && warnings.length === 0;
 
-    return res.status(status).json({
-      success: false, 
-      error: String(e?.message ?? 'upstream_scan_error_unknown'), 
-      meta: { requestId: rid, note: 'Check Vercel Execution Logs for full error object.' } 
-    });
-  }
+  const response = {
+    isSafe,
+    shieldScore: score,
+    grade,
+    warnings,
+    metadata: {
+      mode: 'mock',
+      rawLength: raw.length,
+      base: process.env.BAGS_API_BASE ?? null
+    }
+  };
+
+  return res.status(200).json({ success:true, response, meta:{ requestId: rid }});
 }
