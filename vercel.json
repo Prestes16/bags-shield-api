@@ -1,7 +1,13 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.ts": { "runtime": "nodejs20.x" },
-    "api/**/*.js": { "runtime": "nodejs20.x" }
-  }
+  "rewrites": [
+    { 
+      "source": "/api/ping",
+      "destination": "/api/ping.js"
+    },
+    { 
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
 }
