@@ -1,7 +1,7 @@
 {
   "name": "bags-shield-api",
   "version": "1.0.0",
-  "description": "API Gateway para Bags Shield project",
+  "description": "API Gateway for Bags Shield project on Vercel",
   "scripts": {
     "start": "echo 'Vercel usa a pasta /api'",
     "build": "echo 'Vercel usa o builder padrao @vercel/node'"
@@ -13,6 +13,7 @@
     "@vercel/node": "3.1.1"
   },
   "devDependencies": {
-    "@types/node": "^24.10.0"
+    "@types/node": "20.14.9",
+    "typescript": "5.5.3"
   }
 }
