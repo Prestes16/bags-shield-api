@@ -1,13 +1,9 @@
 {
   "version": 2,
+  "builds": [
+    { "src": "api/**/*.js", "use": "@vercel/node", "config": { "runtime": "nodejs20.x" } }
+  ],
   "rewrites": [
-    { 
-      "source": "/api/ping",
-      "destination": "/api/ping.js"
-    },
-    { 
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    }
+    { "source": "/api/ping", "destination": "/api/ping.js" }
   ]
 }
