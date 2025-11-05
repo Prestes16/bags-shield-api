@@ -38,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 💡 Chamada real à Bags API com o último endpoint lógico
-    const { data, res: upstream } = await bagsFetch<ScanResponse>('token-launch/scan', {
+    // 💡 Chamada real à Bags API com o endpoint 'scan'
+    const { data, res: upstream } = await bagsFetch<ScanResponse>('scan', {
       method: 'POST',
       body: JSON.stringify({ rawTransaction }),
       headers: { 'Content-Type': 'application/json' },
