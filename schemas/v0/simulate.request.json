@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.bags-shield.local/v0/simulate.request.json",
+  "title": "Bags Shield v0 - Simulate Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mint"],
+  "properties": {
+    "mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "description": "Token mint (base58)",
+      "examples": ["So11111111111111111111111111111111111111112"]
+    }
+  }
+}

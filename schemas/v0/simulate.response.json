@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.bags-shield.local/v0/simulate.response.json",
+  "title": "Bags Shield v0 - Simulate Response (success)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["success", "response", "meta"],
+  "properties": {
+    "success": { "const": true },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isSafe", "shieldScore", "grade", "warnings", "metadata"],
+      "properties": {
+        "isSafe": { "type": "boolean" },
+        "shieldScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "grade": { "type": "string", "enum": ["A", "B", "C", "D", "E"] },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["mode", "mintLength"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["mock", "real"] },
+            "mintLength": { "type": "integer", "minimum": 0 },
+            "base": { "type": ["string", "null"], "format": "uri" }
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "mode"],
+      "properties": {
+        "requestId": { "type": "string", "pattern": "^req_[a-z0-9]+" },
+        "mode": { "type": "string", "enum": ["mock", "real"] }
+      }
+    }
+  },
+  "examples": [
+    {
+      "success": true,
+      "response": {
+        "isSafe": false,
+        "shieldScore": 25,
+        "grade": "E",
+        "warnings": [],
+        "metadata": {
+          "mode": "mock",
+          "mintLength": 43,
+          "base": "https://public-api-v2.bags.fm/api/v1/"
+        }
+      },
+      "meta": { "requestId": "req_xxxxxx", "mode": "mock" }
+    }
+  ]
+}
