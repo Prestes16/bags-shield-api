@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bags Shield API â€” Status & Confiabilidade</title>
+  <title>Bags Shield API Ã¢â‚¬â€ Status & Confiabilidade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -34,7 +34,7 @@
       50%{background-position:20px -10px,-10px 10px,0 0}
       100%{background-position:0 0,0 0,0 0}
     }
-    /* canvas da chuva de $ fica por trÃ¡s do conteÃºdo */
+    /* canvas da chuva de $ fica por trÃƒÂ¡s do conteÃƒÂºdo */
     #fx{
       position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.10;
     }
@@ -160,12 +160,12 @@
         </svg>
       </div>
       <div class="brand">Bags Shield API</div>
-      <span class="tag">v0.2.0 â€¢ navy/blue</span>
+      <span class="tag">v0.2.0 Ã¢â‚¬Â¢ navy/blue</span>
     </div>
 
     <div class="hero lift">
       <div class="heroIcon">
-        <!-- versÃ£o maior -->
+        <!-- versÃƒÂ£o maior -->
         <svg viewBox="0 0 96 96" width="56" height="56" fill="none" role="img" aria-hidden="true">
           <defs><linearGradient id="gShield2" x1="0" x2="1"><stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/></linearGradient></defs>
           <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
@@ -176,12 +176,12 @@
         </svg>
       </div>
       <div>
-        <h1>Camada de confianÃ§a do BagsApp</h1>
-        <p class="ghost">Telemetria clara, defesa em profundidade e estabilidade de integraÃ§Ãµes. Status vivo + grÃ¡fico de confiabilidade para <code>/api/scan</code>, <code>/api/simulate</code> e Token Launch (Bags).</p>
+        <h1>Camada de confianÃƒÂ§a do BagsApp</h1>
+        <p class="ghost">Telemetria clara, defesa em profundidade e estabilidade de integraÃƒÂ§ÃƒÂµes. Status vivo + grÃƒÂ¡fico de confiabilidade para <code>/api/scan</code>, <code>/api/simulate</code> e Token Launch (Bags).</p>
         <div class="cta-row">
           <button id="btnHealth" class="btn btn-primary">Atualizar Status</button>
-          <button id="btnPing" class="btn btn-ghost">Ping Bags (canÃ¡rio)</button>
-          <button id="btnSecurity" class="btn btn-outline">Nota de seguranÃ§a</button>
+          <button id="btnPing" class="btn btn-ghost">Ping Bags (canÃƒÂ¡rio)</button>
+          <button id="btnSecurity" class="btn btn-outline">Nota de seguranÃƒÂ§a</button>
         </div>
       </div>
     </div>
@@ -206,19 +206,19 @@
             <div class="bar"><div class="name">/api/simulate</div><div class="track"><div id="b-sim" class="fill" style="width:0%"></div></div><div class="pct" id="p-sim">0%</div></div>
             <div class="bar"><div class="name">Token Launch (Bags)</div><div class="track"><div id="b-bags" class="fill" style="width:0%"></div></div><div class="pct" id="p-bags">0%</div></div>
             <div class="bar"><div class="name">Shield Score Engine</div><div class="track"><div id="b-ssl" class="fill" style="width:0%"></div></div><div class="pct" id="p-ssl">0%</div></div>
-            <div class="ghost" style="margin-top:6px">Shield Score = mÃ©dia da disponibilidade de <code>/scan</code> + <code>/simulate</code>.</div>
+            <div class="ghost" style="margin-top:6px">Shield Score = mÃƒÂ©dia da disponibilidade de <code>/scan</code> + <code>/simulate</code>.</div>
           </div>
         </div>
       </div>
 
       <div class="card span-5 lift" data-tilt>
-        <h3>Playground RÃ¡pido</h3>
+        <h3>Playground RÃƒÂ¡pido</h3>
         <div class="row">
           <input id="mint" placeholder="mint (simulate)" />
           <button id="btnSim" class="btn btn-primary">POST /api/simulate</button>
         </div>
         <div class="row" style="margin-top:8px">
-          <textarea id="tx" rows="5" placeholder="rawTransaction (scan) â€” cole um JSON bruto ou texto"></textarea>
+          <textarea id="tx" rows="5" placeholder="rawTransaction (scan) Ã¢â‚¬â€ cole um JSON bruto ou texto"></textarea>
         </div>
         <div class="row" style="margin-top:8px">
           <button id="btnScan" class="btn btn-ghost">POST /api/scan</button>
@@ -234,32 +234,65 @@
       <div class="card span-7 lift" data-tilt>
         <h3>Status da API</h3>
         <div class="row" style="gap:12px;flex-wrap:wrap">
-          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">â€¦</span></span>
-          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">â€¦</span></span>
-          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">â€¦</span></span>
-          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">â€¦</span></span>
+          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">Ã¢â‚¬Â¦</span></span>
+          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">Ã¢â‚¬Â¦</span></span>
+          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">Ã¢â‚¬Â¦</span></span>
+          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">Ã¢â‚¬Â¦</span></span>
         </div>
-        <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em â€œAtualizar Statusâ€.</pre></div>
+        <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em Ã¢â‚¬Å“Atualizar StatusÃ¢â‚¬Â.</pre></div>
       </div>
 
       <div class="card span-5 lift" data-tilt>
         <h3>Deploy & Metadados</h3>
         <div style="display:grid;grid-template-columns:140px 1fr;gap:10px">
-          <div class="ghost">RequestId</div><div id="kvReq">â€”</div>
-          <div class="ghost">DeploymentId</div><div id="kvDep">â€”</div>
-          <div class="ghost">Vercel-Id</div><div id="kvVer">â€”</div>
-          <div class="ghost">RateLimit</div><div id="kvRl">â€”</div>
+          <div class="ghost">RequestId</div><div id="kvReq">Ã¢â‚¬â€</div>
+          <div class="ghost">DeploymentId</div><div id="kvDep">Ã¢â‚¬â€</div>
+          <div class="ghost">Vercel-Id</div><div id="kvVer">Ã¢â‚¬â€</div>
+          <div class="ghost">RateLimit</div><div id="kvRl">Ã¢â‚¬â€</div>
         </div>
       </div>
     </div>
 
-    <div class="footer">Â© Bags Shield â€” navy/blue â€¢ logo escudo+$ â€¢ chuva de $ em background â€¢ hover lift + tilt</div>
+    
+      <div id="secInfo" class="card lift" data-tilt>
+        <h3>Nota de segurança</h3>
+        <p>Segurança em <strong>camadas</strong>, com proteção de borda a borda e observabilidade ativa.</p>
+
+        <h4>Princípios</h4>
+        <ul>
+          <li><strong>Defesa em profundidade</strong>: validação de entrada/saída, CORS restritivo, <code>no-store</code>.</li>
+          <li><strong>Identificabilidade</strong>: <code>X-Request-Id</code> em todas as respostas + logs estruturados.</li>
+          <li><strong>Resiliência</strong>: retries/backoff em 429/5xx e timeouts curtos.</li>
+        </ul>
+
+        <h4>Proteções na API</h4>
+        <ul>
+          <li>CORS com origem controlada e <code>OPTIONS</code> estável.</li>
+          <li>Rate limiting por IP/chave e envelopes padronizados <code>{ success, response|error }</code>.</li>
+          <li>Upstream Bags com <code>x-api-key</code> + <code>Authorization: Bearer</code> (dupla validação).</li>
+          <li>Webhooks Vercel com HMAC-SHA1 (<code>x-vercel-signature</code>).</li>
+        </ul>
+
+        <h4>Deploy seguro</h4>
+        <ul>
+          <li><strong>Rolling Releases</strong> (canário → 100%) com métricas comparativas.</li>
+          <li><strong>Skew Protection</strong> para travar cliente/servidor por deployment.</li>
+          <li>Instant Rollback; headers de deploy propagados (<code>x-deployment-id</code>, <code>x-vercel-id</code>).</li>
+        </ul>
+
+        <h4>Como validar agora</h4>
+        <pre>{
+  "checagens": ["GET /api/health", "HEAD /api/scan", "HEAD /api/simulate", "GET /api/bags/ping"],
+  "esperado": "200-204 ou 400/405 em rotas POST (vivas) com requestId"
+}</pre>
+      </div>
+<div class="footer">Ã‚Â© Bags Shield Ã¢â‚¬â€ navy/blue Ã¢â‚¬Â¢ logo escudo+$ Ã¢â‚¬Â¢ chuva de $ em background Ã¢â‚¬Â¢ hover lift + tilt</div>
   </div>
 
   <script>
     const $=(q)=>document.querySelector(q);
     const fmt=(d)=>{try{return JSON.stringify(d,null,2)}catch(e){return String(d)}};
-    async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"ConteÃºdo nÃ£o-JSON",text:await res.text()}}}
+    async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"ConteÃƒÂºdo nÃƒÂ£o-JSON",text:await res.text()}}}
     function badge(el,ok){el.className="badge "+(ok?"b-ok":"b-err");el.textContent=ok?"OK":"ERRO"}
 
     // Donut
@@ -277,7 +310,7 @@
         // 2) OPTIONS
         r=await fetch(url,{method:"OPTIONS",signal:ctrl.signal}).catch(()=>null);
         if(r && (r.ok || [204,200,400,405].includes(r.status))) return true;
-        // 3) POST com payload invÃ¡lido esperando 400 rÃ¡pido
+        // 3) POST com payload invÃƒÂ¡lido esperando 400 rÃƒÂ¡pido
         r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal:ctrl.signal}).catch(()=>null);
         return !!(r && (r.ok || [400,405].includes(r.status)));
       }catch{ return false } finally{ clearTimeout(t) }
@@ -289,23 +322,23 @@
       const res=await fetch("/api/health",{headers:{"Accept":"application/json"}}).catch(()=>null);
       if(!res){badge($("#hStatus"),false);$("#healthOut").textContent="Falha de rede";return{ok:false,headers:new Headers(),body:null}}
       const body=await safeJson(res); badge($("#hStatus"),res.ok); $("#healthOut").textContent=fmt(body);
-      const rid=(body&&body.meta&&(body.meta.requestId||body.meta.request_id))||res.headers.get("x-request-id")||"â€”"; $("#kvReq").textContent=rid;
+      const rid=(body&&body.meta&&(body.meta.requestId||body.meta.request_id))||res.headers.get("x-request-id")||"Ã¢â‚¬â€"; $("#kvReq").textContent=rid;
       return{ok:res.ok,headers:res.headers,body}
     }
 
     async function pingBags(){
-      const el=$("#pStatus"); el.textContent="â€¦"; el.className="badge b-warn";
+      const el=$("#pStatus"); el.textContent="Ã¢â‚¬Â¦"; el.className="badge b-warn";
       const res=await fetch("/api/bags/ping",{headers:{"Accept":"application/json"}}).catch(()=>null);
       if(!res){el.textContent="ERRO";el.className="badge b-err";return{ok:false,headers:new Headers(),body:null}}
       const body=await safeJson(res); el.textContent=res.ok?"OK":"ERRO"; el.className="badge "+(res.ok?"b-ok":"b-err");
-      const m=(body&&body.meta)||{}; const rl=[m.rateLimitRemaining,m.rateLimitLimit].every(Boolean)?`${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||"?"})`:"â€”";
+      const m=(body&&body.meta)||{}; const rl=[m.rateLimitRemaining,m.rateLimitLimit].every(Boolean)?`${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||"?"})`:"Ã¢â‚¬â€";
       $("#kvRl").textContent=rl; return{ok:res.ok,headers:res.headers,body}
     }
 
     async function getDeployMeta(){
       const r=await fetch("/",{method:"HEAD"}).catch(()=>null); if(!r) return;
-      $("#kvDep").textContent=r.headers.get("x-deployment-id")||"â€”";
-      $("#kvVer").textContent=r.headers.get("x-vercel-id")||r.headers.get("server")||"â€”";
+      $("#kvDep").textContent=r.headers.get("x-deployment-id")||"Ã¢â‚¬â€";
+      $("#kvVer").textContent=r.headers.get("x-vercel-id")||r.headers.get("server")||"Ã¢â‚¬â€";
     }
 
     async function checkAll(){
@@ -328,7 +361,7 @@
     }
 
     async function postJson(url,payload,out){
-      out.textContent="POST "+url+" â€¦";
+      out.textContent="POST "+url+" Ã¢â‚¬Â¦";
       try{const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(payload)});
           const body=await safeJson(res); out.textContent=fmt(body)}catch(e){out.textContent=fmt({success:false,error:String(e)})}
     }
@@ -404,7 +437,7 @@
     // Wireup
     $("#btnHealth").addEventListener("click",checkAll);
     $("#btnPing").addEventListener("click",pingBags);
-    $("#btnSecurity").addEventListener("click",()=>alert("SeguranÃ§a: CORS restritivo, requestId em todas as respostas, rate limit + retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
+    $("#btnSecurity").addEventListener("click",()=>alert("SeguranÃƒÂ§a: CORS restritivo, requestId em todas as respostas, rate limit + retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
     $("#btnSim").addEventListener("click",()=>postJson("/api/simulate",{mint:$("#mint").value.trim()},$("#outSim")));
     $("#btnScan").addEventListener("click",()=>postJson("/api/scan",{rawTransaction:$("#tx").value},$("#outScan")));
     $("#btnClear").addEventListener("click",()=>{ $("#outSim").textContent="{ }"; $("#outScan").textContent="{ }"; });
@@ -412,34 +445,34 @@
     checkAll(); setInterval(checkAll,10000);
   </script>
 
-  <!-- Modal: Nota de segurança -->
+  <!-- Modal: Nota de seguranÃ§a -->
   <div id="secModal" class="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="secTitle" hidden>
     <div class="modal" tabindex="-1">
       <header>
-        <h2 id="secTitle">Nota de segurança do Bags Shield</h2>
+        <h2 id="secTitle">Nota de seguranÃ§a do Bags Shield</h2>
         <button id="secClose" class="btn btn-ghost" aria-label="Fechar">Fechar</button>
       </header>
       <div class="content">
-        <p>Segurança em <strong>camadas</strong>, com proteção de borda a borda e observabilidade ativa.</p>
+        <p>SeguranÃ§a em <strong>camadas</strong>, com proteÃ§Ã£o de borda a borda e observabilidade ativa.</p>
 
-        <h3>Princípios</h3>
+        <h3>PrincÃ­pios</h3>
         <ul>
-          <li><strong>Defesa em profundidade</strong>: validação de entrada/saída, CORS restritivo, <code>no-store</code>.</li>
+          <li><strong>Defesa em profundidade</strong>: validaÃ§Ã£o de entrada/saÃ­da, CORS restritivo, <code>no-store</code>.</li>
           <li><strong>Identificabilidade</strong>: <code>X-Request-Id</code> em todas as respostas + logs estruturados.</li>
-          <li><strong>Resiliência</strong>: retries/backoff em 429/5xx e timeouts curtos.</li>
+          <li><strong>ResiliÃªncia</strong>: retries/backoff em 429/5xx e timeouts curtos.</li>
         </ul>
 
-        <h3>Proteções na API</h3>
+        <h3>ProteÃ§Ãµes na API</h3>
         <ul>
-          <li>CORS com origem controlada e <code>OPTIONS</code> estável.</li>
+          <li>CORS com origem controlada e <code>OPTIONS</code> estÃ¡vel.</li>
           <li>Rate limiting por IP/chave e envelopes padronizados <code>{ success, response|error }</code>.</li>
-          <li>Upstream Bags com <code>x-api-key</code> + <code>Authorization: Bearer</code> (dupla validação).</li>
+          <li>Upstream Bags com <code>x-api-key</code> + <code>Authorization: Bearer</code> (dupla validaÃ§Ã£o).</li>
           <li>Webhooks Vercel com HMAC-SHA1 (<code>x-vercel-signature</code>).</li>
         </ul>
 
         <h3>Deploy seguro</h3>
         <ul>
-          <li><strong>Rolling Releases</strong> (canário → 100%) com métricas comparativas.</li>
+          <li><strong>Rolling Releases</strong> (canÃ¡rio â†’ 100%) com mÃ©tricas comparativas.</li>
           <li><strong>Skew Protection</strong> para travar cliente/servidor por deployment.</li>
           <li>Instant Rollback; headers de deploy propagados (<code>x-deployment-id</code>, <code>x-vercel-id</code>).</li>
         </ul>
@@ -495,15 +528,30 @@
 
   const copyBtn = document.getElementById("secCopy");
   if (copyBtn) copyBtn.addEventListener("click", async ()=>{
-    const txt = `Bags Shield — Nota de segurança
-- Defesa em profundidade: validação, CORS restritivo, no-store
+    const txt = `Bags Shield â€” Nota de seguranÃ§a
+- Defesa em profundidade: validaÃ§Ã£o, CORS restritivo, no-store
 - Identificabilidade: X-Request-Id em todas as respostas
-- Resiliência: retries/backoff e timeouts curtos
+- ResiliÃªncia: retries/backoff e timeouts curtos
 - API: rate limit, envelopes padronizados, x-api-key + Bearer
 - Webhooks: HMAC-SHA1 (x-vercel-signature)
 - Deploy: Rolling Releases + Skew Protection
 - Validar: GET /api/health, HEAD /api/scan, HEAD /api/simulate, GET /api/bags/ping`;
     try{ await navigator.clipboard.writeText(txt); copyBtn.textContent = "Copiado!"; setTimeout(()=>copyBtn.textContent="Copiar resumo",1500); }catch{}
+  });
+})();
+</script>
+<script id="secInfoScrollFix">
+(function(){
+  const old = document.getElementById('btnSecurity');
+  if(!old) return;
+  // remove event listeners antigos clonando o botão
+  const btn = old.cloneNode(true);
+  old.parentNode.replaceChild(btn, old);
+  // rola suavemente até a seção fixa
+  btn.addEventListener('click', function(e){
+    e.preventDefault();
+    const t = document.getElementById('secInfo');
+    if(t) t.scrollIntoView({behavior:'smooth', block:'start'});
   });
 })();
 </script>
