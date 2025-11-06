@@ -27,7 +27,7 @@
         linear-gradient(180deg, var(--bg), var(--bg-2) 60%);
       min-height:100%;
       overflow-x:hidden;
-      animation: bgShift 12s ease-in-out infinite;
+      animation:bgShift 12s ease-in-out infinite;
     }
     @keyframes bgShift{
       0%{background-position:0 0,0 0,0 0}
@@ -36,17 +36,13 @@
     }
     a{color:var(--blue-3);text-decoration:none}
     .wrap{max-width:1200px;margin:0 auto;padding:24px}
+
     .nav{display:flex;align-items:center;gap:14px}
     .logoApp{
       width:54px;height:54px;border-radius:20px;position:relative;isolation:isolate;
       background: radial-gradient(120% 120% at 30% 25%, #153863 0%, #0e2748 60%);
       box-shadow:var(--shadow); display:grid; place-items:center; overflow:hidden; border:1px solid #123a69;
     }
-    .logoApp img{display:block;width:36px;height:36px}
-    .logoApp .fallback{display:none}
-    .logoApp img[aria-broken="1"]{display:none}
-    .logoApp img[aria-broken="1"] + .fallback{display:grid}
-
     .brand{font-weight:800;letter-spacing:.3px}
     .tag{font-size:12px;color:var(--muted);border:1px solid #1d3557;border-radius:999px;padding:3px 10px}
 
@@ -56,23 +52,42 @@
       box-shadow:var(--shadow);
       display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
     }
-    .heroIcon{width:84px;height:84px;border-radius:28px;background:rgba(17,48,87,.55);display:grid;place-items:center;border:1px solid #164170;position:relative;overflow:hidden}
-    .heroIcon img{display:block;width:48px;height:48px}
-    .heroIcon .fallback{display:none}
-    .heroIcon img[aria-broken="1"]{display:none}
-    .heroIcon img[aria-broken="1"] + .fallback{display:grid}
+    .heroIcon{
+      width:84px;height:84px;border-radius:28px;background:rgba(17,48,87,.55);
+      display:grid;place-items:center;border:1px solid #164170;position:relative;overflow:hidden
+    }
+    .heroIcon::after{
+      content:""; position:absolute; inset:-30%;
+      background:radial-gradient(closest-side, rgba(78,195,255,.20), transparent 60%);
+      pointer-events:none; filter:blur(12px);
+      animation:halo 6s ease-in-out infinite;
+    }
+    @keyframes halo{0%,100%{opacity:.7; transform:scale(1)}50%{opacity:.35; transform:scale(1.05)}}
 
     .hero h1{margin:0 0 6px 0;font-size:30px}
     .hero p{margin:0;color:var(--muted)}
     .cta-row{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
-    .btn{appearance:none;border:0;cursor:pointer;font-weight:700;padding:12px 18px;border-radius:14px;transition:.15s transform,.15s opacity,.25s box-shadow;position:relative;overflow:hidden}
+
+    .btn{
+      appearance:none;border:0;cursor:pointer;font-weight:700;padding:12px 18px;border-radius:14px;
+      transition:.15s transform,.15s opacity,.25s box-shadow;position:relative;overflow:hidden
+    }
     .btn:hover{transform:translateY(-1px)}
-    .btn-primary{color:#eaf4ff;background:linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);box-shadow:0 10px 24px rgba(30,163,255,.25), inset 0 0 0 1px rgba(255,255,255,.06);border:1px solid rgba(0,0,0,.15)}
+    .btn-primary{color:#eaf4ff;background:linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
+      box-shadow:0 10px 24px rgba(30,163,255,.25), inset 0 0 0 1px rgba(255,255,255,.06);border:1px solid rgba(0,0,0,.15)}
     .btn-ghost{background:#0a2447;color:var(--blue-3);border:1px solid #12315a}
     .btn-outline{background:transparent;color:var(--blue-3);border:1px solid #1b3b66}
 
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:22px}
-    .card{grid-column: span 12;background:linear-gradient(180deg,rgba(20,54,96,.55),rgba(8,29,55,.7));border:1px solid #113057;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .card{
+      grid-column: span 12;background:linear-gradient(180deg,rgba(20,54,96,.55),rgba(8,29,55,.7));
+      border:1px solid #113057;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
+      transform-style:preserve-3d; will-change:transform, box-shadow;
+    }
+    .lift{transition:transform .25s ease, box-shadow .25s ease}
+    .lift:hover{transform:translateY(-2px) scale(1.012); box-shadow:0 18px 44px rgba(30,163,255,.18)}
+    .hero.lift:hover{transform:translateY(-2px) scale(1.006)}
+
     .card h3{margin:0 0 8px 0;font-size:16px}
     .pill{font-size:12px;border:1px solid #13406f;background:#0a2447;color:#cfe8ff;border-radius:999px;padding:6px 10px}
     .badge{font-size:12px;padding:4px 8px;border-radius:999px;font-weight:700}
@@ -104,27 +119,50 @@
 <body>
   <div class="wrap">
     <div class="nav">
-      <div class="logoApp" aria-label="Bags Shield logo">
-        <img src="/assets/brand/logo-shield.png" alt="Bags Shield" width="36" height="36" onerror="this.setAttribute('aria-broken','1')"/>
-        <!-- fallback SVG caso o PNG não exista -->
-        <div class="fallback" aria-hidden="true">
-          <svg viewBox="0 0 64 64" fill="none" role="img">
-            <defs><linearGradient id="lgShield" x1="0" x2="1"><stop stop-color="#4dd4ff"/><stop offset="1" stop-color="#1ea3ff"/></linearGradient></defs>
-            <path d="M32 6l18 9v13c0 11-7.6 19-18 22C21.6 47 14 39 14 28V15l18-9z" stroke="url(#lgShield)" stroke-width="3" fill="rgba(17,48,87,.55)"/>
-            <path d="M25 30c0-3.8 3-6 7-6s7 2.2 7 6c0 2.6-1.3 4.6-3.4 5.6l.6 3.1H27.8l.6-3.1C26.3 34.6 25 32.6 25 30z" fill="url(#lgShield)"/>
-          </svg>
-        </div>
+      <div class="logoApp lift" aria-label="Bags Shield logo">
+        <!-- LOGO SVG INLINE — estilo do mock (escudo com traço + saco de dinheiro) -->
+        <svg viewBox="0 0 96 96" width="36" height="36" fill="none" role="img" aria-label="Bags Shield">
+          <defs>
+            <linearGradient id="gShield" x1="0" x2="1">
+              <stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/>
+            </linearGradient>
+            <radialGradient id="gSoft" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgba(77,212,255,.25)"/>
+              <stop offset="100%" stop-color="rgba(77,212,255,0)"/>
+            </radialGradient>
+          </defs>
+          <circle cx="48" cy="48" r="46" fill="url(#gSoft)" opacity=".2"/>
+          <!-- contorno do escudo -->
+          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
+                fill="none" stroke="url(#gShield)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- money bag -->
+          <path d="M34 48c0-6 4.8-10 14-10s14 4 14 10c0 4.2-2.1 7.3-5.4 9l1.2 5.2H38.2l1.2-5.2C36.1 55.3 34 52.2 34 48z"
+                fill="url(#gShield)"/>
+          <rect x="42" y="34" width="12" height="5" rx="2.5" fill="url(#gShield)"/>
+          <!-- símbolo $ simplificado -->
+          <path d="M51 46c0 1.6-1.2 2.5-2.8 3.7-1.7 1.3-3.2 2.6-3.2 5.3h3.2c0-1.6 1.3-2.6 2.9-3.8 1.7-1.3 3.1-2.6 3.1-5.2 0-3-2.3-5-5.2-5-1.7 0-3.5.7-4.6 1.9l2 2.1c.7-.7 1.6-1.1 2.6-1.1 1.6 0 2.9 1 2.9 2.1z" fill="#0a2447" opacity=".35"/>
+        </svg>
       </div>
       <div class="brand">Bags Shield API</div>
       <span class="tag">v0.2.0 • navy/blue</span>
     </div>
 
-    <div class="hero">
+    <div class="hero lift">
       <div class="heroIcon">
-        <img src="/assets/brand/logo-shield.png" alt="Bags Shield" width="48" height="48" onerror="this.setAttribute('aria-broken','1')"/>
-        <div class="fallback" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="g2" x1="0" x2="1"><stop stop-color="#4dd4ff"/><stop offset="1" stop-color="#1ea3ff"/></linearGradient></defs><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" stroke="url(#g2)" stroke-width="2" fill="rgba(17,48,87,.55)"/></svg>
-        </div>
+        <!-- versão maior da logo -->
+        <svg viewBox="0 0 96 96" width="56" height="56" fill="none" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="gShield2" x1="0" x2="1">
+              <stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/>
+            </linearGradient>
+          </defs>
+          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
+                fill="none" stroke="url(#gShield2)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M34 48c0-6 4.8-10 14-10s14 4 14 10c0 4.2-2.1 7.3-5.4 9l1.2 5.2H38.2l1.2-5.2C36.1 55.3 34 52.2 34 48z"
+                fill="url(#gShield2)"/>
+          <rect x="42" y="34" width="12" height="5" rx="2.5" fill="url(#gShield2)"/>
+          <path d="M51 46c0 1.6-1.2 2.5-2.8 3.7-1.7 1.3-3.2 2.6-3.2 5.3h3.2c0-1.6 1.3-2.6 2.9-3.8 1.7-1.3 3.1-2.6 3.1-5.2 0-3-2.3-5-5.2-5-1.7 0-3.5.7-4.6 1.9l2 2.1c.7-.7 1.6-1.1 2.6-1.1 1.6 0 2.9 1 2.9 2.1z" fill="#0a2447" opacity=".35"/>
+        </svg>
       </div>
       <div>
         <h1>Camada de confiança do BagsApp</h1>
@@ -138,7 +176,7 @@
     </div>
 
     <div class="grid">
-      <div class="card span-7">
+      <div class="card span-7 lift" data-tilt>
         <h3>Painel de Confiabilidade (tempo real)</h3>
         <div class="reliability">
           <div class="donutwrap">
@@ -162,7 +200,7 @@
         </div>
       </div>
 
-      <div class="card span-5">
+      <div class="card span-5 lift" data-tilt>
         <h3>Playground Rápido</h3>
         <div class="row">
           <input id="mint" placeholder="mint (simulate)" />
@@ -182,7 +220,7 @@
         </div>
       </div>
 
-      <div class="card span-7">
+      <div class="card span-7 lift" data-tilt>
         <h3>Status da API</h3>
         <div class="row" style="gap:12px;flex-wrap:wrap">
           <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">…</span></span>
@@ -193,7 +231,7 @@
         <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em “Atualizar Status”.</pre></div>
       </div>
 
-      <div class="card span-5">
+      <div class="card span-5 lift" data-tilt>
         <h3>Deploy & Metadados</h3>
         <div style="display:grid;grid-template-columns:140px 1fr;gap:10px">
           <div class="ghost">RequestId</div><div id="kvReq">—</div>
@@ -204,7 +242,7 @@
       </div>
     </div>
 
-    <div class="footer">© Bags Shield — navy/blue • CTAs azul escuro • responsivo</div>
+    <div class="footer">© Bags Shield — navy/blue • logo SVG inline • hover lift + tilt • responsivo</div>
   </div>
 
   <script>
@@ -213,12 +251,9 @@
     async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"Conteúdo não-JSON",text:await res.text()}}}
     function badge(el,ok){el.className="badge "+(ok?"b-ok":"b-err");el.textContent=ok?"OK":"ERRO"}
 
+    // Donut
     const R=92,CIRC=2*Math.PI*R;
-    function setDonut(pct){
-      const arc=$("#donutArc"); arc.setAttribute("stroke-dasharray",String(CIRC));
-      const target=CIRC*(1-pct/100); arc.setAttribute("stroke-dashoffset",String(target));
-      $("#donutVal").textContent=Math.round(pct)+"%";
-    }
+    function setDonut(pct){const arc=$("#donutArc"); arc.setAttribute("stroke-dasharray",String(CIRC)); const t=CIRC*(1-pct/100); arc.setAttribute("stroke-dashoffset",String(t)); $("#donutVal").textContent=Math.round(pct)+"%" }
     function setBar(id,pct){$("#b-"+id).style.width=Math.max(0,Math.min(100,pct))+"%";$("#p-"+id).textContent=Math.round(pct)+"%"}
 
     async function head(url){const r=await fetch(url,{method:"HEAD"}).catch(()=>null);return r&&r.ok}
@@ -250,21 +285,32 @@
       const overall=Math.round(corePct*0.35+scanPct*0.20+simPct*0.20+bagsPct*0.15+sslPct*0.10);
       setBar("core",corePct); setBar("scan",scanPct); setBar("sim",simPct); setBar("bags",bagsPct); setBar("ssl",sslPct); setDonut(overall);
     }
+
     async function postJson(url,payload,out){
       out.textContent="POST "+url+" …";
       try{const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(payload)});
           const body=await safeJson(res); out.textContent=fmt(body)}catch(e){out.textContent=fmt({success:false,error:String(e)})}
     }
 
-    // Logo fallback (marca imagem como quebrada se 404)
-    document.querySelectorAll('.logoApp img, .heroIcon img').forEach(img=>{
-      img.addEventListener('error',()=>img.setAttribute('aria-broken','1'),{once:true});
-    });
+    // Tilt leve (ressaltar sob o cursor)
+    function attachTilt(node){
+      let rect=node.getBoundingClientRect();
+      function onMove(e){
+        const x=(e.clientX-rect.left)/rect.width-.5, y=(e.clientY-rect.top)/rect.height-.5;
+        node.style.transform=`perspective(900px) rotateX(${(-y*5).toFixed(2)}deg) rotateY(${(x*7).toFixed(2)}deg) translateZ(0)`;
+      }
+      function onLeave(){ node.style.transform=""; }
+      function onResize(){ rect=node.getBoundingClientRect(); }
+      node.addEventListener("pointermove",onMove);
+      node.addEventListener("pointerleave",onLeave);
+      window.addEventListener("resize",onResize);
+    }
+    document.querySelectorAll("[data-tilt]").forEach(attachTilt);
 
     // Wireup
     $("#btnHealth").addEventListener("click",checkAll);
     $("#btnPing").addEventListener("click",pingBags);
-    $("#btnSecurity").addEventListener("click",()=>alert("Nota de segurança já inclusa nos princípios do projeto. (Se quiser, converto para modal de markdown depois.)"));
+    $("#btnSecurity").addEventListener("click",()=>alert("Nota de segurança: defesa em camadas, CORS restritivo, requestId, rate limiting, retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
     $("#btnSim").addEventListener("click",()=>postJson("/api/simulate",{mint:$("#mint").value.trim()},$("#outSim")));
     $("#btnScan").addEventListener("click",()=>postJson("/api/scan",{rawTransaction:$("#tx").value},$("#outScan")));
     $("#btnClear").addEventListener("click",()=>{ $("#outSim").textContent="{ }"; $("#outScan").textContent="{ }"; });
