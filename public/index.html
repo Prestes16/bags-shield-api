@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bags Shield API — Status & Confiabilidade</title>
+  <title>Bags Shield API â€” Status & Confiabilidade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -119,58 +119,58 @@
 <body>
   <div class="wrap">
     <div class="nav">
-      <div class="logoApp lift" aria-label="Bags Shield logo">
-        <!-- LOGO SVG INLINE — estilo do mock (escudo com traço + saco de dinheiro) -->
-        <svg viewBox="0 0 96 96" width="36" height="36" fill="none" role="img" aria-label="Bags Shield">
-          <defs>
-            <linearGradient id="gShield" x1="0" x2="1">
-              <stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/>
-            </linearGradient>
-            <radialGradient id="gSoft" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="rgba(77,212,255,.25)"/>
-              <stop offset="100%" stop-color="rgba(77,212,255,0)"/>
-            </radialGradient>
-          </defs>
-          <circle cx="48" cy="48" r="46" fill="url(#gSoft)" opacity=".2"/>
-          <!-- contorno do escudo -->
-          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
-                fill="none" stroke="url(#gShield)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <!-- money bag -->
-          <path d="M34 48c0-6 4.8-10 14-10s14 4 14 10c0 4.2-2.1 7.3-5.4 9l1.2 5.2H38.2l1.2-5.2C36.1 55.3 34 52.2 34 48z"
-                fill="url(#gShield)"/>
-          <rect x="42" y="34" width="12" height="5" rx="2.5" fill="url(#gShield)"/>
-          <!-- símbolo $ simplificado -->
-          <path d="M51 46c0 1.6-1.2 2.5-2.8 3.7-1.7 1.3-3.2 2.6-3.2 5.3h3.2c0-1.6 1.3-2.6 2.9-3.8 1.7-1.3 3.1-2.6 3.1-5.2 0-3-2.3-5-5.2-5-1.7 0-3.5.7-4.6 1.9l2 2.1c.7-.7 1.6-1.1 2.6-1.1 1.6 0 2.9 1 2.9 2.1z" fill="#0a2447" opacity=".35"/>
-        </svg>
-      </div>
+      <div class="logoApp lift" aria-label="Bags Shield logo"><svg viewBox="0 0 96 96" width="36" height="36" fill="none" role="img" aria-label="Bags Shield">
+  <defs>
+    <linearGradient id="gradShield" x1="0" x2="1">
+      <stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/>
+    </linearGradient>
+    <radialGradient id="gradBag" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#29C1FF"/><stop offset="100%" stop-color="#1EA3FF"/>
+    </radialGradient>
+  </defs>
+  <!-- escudo -->
+  <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
+        fill="none" stroke="url(#gradShield)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- saco -->
+  <path d="M34 48c0-6 5-10 14-10s14 4 14 10c0 4.5-2.3 7.7-5.8 9.6l1.2 5.4H38.6l1.2-5.4C36.3 55.7 34 52.5 34 48z"
+        fill="url(#gradBag)"/>
+  <!-- laço do saco -->
+  <rect x="42" y="35" width="12" height="5" rx="2.5" fill="url(#gradBag)"/>
+  <!-- símbolo $ central (texto para nitidez) -->
+  <text x="48" y="52" text-anchor="middle" dominant-baseline="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" font-size="20"
+        fill="#0A2447">$</text>
+</svg></div>
       <div class="brand">Bags Shield API</div>
-      <span class="tag">v0.2.0 • navy/blue</span>
+      <span class="tag">v0.2.0 â€¢ navy/blue</span>
     </div>
 
     <div class="hero lift">
-      <div class="heroIcon">
-        <!-- versão maior da logo -->
-        <svg viewBox="0 0 96 96" width="56" height="56" fill="none" role="img" aria-hidden="true">
-          <defs>
-            <linearGradient id="gShield2" x1="0" x2="1">
-              <stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/>
-            </linearGradient>
-          </defs>
-          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
-                fill="none" stroke="url(#gShield2)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M34 48c0-6 4.8-10 14-10s14 4 14 10c0 4.2-2.1 7.3-5.4 9l1.2 5.2H38.2l1.2-5.2C36.1 55.3 34 52.2 34 48z"
-                fill="url(#gShield2)"/>
-          <rect x="42" y="34" width="12" height="5" rx="2.5" fill="url(#gShield2)"/>
-          <path d="M51 46c0 1.6-1.2 2.5-2.8 3.7-1.7 1.3-3.2 2.6-3.2 5.3h3.2c0-1.6 1.3-2.6 2.9-3.8 1.7-1.3 3.1-2.6 3.1-5.2 0-3-2.3-5-5.2-5-1.7 0-3.5.7-4.6 1.9l2 2.1c.7-.7 1.6-1.1 2.6-1.1 1.6 0 2.9 1 2.9 2.1z" fill="#0a2447" opacity=".35"/>
-        </svg>
-      </div>
+      <div class="heroIcon"><svg viewBox="0 0 96 96" width="56" height="56" fill="none" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="gradShield2" x1="0" x2="1">
+      <stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/>
+    </linearGradient>
+    <radialGradient id="gradBag2" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#29C1FF"/><stop offset="100%" stop-color="#1EA3FF"/>
+    </radialGradient>
+  </defs>
+  <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
+        fill="none" stroke="url(#gradShield2)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 48c0-6 5-10 14-10s14 4 14 10c0 4.5-2.3 7.7-5.8 9.6l1.2 5.4H38.6l1.2-5.4C36.3 55.7 34 52.5 34 48z"
+        fill="url(#gradBag2)"/>
+  <rect x="42" y="35" width="12" height="5" rx="2.5" fill="url(#gradBag2)"/>
+  <text x="48" y="52" text-anchor="middle" dominant-baseline="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" font-size="22"
+        fill="#0A2447">$</text>
+</svg></div>
       <div>
-        <h1>Camada de confiança do BagsApp</h1>
-        <p class="ghost">Telemetria clara, defesa em profundidade e estabilidade de integrações. Status vivo + gráfico de confiabilidade para <code>/api/scan</code>, <code>/api/simulate</code> e Token Launch (Bags).</p>
+        <h1>Camada de confianÃ§a do BagsApp</h1>
+        <p class="ghost">Telemetria clara, defesa em profundidade e estabilidade de integraÃ§Ãµes. Status vivo + grÃ¡fico de confiabilidade para <code>/api/scan</code>, <code>/api/simulate</code> e Token Launch (Bags).</p>
         <div class="cta-row">
           <button id="btnHealth" class="btn btn-primary">Atualizar Status</button>
-          <button id="btnPing" class="btn btn-ghost">Ping Bags (canário)</button>
-          <button id="btnSecurity" class="btn btn-outline">Nota de segurança</button>
+          <button id="btnPing" class="btn btn-ghost">Ping Bags (canÃ¡rio)</button>
+          <button id="btnSecurity" class="btn btn-outline">Nota de seguranÃ§a</button>
         </div>
       </div>
     </div>
@@ -195,19 +195,19 @@
             <div class="bar"><div class="name">/api/simulate</div><div class="track"><div id="b-sim" class="fill" style="width:0%"></div></div><div class="pct" id="p-sim">0%</div></div>
             <div class="bar"><div class="name">Token Launch (Bags)</div><div class="track"><div id="b-bags" class="fill" style="width:0%"></div></div><div class="pct" id="p-bags">0%</div></div>
             <div class="bar"><div class="name">Shield Score Engine</div><div class="track"><div id="b-ssl" class="fill" style="width:0%"></div></div><div class="pct" id="p-ssl">0%</div></div>
-            <div class="ghost" style="margin-top:6px">Shield Score = média da disponibilidade de <code>/scan</code> + <code>/simulate</code>.</div>
+            <div class="ghost" style="margin-top:6px">Shield Score = mÃ©dia da disponibilidade de <code>/scan</code> + <code>/simulate</code>.</div>
           </div>
         </div>
       </div>
 
       <div class="card span-5 lift" data-tilt>
-        <h3>Playground Rápido</h3>
+        <h3>Playground RÃ¡pido</h3>
         <div class="row">
           <input id="mint" placeholder="mint (simulate)" />
           <button id="btnSim" class="btn btn-primary">POST /api/simulate</button>
         </div>
         <div class="row" style="margin-top:8px">
-          <textarea id="tx" rows="5" placeholder="rawTransaction (scan) — cole um JSON bruto ou texto"></textarea>
+          <textarea id="tx" rows="5" placeholder="rawTransaction (scan) â€” cole um JSON bruto ou texto"></textarea>
         </div>
         <div class="row" style="margin-top:8px">
           <button id="btnScan" class="btn btn-ghost">POST /api/scan</button>
@@ -223,32 +223,32 @@
       <div class="card span-7 lift" data-tilt>
         <h3>Status da API</h3>
         <div class="row" style="gap:12px;flex-wrap:wrap">
-          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">â€¦</span></span>
+          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">â€¦</span></span>
+          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">â€¦</span></span>
+          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">â€¦</span></span>
         </div>
-        <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em “Atualizar Status”.</pre></div>
+        <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em â€œAtualizar Statusâ€.</pre></div>
       </div>
 
       <div class="card span-5 lift" data-tilt>
         <h3>Deploy & Metadados</h3>
         <div style="display:grid;grid-template-columns:140px 1fr;gap:10px">
-          <div class="ghost">RequestId</div><div id="kvReq">—</div>
-          <div class="ghost">DeploymentId</div><div id="kvDep">—</div>
-          <div class="ghost">Vercel-Id</div><div id="kvVer">—</div>
-          <div class="ghost">RateLimit</div><div id="kvRl">—</div>
+          <div class="ghost">RequestId</div><div id="kvReq">â€”</div>
+          <div class="ghost">DeploymentId</div><div id="kvDep">â€”</div>
+          <div class="ghost">Vercel-Id</div><div id="kvVer">â€”</div>
+          <div class="ghost">RateLimit</div><div id="kvRl">â€”</div>
         </div>
       </div>
     </div>
 
-    <div class="footer">© Bags Shield — navy/blue • logo SVG inline • hover lift + tilt • responsivo</div>
+    <div class="footer">Â© Bags Shield â€” navy/blue â€¢ logo SVG inline â€¢ hover lift + tilt â€¢ responsivo</div>
   </div>
 
   <script>
     const $=(q)=>document.querySelector(q);
     const fmt=(d)=>{try{return JSON.stringify(d,null,2)}catch(e){return String(d)}};
-    async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"Conteúdo não-JSON",text:await res.text()}}}
+    async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"ConteÃºdo nÃ£o-JSON",text:await res.text()}}}
     function badge(el,ok){el.className="badge "+(ok?"b-ok":"b-err");el.textContent=ok?"OK":"ERRO"}
 
     // Donut
@@ -261,21 +261,21 @@
       const res=await fetch("/api/health",{headers:{"Accept":"application/json"}}).catch(()=>null);
       if(!res){badge($("#hStatus"),false);$("#healthOut").textContent="Falha de rede";return{ok:false,headers:new Headers(),body:null}}
       const body=await safeJson(res); badge($("#hStatus"),res.ok); $("#healthOut").textContent=fmt(body);
-      const rid=(body&&body.meta&&(body.meta.requestId||body.meta.request_id))||res.headers.get("x-request-id")||"—"; $("#kvReq").textContent=rid;
+      const rid=(body&&body.meta&&(body.meta.requestId||body.meta.request_id))||res.headers.get("x-request-id")||"â€”"; $("#kvReq").textContent=rid;
       return{ok:res.ok,headers:res.headers,body}
     }
     async function pingBags(){
-      const el=$("#pStatus"); el.textContent="…"; el.className="badge b-warn";
+      const el=$("#pStatus"); el.textContent="â€¦"; el.className="badge b-warn";
       const res=await fetch("/api/bags/ping",{headers:{"Accept":"application/json"}}).catch(()=>null);
       if(!res){el.textContent="ERRO";el.className="badge b-err";return{ok:false,headers:new Headers(),body:null}}
       const body=await safeJson(res); el.textContent=res.ok?"OK":"ERRO"; el.className="badge "+(res.ok?"b-ok":"b-err");
-      const m=(body&&body.meta)||{}; const rl=[m.rateLimitRemaining,m.rateLimitLimit].every(Boolean)?`${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||"?"})`:"—";
+      const m=(body&&body.meta)||{}; const rl=[m.rateLimitRemaining,m.rateLimitLimit].every(Boolean)?`${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||"?"})`:"â€”";
       $("#kvRl").textContent=rl; return{ok:res.ok,headers:res.headers,body}
     }
     async function getDeployMeta(){
       const r=await fetch("/",{method:"HEAD"}).catch(()=>null); if(!r) return;
-      $("#kvDep").textContent=r.headers.get("x-deployment-id")||"—";
-      $("#kvVer").textContent=r.headers.get("x-vercel-id")||r.headers.get("server")||"—";
+      $("#kvDep").textContent=r.headers.get("x-deployment-id")||"â€”";
+      $("#kvVer").textContent=r.headers.get("x-vercel-id")||r.headers.get("server")||"â€”";
     }
     async function checkAll(){
       const h=await pingHealth(); const scanOk=await head("/api/scan"); badge($("#sStatus"),scanOk);
@@ -287,7 +287,7 @@
     }
 
     async function postJson(url,payload,out){
-      out.textContent="POST "+url+" …";
+      out.textContent="POST "+url+" â€¦";
       try{const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(payload)});
           const body=await safeJson(res); out.textContent=fmt(body)}catch(e){out.textContent=fmt({success:false,error:String(e)})}
     }
@@ -310,7 +310,7 @@
     // Wireup
     $("#btnHealth").addEventListener("click",checkAll);
     $("#btnPing").addEventListener("click",pingBags);
-    $("#btnSecurity").addEventListener("click",()=>alert("Nota de segurança: defesa em camadas, CORS restritivo, requestId, rate limiting, retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
+    $("#btnSecurity").addEventListener("click",()=>alert("Nota de seguranÃ§a: defesa em camadas, CORS restritivo, requestId, rate limiting, retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
     $("#btnSim").addEventListener("click",()=>postJson("/api/simulate",{mint:$("#mint").value.trim()},$("#outSim")));
     $("#btnScan").addEventListener("click",()=>postJson("/api/scan",{rawTransaction:$("#tx").value},$("#outScan")));
     $("#btnClear").addEventListener("click",()=>{ $("#outSim").textContent="{ }"; $("#outScan").textContent="{ }"; });
