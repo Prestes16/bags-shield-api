@@ -9,3 +9,4 @@ tmp/
 # Em prod, não precisamos dos mocks (se quiser usar local, estão no repo)
 api/mock/
 !api/**
+api/mock/**
