@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bags Shield API — Status & Playground</title>
+  <title>Bags Shield API — Status & Confiabilidade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
       --muted:#94a3b8; --text:#e6f1ff;
       --primary:#2fa7ff; --primary-2:#4dd4ff; --accent:#39ff88;
       --danger:#ff4d6d; --warn:#ffb020; --ok:#47d16a;
-      --radius:20px; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --shadow:0 10px 30px rgba(0,0,0,.35); --radius:20px;
     }
     *{box-sizing:border-box} html,body{height:100%}
     body{
@@ -28,34 +28,71 @@
     a{color:var(--primary-2);text-decoration:none}
     .wrap{max-width:1200px;margin:0 auto;padding:24px}
     .nav{display:flex;align-items:center;gap:14px}
-    .logo{width:42px;height:42px;border-radius:14px;background: radial-gradient(80% 80% at 30% 25%, #2fa7ff 0%, #0e2748 60%);display:grid;place-items:center; box-shadow:var(--shadow)}
-    .logo svg{width:24px;height:24px}
+    .logo{
+      width:48px;height:48px;border-radius:16px;
+      background: radial-gradient(80% 80% at 30% 25%, #2fa7ff 0%, #0e2748 60%);
+      display:grid;place-items:center; box-shadow:var(--shadow);
+    }
+    .logo svg{width:26px;height:26px}
     .brand{font-weight:800;letter-spacing:.3px}
     .tag{font-size:12px;color:var(--muted);border:1px solid #1d3557;border-radius:999px;padding:3px 10px}
-    .hero{margin-top:28px; border-radius:var(--radius); padding:28px; background:
-        linear-gradient(140deg, rgba(15,74,121,.65), rgba(14,39,72,.65)); box-shadow:var(--shadow)}
-    .hero h1{margin:0 0 10px 0;font-size:26px} .hero p{margin:0;color:var(--muted)}
+
+    .hero{
+      margin-top:28px; border-radius:var(--radius); padding:28px;
+      background: linear-gradient(140deg, rgba(15,74,121,.65), rgba(14,39,72,.65));
+      box-shadow:var(--shadow);
+      display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center;
+    }
+    .shield-mark{
+      width:72px;height:72px;border-radius:24px;background:rgba(17,48,87,.45);
+      display:grid;place-items:center;border:1px solid #164170;
+    }
+    .shield-mark svg{width:38px;height:38px}
+    .hero h1{margin:0 0 6px 0;font-size:28px}
+    .hero p{margin:0;color:var(--muted)}
     .cta-row{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
     .btn{appearance:none;border:0;cursor:pointer;font-weight:700;padding:12px 16px;border-radius:14px;transition:.15s transform,.15s opacity}
     .btn:hover{transform:translateY(-1px)} .btn:active{transform:translateY(0)}
     .btn-primary{background:linear-gradient(90deg,var(--accent),#6dffaa);color:#01230f}
     .btn-ghost{background:#0a2447;color:var(--primary-2);border:1px solid #12315a}
+    .btn-outline{background:transparent;color:var(--primary-2);border:1px solid #1b3b66}
+
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:22px}
     .card{grid-column: span 12;background:linear-gradient(180deg,rgba(20,54,96,.55),rgba(8,29,55,.7));border:1px solid #113057; border-radius:var(--radius); padding:18px; box-shadow:var(--shadow)}
     .card h3{margin:0 0 8px 0;font-size:16px}
-    .kpis{display:flex;gap:12px;flex-wrap:wrap}
     .pill{font-size:12px;border:1px solid #13406f;background:#0a2447;color:#cfe8ff;border-radius:999px;padding:6px 10px}
     .badge{font-size:12px;padding:4px 8px;border-radius:999px;font-weight:700}
     .b-ok{background:rgba(71,209,106,.12);color:#47d16a;border:1px solid rgba(71,209,106,.35)}
     .b-warn{background:rgba(255,176,32,.12);color:#ffcc66;border:1px solid rgba(255,176,32,.35)}
     .b-err{background:rgba(255,77,109,.12);color:#ff7e95;border:1px solid rgba(255,77,109,.35)}
-    .io{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    textarea,input{width:100%; background:#061427;color:var(--text); border:1px solid #13325b; border-radius:12px; padding:10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; outline:none}
-    textarea:focus,input:focus{box-shadow: inset 0 0 0 1px var(--primary)}
     pre{white-space:pre-wrap;word-break:break-word;background:#061427;border:1px solid #13325b;border-radius:12px;padding:10px;font-size:13px;max-height:360px;overflow:auto;margin:0}
+    input,textarea{width:100%; background:#061427;color:var(--text); border:1px solid #13325b; border-radius:12px; padding:10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; outline:none}
+    input:focus,textarea:focus{box-shadow: inset 0 0 0 1px var(--primary)}
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .ghost{opacity:.8} .footer{margin:26px 0 10px 0;color:#6f87a7;font-size:12px;text-align:center}
-    .kv{display:grid;grid-template-columns:120px 1fr;gap:10px}
+    .ghost{opacity:.85}
+    .footer{margin:26px 0 10px 0;color:#6f87a7;font-size:12px;text-align:center}
+
+    /* Painel de Confiabilidade */
+    .reliability{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:center}
+    .donutwrap{display:grid;place-items:center}
+    .donut-label{position:absolute;text-align:center}
+    .donut-value{font-size:34px;font-weight:800}
+    .donut-sub{font-size:12px;color:#9fb6d5;margin-top:2px}
+    .bar{display:grid;grid-template-columns:160px 1fr 52px;gap:10px;align-items:center;margin:8px 0}
+    .bar .name{color:#cfe8ff}
+    .bar .track{height:12px;border-radius:999px;background:#0a2447;border:1px solid #14335c;overflow:hidden}
+    .bar .fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2fa7ff,#4dd4ff)}
+    .bar .pct{font-variant-numeric:tabular-nums;color:#a7c6e8}
+
+    /* Modal segurança */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);z-index:50}
+    .modal.open{display:grid}
+    .modal .box{width:min(720px,92vw);background:linear-gradient(180deg,rgba(20,54,96,.95),rgba(8,29,55,.95));border:1px solid #123a69;border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+    .modal h2{margin:0 0 6px 0}
+    .modal p{margin:8px 0;color:#cfe8ff}
+    .modal ul{margin:8px 0 0 18px;line-height:1.6}
+    .close{float:right;background:#0a2447;border:1px solid #1a3b66;color:#cfe8ff;border-radius:12px;padding:6px 10px;cursor:pointer}
+    @media (max-width: 920px){ .reliability{grid-template-columns:1fr} }
     @media (min-width: 860px){ .card.span-7{grid-column: span 7} .card.span-5{grid-column: span 5} }
   </style>
 </head>
@@ -73,30 +110,59 @@
     </div>
 
     <div class="hero">
-      <h1>Camada de Confiança para o ecossistema Bags</h1>
-      <p class="ghost">Status em tempo real e playground para <code>/api/scan</code> e <code>/api/simulate</code>. Conecte o app, teste, quebre — e aprimore.</p>
-      <div class="cta-row">
-        <button id="btnHealth" class="btn btn-primary">Atualizar Status</button>
-        <button id="btnPing" class="btn btn-ghost">Ping Bags (canário)</button>
+      <div class="shield-mark">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" stroke="url(#g2)" stroke-width="2" fill="rgba(17,48,87,.55)"/>
+          <path d="M9.5 10.5c0-2 1.5-3 2.5-3s2.5 1 2.5 3c0 1.2-.7 2.2-1.7 2.6l.3 1.4h-2.3l.3-1.4c-1-.4-1.6-1.4-1.6-2.6z" fill="url(#g2)"/>
+          <defs><linearGradient id="g2" x1="0" x2="1"><stop stop-color="#4dd4ff"/><stop offset="1" stop-color="#2fa7ff"/></linearGradient></defs>
+        </svg>
+      </div>
+      <div>
+        <h1>Camada de Confiança para o ecossistema Bags</h1>
+        <p class="ghost">Status em tempo real + gráfico de confiabilidade. Playground para <code>/api/scan</code> e <code>/api/simulate</code>. Design alinhado ao app (navy/blue).</p>
+        <div class="cta-row">
+          <button id="btnHealth" class="btn btn-primary">Atualizar Status</button>
+          <button id="btnPing" class="btn btn-ghost">Ping Bags (canário)</button>
+          <button id="btnSecurity" class="btn btn-outline">Ler nota de segurança</button>
+        </div>
       </div>
     </div>
 
     <div class="grid">
-      <!-- Status -->
+      <!-- Painel de Confiabilidade -->
       <div class="card span-7">
-        <h3>Status da API</h3>
-        <div class="kpis" id="kpis">
-          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">…</span></span>
-        </div>
-        <div style="margin-top:12px">
-          <pre id="healthOut" aria-live="polite">Clique em “Atualizar Status”.</pre>
+        <h3>Painel de Confiabilidade (tempo real)</h3>
+        <div class="reliability">
+          <div class="donutwrap" style="position:relative">
+            <svg id="donut" width="230" height="230" viewBox="0 0 230 230">
+              <defs>
+                <linearGradient id="dg" x1="0" x2="1">
+                  <stop stop-color="#2fa7ff"/><stop offset="1" stop-color="#4dd4ff"/>
+                </linearGradient>
+              </defs>
+              <circle cx="115" cy="115" r="92" stroke="#0b2142" stroke-width="24" fill="none"/>
+              <circle id="donutArc" cx="115" cy="115" r="92" stroke="url(#dg)" stroke-width="24" fill="none"
+                      stroke-linecap="round" transform="rotate(-90 115 115)"/>
+            </svg>
+            <div class="donut-label" style="position:absolute;inset:0;display:grid;place-items:center;">
+              <div>
+                <div class="donut-value" id="donutVal">0%</div>
+                <div class="donut-sub">Confiabilidade geral</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="bar"><div class="name">Core API (health)</div><div class="track"><div id="b-core" class="fill" style="width:0%"></div></div><div class="pct" id="p-core">0%</div></div>
+            <div class="bar"><div class="name">/api/scan</div><div class="track"><div id="b-scan" class="fill" style="width:0%"></div></div><div class="pct" id="p-scan">0%</div></div>
+            <div class="bar"><div class="name">/api/simulate</div><div class="track"><div id="b-sim" class="fill" style="width:0%"></div></div><div class="pct" id="p-sim">0%</div></div>
+            <div class="bar"><div class="name">Token Launch (Bags)</div><div class="track"><div id="b-bags" class="fill" style="width:0%"></div></div><div class="pct" id="p-bags">0%</div></div>
+            <div class="bar"><div class="name">Shield Score Engine</div><div class="track"><div id="b-ssl" class="fill" style="width:0%"></div></div><div class="pct" id="p-ssl">0%</div></div>
+            <div class="ghost" style="margin-top:6px">Shield Score é derivado da disponibilidade de <code>/scan</code> e <code>/simulate</code> (média).</div>
+          </div>
         </div>
       </div>
 
-      <!-- Playground -->
+      <!-- Status + Playground (como antes) -->
       <div class="card span-5">
         <h3>Playground Rápido</h3>
         <div class="row">
@@ -117,22 +183,22 @@
         </div>
       </div>
 
-      <!-- Andamento do Projeto -->
       <div class="card span-7">
-        <h3>Andamento do Projeto</h3>
-        <ul style="margin:8px 0 0 18px; line-height:1.6">
-          <li>UI <strong>navy/blue</strong> publicada (esta página).</li>
-          <li>Cliente <code>lib/bags.ts</code> com timeout + retry/backoff <em>(próximo passo)</em>.</li>
-          <li>Ativar <code>/scan</code> e <code>/simulate</code> em modo <em>canário</em> usando o cliente.</li>
-          <li>Docs v0 (schemas scan/simulate) — exemplos e smoke scripts.</li>
-          <li>Rolling Releases/Skew Protection configuráveis no Vercel.</li>
-        </ul>
+        <h3>Status da API</h3>
+        <div class="row" style="gap:12px;flex-wrap:wrap">
+          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">…</span></span>
+        </div>
+        <div style="margin-top:12px">
+          <pre id="healthOut" aria-live="polite">Clique em “Atualizar Status”.</pre>
+        </div>
       </div>
 
-      <!-- Deploy & Metadados -->
       <div class="card span-5">
         <h3>Deploy & Metadados</h3>
-        <div class="kv">
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:10px">
           <div class="ghost">RequestId</div><div id="kvReq">—</div>
           <div class="ghost">DeploymentId</div><div id="kvDep">—</div>
           <div class="ghost">Vercel-Id</div><div id="kvVer">—</div>
@@ -141,77 +207,135 @@
       </div>
     </div>
 
-    <div class="footer">© Bags Shield — navy/blue UI • CTAs verde neon • responsivo (430×932 / 1290×2796)</div>
+    <div class="footer">© Bags Shield — navy/blue • donut + barras em tempo real • 430×932 / 1290×2796</div>
+  </div>
+
+  <!-- Modal Nota de Segurança -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="secTitle">
+    <div class="box">
+      <button class="close" id="mClose">Fechar</button>
+      <h2 id="secTitle">Nota de Segurança • Bags Shield</h2>
+      <p>O Bags Shield é uma camada de confiança focada em **clareza de risco** e **defesa em profundidade** para a rede Bags/Solana.</p>
+      <ul>
+        <li><b>Isolamento e CORS restritivo</b>: endereços permitidos, <i>no-store</i> e validação de método.</li>
+        <li><b>Request-ID em todas as respostas</b>: rastreabilidade ponta-a-ponta em logs e incidentes.</li>
+        <li><b>Rate limiting e backoff</b>: proteção contra abuso e picos.</li>
+        <li><b>Integração Bags com timeout, retries e validação</b> (duplo header <code>x-api-key</code> + <code>Authorization</code>).</li>
+        <li><b>Webhooks Vercel com HMAC-SHA1</b> e opção de Rolling Releases + Skew Protection.</li>
+      </ul>
+      <p class="ghost">Transparência primeiro: quando um upstream responder fora do padrão, a UI sinaliza e mantém operação degradada, sem dados falsos.</p>
+    </div>
   </div>
 
   <script>
     const $ = (q)=>document.querySelector(q);
-    const fmt = (data)=>{ try{ return JSON.stringify(data, null, 2); }catch(e){ return String(data); } };
-    async function safeJson(res){ try { return await res.json(); } catch { return { success:false, error:"Conteúdo não-JSON", text: await res.text() }; } }
+    const fmt = (d)=>{ try{ return JSON.stringify(d,null,2);}catch(e){ return String(d);} };
+    async function safeJson(res){ try{ return await res.json(); } catch{ return { success:false, error:"Conteúdo não-JSON", text: await res.text() }; } }
     function badge(el, ok){ el.className = "badge " + (ok ? "b-ok" : "b-err"); el.textContent = ok ? "OK" : "ERRO"; }
 
-    async function pingHealth(){
-      $('#healthOut').textContent = "Consultando /api/health …";
-      const res = await fetch('/api/health', { headers:{'Accept':'application/json'} }).catch(()=>null);
-      if(!res){ $('#healthOut').textContent = "Falha de rede"; badge($('#hStatus'), false); return; }
-      const body = await safeJson(res);
-      $('#healthOut').textContent = fmt(body);
-      badge($('#hStatus'), res.ok);
+    // Donut helpers
+    const R = 92, CIRC = 2*Math.PI*R;
+    const donutArc = ()=>$('#donutArc');
+    function setDonut(pct){
+      const arc = donutArc();
+      arc.setAttribute('stroke-dasharray', String(CIRC));
+      arc.setAttribute('stroke-dashoffset', String(CIRC * (1 - pct/100)));
+      $('#donutVal').textContent = Math.round(pct) + '%';
+    }
+    function setBar(id, pct){
+      $('#b-'+id).style.width = Math.max(0, Math.min(100, pct)) + '%';
+      $('#p-'+id).textContent = Math.round(pct) + '%';
+    }
 
-      // Metadados (RequestId preferindo body.meta, fallback header)
+    async function head(url){ const r = await fetch(url,{method:'HEAD'}).catch(()=>null); return r && r.ok; }
+
+    async function pingHealth(){
+      const res = await fetch('/api/health', { headers:{'Accept':'application/json'} }).catch(()=>null);
+      if(!res){ badge($('#hStatus'), false); $('#healthOut').textContent='Falha de rede'; return { ok:false, body:null, headers:new Headers() }; }
+      const body = await safeJson(res);
+      badge($('#hStatus'), res.ok);
+      $('#healthOut').textContent = fmt(body);
       const rid = (body && body.meta && (body.meta.requestId || body.meta.request_id)) || res.headers.get('x-request-id') || '—';
       $('#kvReq').textContent = rid;
-      return res.ok;
+      return { ok:res.ok, body, headers:res.headers };
     }
 
     async function pingBags(){
-      const el = $('#pStatus'); el.textContent = "…"; el.className = "badge b-warn";
+      const el = $('#pStatus'); el.textContent="…"; el.className="badge b-warn";
       const res = await fetch('/api/bags/ping', { headers:{'Accept':'application/json'} }).catch(()=>null);
-      if(!res){ el.textContent="ERRO"; el.className="badge b-err"; return; }
+      if(!res){ el.textContent="ERRO"; el.className="badge b-err"; return { ok:false, body:null, headers:new Headers() }; }
       const body = await safeJson(res);
       el.textContent = res.ok ? "OK" : "ERRO";
       el.className = "badge " + (res.ok ? "b-ok" : "b-err");
-      $('#healthOut').textContent = "Ping Bags (canário):\n" + fmt(body);
-      // RateLimit meta vinda do proxy
       const m = (body && body.meta) || {};
       const rl = [m.rateLimitRemaining, m.rateLimitLimit].every(Boolean) ? `${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||'?'})` : '—';
       $('#kvRl').textContent = rl;
+      return { ok:res.ok, body, headers:res.headers };
     }
-
-    async function head(url){ const res = await fetch(url, { method:'HEAD' }).catch(()=>null); return res; }
 
     async function getDeployMeta(){
-      const res = await head('/');
-      if(!res) return;
-      const dpl = res.headers.get('x-deployment-id') || '—';
-      const ver = res.headers.get('x-vercel-id') || res.headers.get('server') || '—';
-      $('#kvDep').textContent = dpl;
-      $('#kvVer').textContent = ver;
+      const r = await fetch('/', { method:'HEAD' }).catch(()=>null);
+      if(!r) return;
+      $('#kvDep').textContent = r.headers.get('x-deployment-id') || '—';
+      $('#kvVer').textContent = r.headers.get('x-vercel-id') || r.headers.get('server') || '—';
     }
 
-    async function checkEndpoints(){
-      const okHealth = await pingHealth();
-      const r1 = await head('/api/scan');   badge($('#sStatus'), !!(r1 && r1.ok));
-      const r2 = await head('/api/simulate'); badge($('#mStatus'), !!(r2 && r2.ok));
+    async function checkEndpointsAndChart(){
+      const h = await pingHealth();
+      const scanOk = await head('/api/scan');   badge($('#sStatus'), scanOk);
+      const simOk  = await head('/api/simulate'); badge($('#mStatus'), simOk);
+      const bags   = await pingBags();
       await getDeployMeta();
+
+      // Percentuais individuais
+      const corePct = h.ok ? 100 : 0;
+      const scanPct = scanOk ? 100 : 0;
+      const simPct  = simOk ? 100 : 0;
+      const bagsPct = bags.ok ? 100 : 0;
+      const sslPct  = Math.round((scanPct + simPct)/2); // derivado
+
+      // Donut (média ponderada)
+      const overall = Math.round(
+        corePct*0.35 + scanPct*0.20 + simPct*0.20 + bagsPct*0.15 + sslPct*0.10
+      );
+
+      setBar('core', corePct);
+      setBar('scan', scanPct);
+      setBar('sim',  simPct);
+      setBar('bags', bagsPct);
+      setBar('ssl',  sslPct);
+      setDonut(overall);
     }
 
     async function postJson(url, payload, out){
       out.textContent = "POST " + url + " …";
       try{
-        const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify(payload) });
+        const res = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Accept':'application/json'},
+          body: JSON.stringify(payload)
+        });
         const body = await safeJson(res);
         out.textContent = fmt(body);
       }catch(e){ out.textContent = fmt({ success:false, error:String(e) }); }
     }
 
-    $('#btnHealth').addEventListener('click', checkEndpoints);
+    // Wireup
+    $('#btnHealth').addEventListener('click', checkEndpointsAndChart);
     $('#btnPing').addEventListener('click', pingBags);
     $('#btnSim').addEventListener('click', ()=> postJson('/api/simulate', { mint: $('#mint').value.trim() }, $('#outSim')));
     $('#btnScan').addEventListener('click', ()=> postJson('/api/scan', { rawTransaction: $('#tx').value }, $('#outScan')));
     $('#btnClear').addEventListener('click', ()=>{ $('#outSim').textContent='{ }'; $('#outScan').textContent='{ }'; });
 
-    checkEndpoints();
+    // Modal
+    const modal = $('#modal'); const open = ()=>modal.classList.add('open'); const close = ()=>modal.classList.remove('open');
+    $('#btnSecurity').addEventListener('click', open);
+    $('#mClose').addEventListener('click', close);
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) close(); });
+
+    // Auto-run
+    checkEndpointsAndChart();
+    setInterval(checkEndpointsAndChart, 10000);
   </script>
 </body>
 </html>
