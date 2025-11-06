@@ -1,11 +1,191 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bags Shield — API</title>
-  <body style="font-family: system-ui; background:#0b1020; color:#d9f99d; padding:24px; line-height:1.5">
-    <h1 style="color:#22c55e;margin:0 0 8px 0;">Bags Shield — Fase 4</h1>
-    <p>Status da API: <a href="/api/health" style="color:#22c55e">/api/health</a></p>
-    <p style="opacity:.8">Este é o ponto de entrada estático do projeto. UI final virá do Figma → build web.</p>
-  </body>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark">
+  <style>
+    :root{
+      --bg-1:#071a2e; --bg-2:#0b2341; --bg-3:#0e2d55;
+      --blue-1:#2fa7ff; --blue-2:#4dd4ff; --ink:#e9f0f6;
+      --muted:#9fb2c7; --ok:#1ef2a3; --warn:#ffd166; --bad:#ff6b6b;
+      --ring:rgba(77,212,255,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink); background: radial-gradient(1200px 800px at 20% -10%, #123a6b 0%, transparent 60%),
+                           radial-gradient(900px 900px at 90% 10%, #0a2d52 0%, transparent 55%),
+                           linear-gradient(180deg, var(--bg-2), var(--bg-1) 40%, var(--bg-2) 100%);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:40px 20px 56px}
+    header{display:flex; align-items:center; gap:14px; opacity:.9}
+    header .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(180deg,var(--blue-2),var(--blue-1))}
+    header .brand{font-weight:700; letter-spacing:.2px; color:var(--ink)}
+    .hero{display:grid; grid-template-columns:120px 1fr; gap:28px; align-items:center; margin:36px 0 26px}
+    .logo{
+      width:120px;height:120px;border-radius:28px;
+      background: radial-gradient(60px 60px at 50% 35%, rgba(255,255,255,.08), transparent 60%),
+                  linear-gradient(180deg, #0f2f58, #0b2647);
+      box-shadow: 0 12px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+      display:grid; place-items:center; position:relative;
+    }
+    .logo::after{
+      content:""; position:absolute; inset:-8px; border-radius:32px;
+      background:
+        radial-gradient(260px 260px at 50% 50%, var(--ring) 0 30%, transparent 35% 100%),
+        radial-gradient(380px 380px at 50% 50%, var(--ring) 0 25%, transparent 28% 100%);
+      pointer-events:none; filter:blur(.2px);
+    }
+    .title{font-size:44px; line-height:1.05; font-weight:800; margin:0 0 6px}
+    .grad{background:linear-gradient(90deg,var(--ink) 0%, #d9f3ff 45%, var(--ink) 100%); -webkit-background-clip:text; background-clip:text; color:transparent}
+    .subtitle{margin:0; font-size:18px; color:var(--muted)}
+    .grid{display:grid; grid-template-columns:1.1fr 1fr; gap:22px; margin-top:28px}
+    @media (max-width:940px){ .hero{grid-template-columns:1fr} .grid{grid-template-columns:1fr}}
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px 18px 16px;
+      box-shadow: 0 6px 22px rgba(0,0,0,.25);
+    }
+    .card h3{margin:0 0 10px; font-size:16px; letter-spacing:.2px; color:#dff3ff}
+    .status{display:flex; align-items:center; gap:10px; font-size:14px; color:var(--muted); margin-top:8px}
+    .chip{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.1); background:rgba(11,35,65,.6); font-size:13px}
+    .chip .led{width:8px;height:8px;border-radius:50%}
+    .btn{
+      appearance:none; border:0; cursor:pointer; border-radius:12px; padding:10px 14px; font-weight:700;
+      background:linear-gradient(180deg, var(--blue-2), var(--blue-1)); color:#001523; transition:transform .04s ease, filter .2s ease;
+      box-shadow:0 10px 24px rgba(0,148,255,.25);
+    }
+    .btn:active{transform:translateY(1px)}
+    label{font-size:12px; color:var(--muted)}
+    input,textarea{
+      width:100%; background:#0c1f36; color:var(--ink); border:1px solid rgba(255,255,255,.08);
+      border-radius:12px; padding:10px 12px; font-family:inherit; font-size:14px; outline: none;
+    }
+    .row{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end}
+    pre{
+      margin:10px 0 0; padding:12px; background:#0a1b31; border:1px solid rgba(255,255,255,.08);
+      border-radius:12px; color:#cde9ff; font-size:12px; overflow:auto; max-height:260px;
+    }
+    .road li{margin:8px 0; color:var(--muted)}
+    footer{margin-top:36px; opacity:.7; font-size:12px; color:var(--muted)}
+    a { color: var(--blue-2); text-underline-offset: 3px; }
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header><span class="dot"></span><div class="brand">Bags Shield — Fase 4</div></header>
+
+    <section class="hero">
+      <div class="logo" aria-hidden="true">
+        <!-- Ícone shield + money bag -->
+        <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bags Shield icon">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#4dd4ff"/><stop offset="1" stop-color="#2fa7ff"/>
+            </linearGradient>
+          </defs>
+          <path d="M36 8c7.8 4.6 16.2 7.2 25 8.1v20.6c0 12.6-9.9 21.6-25 27.3-15.1-5.7-25-14.7-25-27.3V16.1C19.8 15.2 28.2 12.6 36 8Z" stroke="url(#g)" stroke-width="3" fill="none"/>
+          <path d="M42.6 26.5l2.3-5.3a2 2 0 0 0-1.9-2.8H29a2 2 0 0 0-1.9 2.8l2.3 5.3c-4 2.6-6.7 7-6.7 12 0 8 6.5 14.6 14.6 14.6s14.6-6.5 14.6-14.6c0-5-2.7-9.4-6.7-12Z" fill="url(#g)"/>
+          <text x="35.7" y="44" text-anchor="middle" font-size="16" font-weight="800" fill="#06223d">$</text>
+        </svg>
+      </div>
+      <div>
+        <h1 class="title"><span class="grad">Bags Shield</span></h1>
+        <p class="subtitle">Verificação de risco para memecoins na Solana. Camada nativa de confiança para devs e traders.</p>
+        <div class="status">
+          <div class="chip"><span class="led" id="led" style="background:#888"></span><span id="state">checando status…</span></div>
+          <div class="chip mono">requestId: <span id="rid">—</span></div>
+          <a href="/api/health" class="chip">/api/health</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>Testar <code>/api/scan</code></h3>
+        <div class="row">
+          <div>
+            <label for="tx">rawTransaction (base64)</label>
+            <input id="tx" value="AQAAAAAAAAAAAAAA" />
+          </div>
+          <button class="btn" id="btnScan">Enviar</button>
+        </div>
+        <pre id="outScan">—</pre>
+      </div>
+
+      <div class="card">
+        <h3>Testar <code>/api/simulate</code></h3>
+        <div class="row">
+          <div>
+            <label for="mint">mint (base58)</label>
+            <input id="mint" value="So11111111111111111111111111111111111111112" />
+          </div>
+          <button class="btn" id="btnSim">Enviar</button>
+        </div>
+        <pre id="outSim">—</pre>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:22px">
+      <h3>Roadmap v0.2.0 (real) — NEXT</h3>
+      <ul class="road">
+        <li>lib/bags.ts: <span class="mono">bagsFetch</span> com timeout (5s), retry/backoff (429/5xx) e repasse de <span class="mono">X-RateLimit-*</span>.</li>
+        <li>Ativar modo <span class="mono">real</span> em <span class="mono">/api/scan</span> e <span class="mono">/api/simulate</span> (canário / Preview).</li>
+        <li>Observabilidade: <span class="mono">X-Request-Id</span>, <span class="mono">no-store</span>, <span class="mono">meta.rate</span>.</li>
+        <li>Docs & Collection com cenários 401/429; smoke com Newman.</li>
+        <li>Rollout: Rolling Releases (5%→25%→100%) + Skew Protection.</li>
+      </ul>
+    </section>
+
+    <footer>© Bags Shield — Fase 4. Tema navy/azul · ícone shield+money bag.</footer>
+  </div>
+
+  <script>
+    const $ = (q)=>document.querySelector(q);
+    const fmt = (o)=>JSON.stringify(o,null,2);
+
+    async function health(){
+      try{
+        const res = await fetch('/api/health',{headers:{'Accept':'application/json'}});
+        const ok = res.ok;
+        const rid = res.headers.get('x-request-id') || '—';
+        $('#rid').textContent = rid;
+        $('#led').style.background = ok ? 'var(--ok)' : 'var(--bad)';
+        const body = await res.json().catch(()=> ({}));
+        const mode = body?.meta?.mode || '—';
+        $('#state').textContent = ok ? `online (mode: ${mode})` : `offline (${res.status})`;
+      }catch(e){
+        $('#state').textContent = 'offline (erro)';
+        $('#led').style.background = 'var(--bad)';
+      }
+    }
+
+    async function postJson(url, payload, outEl){
+      outEl.textContent = 'enviando…';
+      try{
+        const res = await fetch(url,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Accept':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const body = await res.json().catch(()=> ({}));
+        outEl.textContent = fmt(body);
+      }catch(e){
+        outEl.textContent = fmt({success:false, error:String(e)});
+      }
+    }
+
+    $('#btnScan').addEventListener('click', ()=> postJson('/api/scan', { rawTransaction: $('#tx').value.trim() }, $('#outScan')));
+    $('#btnSim').addEventListener('click',  ()=> postJson('/api/simulate', { mint: $('#mint').value.trim() }, $('#outSim')));
+
+    health();
+  </script>
+</body>
 </html>
