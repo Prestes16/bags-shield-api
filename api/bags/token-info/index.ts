@@ -1,59 +1,91 @@
-export const config = { runtime: "nodejs" };
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { CONFIG } from "../../../lib/constants";
+import { bagsJson } from "../../../lib/bags";
 
-import { getTokenInfo } from "../../_lib/bags.js";
-
-function setBaseHeaders(res: any, requestId: string) {
+function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "authorization,content-type,x-requested-with");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
   res.setHeader("Access-Control-Expose-Headers", "X-Request-Id");
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
-  res.setHeader("X-Request-Id", requestId);
+}
+function noStore(res: VercelResponse) {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+}
+function reqId() {
+  return "req_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-function meta(requestId: string, extra: Record<string,unknown> = {}) {
-  return { service: "bags-shield-api", version: "1.0.0", time: new Date().toISOString(), requestId, ...extra };
-}
+type TokenInfoIn = {
+  imageUrl?: string;          // preferido inicialmente (evita multipart)
+  metadataUrl?: string;       // opcional: pula upload
+  name: string;               // <= 32
+  symbol: string;             // <= 10 (UPCASE recomendado)
+  description?: string;       // <= 1000
+  telegram?: string;
+  twitter?: string;
+  website?: string;
+};
 
-function resolveBase(): string | undefined {
-  const raw = (process.env.BAGS_API_BASE_OVERRIDE ?? process.env.BAGS_API_BASE ?? '').trim();
-  if (!raw) return undefined;
-  return raw.replace(/\/_mock\b/, '/mock').trim();
-}
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(res);
+  noStore(res);
 
-export default async function handler(req: any, res: any) {
-  const method = String(req.method || "").toUpperCase();
-  const requestId = (globalThis.crypto && "randomUUID" in globalThis.crypto) ? globalThis.crypto.randomUUID() : Math.random().toString(36).slice(2);
-  setBaseHeaders(res, requestId);
+  const rid = reqId();
+  res.setHeader("X-Request-Id", rid);
 
-  if (method === "OPTIONS") { res.status(204).end(); return; }
-  if (method === "HEAD")    { res.status(200).end(); return; }
-  if (method !== "GET") {
-    res.status(405).send(JSON.stringify({ ok:false, error:{ code:"METHOD_NOT_ALLOWED", message:"Use GET" }, meta: meta(requestId) }));
-    return;
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, error: "Method Not Allowed", meta: { requestId: rid } });
   }
 
-  const u = new URL(String(req.url || "/"), "http://local");
-  const mint = (u.searchParams.get("mint") || "").trim();
-  if (!mint) {
-    res.status(400).send(JSON.stringify({ ok:false, error:{ code:"BAD_REQUEST", message:"Parameter mint is required" }, meta: meta(requestId) }));
-    return;
-  }
-
-  const base = resolveBase();
   try {
-    const upstream: any = await getTokenInfo(mint, { baseUrl: base, timeoutMs: Number(process.env.BAGS_TIMEOUT_MS || "5000") || 5000, apiKey: process.env.BAGS_API_KEY || undefined });
-    const m: any = meta(requestId, { baseUrlUsed: base ?? null, upstreamRequestId: upstream?.upstreamRequestId ?? upstream?.data?.meta?.requestId ?? null });
-    if (upstream && upstream.ok) {
-      const payload = upstream.data?.response ?? upstream.data?.data ?? upstream.data;
-      res.status(200).send(JSON.stringify({ ok:true, data:{ mint, info: payload }, meta: m }));
-    } else {
-      const status = upstream?.status ?? 502;
-      const errObj = upstream?.data?.error ?? { code: "UPSTREAM_ERROR" };
-      res.status(status).send(JSON.stringify({ ok:false, error: errObj, meta: m }));
+    if (!CONFIG.BAGS_API_BASE) {
+      return res.status(501).json({
+        success: false,
+        error: "BAGS_API_BASE não configurado (token-info canário desativado).",
+        meta: { requestId: rid, ts: Date.now() }
+      });
     }
-  } catch (err: any) {
-    res.status(502).send(JSON.stringify({ ok:false, error:{ code:"UPSTREAM_FETCH_FAILED", message:String(err?.message || err) }, meta: meta(requestId, { baseUrlUsed: base ?? null }) }));
+
+    // parse/validação leve
+    const payload = (typeof req.body === "object" && req.body) ? req.body as TokenInfoIn : JSON.parse(String(req.body || "{}"));
+    const { name, symbol, imageUrl, metadataUrl } = payload;
+
+    if (!name || !symbol) {
+      return res.status(400).json({
+        success: false,
+        error: "Campos obrigatórios ausentes: name e symbol.",
+        meta: { requestId: rid, ts: Date.now() }
+      });
+    }
+    if (!imageUrl && !metadataUrl) {
+      return res.status(400).json({
+        success: false,
+        error: "Forneça imageUrl ou metadataUrl (evitamos multipart nesse canário).",
+        meta: { requestId: rid, ts: Date.now() }
+      });
+    }
+
+    // forward para o upstream real
+    const upstream = await bagsJson<any>("/token-launch/create-token-info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const meta = { ...upstream.meta, requestId: rid, ts: Date.now() };
+
+    if (upstream.success) {
+      return res.status(200).json({ success: true, response: upstream.response, meta });
+    } else {
+      const bad = upstream.meta.status || 502;
+      return res.status(bad).json({ success: false, error: upstream.error, meta });
+    }
+  } catch (e: any) {
+    return res.status(502).json({
+      success: false,
+      error: String(e?.message ?? e),
+      meta: { requestId: rid, ts: Date.now() }
+    });
   }
 }
