@@ -7,7 +7,7 @@ if (-not $HostBase -or -not $HostBase.Trim()) {
 }
 
 $ErrorActionPreference = "Stop"
-Write-Host "`n==> Smoke Bags (canario) — $HostBase" -ForegroundColor Cyan
+Write-Host "`n==> Smoke Bags (canario) :: $HostBase" -ForegroundColor Cyan
 
 function Build-Url([string]$p){
   if ($p -match '^https?://') { return $p }
@@ -35,7 +35,7 @@ function Invoke-HTTP {
     } else {
       $payload = if ($Body) { $Body | ConvertTo-Json -Depth 8 -Compress } else { "{}" }
       $res = Invoke-WebRequest -UseBasicParsing -Method POST -Uri $url -TimeoutSec $TimeoutSec `
-              -ContentType "application/json" -Body $payload -ErrorAction Stop
+        -ContentType "application/json" -Body $payload -ErrorAction Stop
       $json = $null
       try { $json = $res.Content | ConvertFrom-Json -ErrorAction Stop } catch {}
       return [pscustomobject]@{
@@ -76,7 +76,7 @@ function Show([string]$name, $r) {
 $r1 = Invoke-HTTP -Method GET -Path "/api/bags/ping"
 Show "GET /api/bags/ping" $r1
 
-# 2) Token Info (POST) — deve dar 501 se base ausente; 200/401/403 se configurado
+# 2) Token Info (POST) - espera 501 se base ausente; 200/401/403 se configurado
 $tokenInfo = @{
   name = "CanaryCoin"
   symbol = "CNC"
@@ -86,7 +86,7 @@ $tokenInfo = @{
 $r2 = Invoke-HTTP -Method POST -Path "/api/bags/token-info" -Body $tokenInfo
 Show "POST /api/bags/token-info" $r2
 
-# 3) Create Config (POST) — primeiro invalido (400), depois ok (501 se base ausente)
+# 3) Create Config (POST) - primeiro invalido (400), depois ok (501 se base ausente)
 $cfgBad = @{ launchWallet = "not-base58" }
 $r3 = Invoke-HTTP -Method POST -Path "/api/bags/create-config" -Body $cfgBad
 Show "POST /api/bags/create-config (400)" $r3
