@@ -1,16 +1,11 @@
-api/**            # regra ampla que ignora tudo...
-!api/             # ...mas reabilita o diretório api/ (ESSENCIAL)
-!api/health/**
-!api/scan/**
-!api/simulate/**
-!api/apply/**
-
-# Ignorar arquivos de dev/junk
-**/*.bak
-**/*.bak.*
-**/*.backup*
-api/**/index.bak
-api/**/index.bak.ts
+# Evitar lixo de dev, mas manter src (api/, lib/, public/, package.json, tsconfig)
+.git/
+.vercel/
+node_modules/
+dist/
+coverage/
+*.log
+*.bak
+*.backup*
 scripts/**
 schemas/**
-vercel.local.json
