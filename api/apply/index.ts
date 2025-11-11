@@ -1,22 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import crypto from "node:crypto";
-import { setCors, preflight, guardMethod, noStore } from "../../lib/cors";
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../../lib/cors";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCors(res);
-  if (req.method === "OPTIONS") {
-    return preflight(res, ["POST"], ["Content-Type","Authorization","x-api-key"]);
+  setCors(res); noStore(res);
+  if (req.method === "OPTIONS") return preflight(res, ["POST"]);
+  if (!guardMethod(req, res, ["POST"])) return;
+
+  const requestId = ensureRequestId(res);
+  try {
+    return res.status(200).json({ success: true, response: { applied: true }, meta: { requestId } });
+  } catch (err: any) {
+    return res
+      .status(500)
+      .json({ success: false, error: "internal_error", details: String(err?.message ?? err), meta: { requestId } });
   }
-  guardMethod(req, res, ["POST"]);
-  noStore(res);
-
-  const requestId = crypto.randomUUID();
-  res.setHeader("X-Request-Id", requestId);
-
-  // Nenhuma mutação real aqui — apenas ecoa o OK no formato padrão
-  return res.status(200).json({
-    success: true,
-    response: { applied: true },
-    meta: { requestId }
-  });
 }

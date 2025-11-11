@@ -1,28 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import crypto from "node:crypto";
-import { setCors, preflight, guardMethod, noStore } from "../../lib/cors";
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../../lib/cors";
 
-function isBase58ish(s: unknown): s is string {
-  // 32–44 chars no alfabeto base58 (sem 0 O I l)
+function isBase58ish(s: any): s is string {
   return typeof s === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
 }
 
-function safeParse(body: unknown): any {
-  if (typeof body === "object" && body !== null) return body as any;
-  try { return JSON.parse(String(body ?? "{}")); } catch { return {}; }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCors(res);
-  if (req.method === "OPTIONS") return preflight(res, ["POST"], ["Content-Type","Authorization","x-api-key"]);
-  guardMethod(req, res, ["POST"]);
-  noStore(res);
+  setCors(res); noStore(res);
+  if (req.method === "OPTIONS") return preflight(res, ["POST"]);
+  if (!guardMethod(req, res, ["POST"])) return;
 
-  const requestId = crypto.randomUUID();
-  res.setHeader("X-Request-Id", requestId);
-
-  const body = safeParse(req.body);
-  const mint: unknown = body?.mint;
+  const requestId = ensureRequestId(res);
+  const mint = (req.body as any)?.mint;
 
   if (!isBase58ish(mint)) {
     return res.status(400).json({
@@ -32,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const score = 68; // mock estável para integração
+  const score = 68;
   const grade = score >= 80 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "E";
 
   return res.status(200).json({
@@ -42,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       shieldScore: score,
       grade,
       warnings: [],
-      metadata: { mode: "real", mintLength: (mint as string).length, base: null }
+      metadata: { mode: "mock", mintLength: mint.length, base: null }
     },
     meta: { requestId }
   });

@@ -1,30 +1,20 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import crypto from "node:crypto";
-import { setCors, preflight, guardMethod, noStore } from "../../lib/cors";
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../../lib/cors";
 
-function isB64ish(s: unknown): s is string {
+function isB64ish(s: any): s is string {
   return typeof s === "string"
     && /^[A-Za-z0-9+/=]+$/.test(s)
     && s.length >= 64
     && (s.length % 4 === 0);
 }
 
-function safeParse(body: unknown): any {
-  if (typeof body === "object" && body !== null) return body as any;
-  try { return JSON.parse(String(body ?? "{}")); } catch { return {}; }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCors(res);
-  if (req.method === "OPTIONS") return preflight(res, ["POST"], ["Content-Type","Authorization","x-api-key"]);
-  guardMethod(req, res, ["POST"]);
-  noStore(res);
+  setCors(res); noStore(res);
+  if (req.method === "OPTIONS") return preflight(res, ["POST"]);
+  if (!guardMethod(req, res, ["POST"])) return;
 
-  const requestId = crypto.randomUUID();
-  res.setHeader("X-Request-Id", requestId);
-
-  const body = safeParse(req.body);
-  const raw: unknown = body?.rawTransaction;
+  const requestId = ensureRequestId(res);
+  const raw = (req.body as any)?.rawTransaction;
 
   if (!isB64ish(raw)) {
     return res.status(400).json({
@@ -44,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       shieldScore: score,
       grade,
       warnings: [],
-      metadata: { mode: "real", rawLength: raw.length, base: null }
+      metadata: { mode: "mock", rawLength: raw.length, base: null }
     },
     meta: { requestId }
   });
