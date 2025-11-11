@@ -11,16 +11,16 @@ app.use((req,res,next)=>{
   next();
 });
 
-app.options('/api/scan',(req,res)=>{
-  res.set('Access-Control-Allow-Methods','POST,OPTIONS');
-  res.set('Access-Control-Allow-Headers','Content-Type,Authorization,x-api-key');
-  res.status(204).end();
-});
-app.options('/api/simulate',(req,res)=>{
-  res.set('Access-Control-Allow-Methods','POST,OPTIONS');
-  res.set('Access-Control-Allow-Headers','Content-Type,Authorization,x-api-key');
-  res.status(204).end();
-});
+function allowPreflight(path){
+  app.options(path,(req,res)=>{
+    res.set('Access-Control-Allow-Methods','POST,OPTIONS');
+    res.set('Access-Control-Allow-Headers','Content-Type,Authorization,x-api-key');
+    res.status(204).end();
+  });
+}
+allowPreflight('/api/scan');
+allowPreflight('/api/simulate');
+allowPreflight('/api/apply');
 
 app.get('/api/health',(req,res)=>{
   const meta = {
@@ -91,6 +91,15 @@ app.post('/api/simulate',(req,res)=>{
       warnings: [],
       metadata:{ mode:'mock', mintLength: mint.length, base: null }
     },
+    meta:{ requestId: res.get('X-Request-Id'), mode:'mock' }
+  });
+});
+
+app.post('/api/apply',(req,res)=>{
+  // mock simples — no real changes applied
+  res.json({
+    success:true,
+    response:{ applied:true },
     meta:{ requestId: res.get('X-Request-Id'), mode:'mock' }
   });
 });
