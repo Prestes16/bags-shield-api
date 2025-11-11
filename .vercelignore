@@ -1,12 +1,16 @@
-# Não suba tralha para a Vercel
-logs/
-tmp/
-*.bak
-*.tmp
-.env
-.env.*
+# Limite Hobby: 12 functions. Whitelist das rotas essenciais.
+api/**
+!api/health/**
+!api/scan/**
+!api/simulate/**
+!api/apply/**
 
-# Em prod, não precisamos dos mocks (se quiser usar local, estão no repo)
-api/mock/
-!api/**
-api/mock/**
+# Ignorar backups/dev/junk
+**/*.bak
+**/*.bak.*
+**/*.backup*
+api/**/index.bak
+api/**/index.bak.ts
+vercel.local.json
+scripts/**
+schemas/**
