@@ -1,5 +1,3 @@
-export const config = { runtime: "nodejs" };
-
 export default async function handler(req: any, res: any) {
   const id = (globalThis.crypto && "randomUUID" in globalThis.crypto) ?
     globalThis.crypto.randomUUID() : Math.random().toString(36).slice(2);
