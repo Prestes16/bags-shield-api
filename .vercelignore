@@ -1,16 +1,16 @@
-# Limite Hobby: 12 functions. Whitelist das rotas essenciais.
-api/**
+api/**            # regra ampla que ignora tudo...
+!api/             # ...mas reabilita o diretório api/ (ESSENCIAL)
 !api/health/**
 !api/scan/**
 !api/simulate/**
 !api/apply/**
 
-# Ignorar backups/dev/junk
+# Ignorar arquivos de dev/junk
 **/*.bak
 **/*.bak.*
 **/*.backup*
 api/**/index.bak
 api/**/index.bak.ts
-vercel.local.json
 scripts/**
 schemas/**
+vercel.local.json
