@@ -1,22 +1,45 @@
 export default async function handler(req: any, res: any) {
-  const id = (globalThis.crypto && "randomUUID" in globalThis.crypto) ?
-    globalThis.crypto.randomUUID() : Math.random().toString(36).slice(2);
+  const requestId =
+    (globalThis as any)?.crypto?.randomUUID?.() ??
+    Math.random().toString(36).slice(2);
 
-  res.setHeader("Access-Control-Expose-Headers", "X-Request-Id");
-  res.setHeader("X-Request-Id", id);
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  // CORS básico (liberado) + no-store + expose do X-Request-Id
+  const allowOrigin = req.headers?.origin || '*';
+  const baseHeaders: Record<string, string> = {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
+    'Access-Control-Expose-Headers': 'X-Request-Id',
+    'Cache-Control': 'no-store',
+    'X-Request-Id': requestId,
+  };
 
-  if (String(req.method).toUpperCase() === "HEAD") {
+  for (const [k, v] of Object.entries(baseHeaders)) res.setHeader(k, v);
+
+  // Preflight
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
+  // HEAD sem body
+  if (req.method === 'HEAD') {
     res.status(200).end();
     return;
   }
-  const body = {
-    ok: true,
-    status: "healthy",
-    meta: { service: "bags-shield-api", version: "1.0.0", env: "production", time: new Date().toISOString(), requestId: id },
-    checks: { uptimeSeconds: 1 }
-  };
-  res.status(200).send(JSON.stringify(body));
+
+  // Apenas GET permitido
+  if (req.method !== 'GET') {
+    res.status(405).json({ success: false, error: 'Method Not Allowed', meta: { requestId } });
+    return;
+  }
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.status(200).send(
+    JSON.stringify({
+      success: true,
+      response: { status: 'ok' },
+      meta: { requestId },
+    })
+  );
 }
