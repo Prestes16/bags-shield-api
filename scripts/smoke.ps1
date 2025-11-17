@@ -30,14 +30,25 @@ $fh = "logs/smoke-$ts.txt"
 
 Log $fh "=== SMOKE START BaseUrl=$BaseUrl Origin=$Origin Mint=$Mint ==="
 
-# 1) /api/scan
+# 1) /api/scan (POST com JSON)
 try {
-  $u = "$BaseUrl/api/scan?foo=bar"
-  $r = Invoke-WebRequest -Method GET -Uri $u -Headers @{ Origin=$Origin } -ErrorAction Stop
-  Log $fh "SCAN GET: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
+  $u = "$BaseUrl/api/scan"
+  $dummyRaw = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  $bodyObj = @{
+    rawTransaction = $dummyRaw
+  }
+  $jsonBody = $bodyObj | ConvertTo-Json -Depth 3
+
+  $r = Invoke-WebRequest -Method POST -Uri $u -Headers @{ Origin = $Origin } -ContentType 'application/json' -Body $jsonBody -ErrorAction Stop
+  Log $fh "SCAN POST: $($r.StatusCode) CT=$($r.Headers['Content-Type'])"
   Log $fh $r.Content
 } catch {
-  Log $fh "SCAN GET: ERROR"
+  $resp = $_.Exception.Response
+  $status  = if ($resp) { [int]$resp.StatusCode } else { 0 }
+  $ct      = if ($resp) { $resp.Headers['Content-Type'] } else { '' }
+  $body    = if ($resp) { (New-Object IO.StreamReader($resp.GetResponseStream())).ReadToEnd() } else { '' }
+  Log $fh "SCAN POST: $status CT=$ct"
+  Log $fh $body
 }
 
 # 2) /api/simulate BAD_JSON

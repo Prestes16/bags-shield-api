@@ -1,4 +1,4 @@
-export const config = { runtime: "edge" };
+
 
 function hdr(id: string){
   return new Headers({

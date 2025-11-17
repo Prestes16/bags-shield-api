@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "builds": [
-    { "src": "api/health/index.ts",   "use": "@vercel/node" },
-    { "src": "api/apply/index.ts",    "use": "@vercel/node" },
-    { "src": "api/simulate/index.ts", "use": "@vercel/node" },
-    { "src": "api/scan/index.ts",     "use": "@vercel/node" }
-  ]
-}

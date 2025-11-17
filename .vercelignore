@@ -1,11 +1,3 @@
-# Evitar lixo de dev, mas manter src (api/, lib/, public/, package.json, tsconfig)
-.git/
-.vercel/
-node_modules/
-dist/
-coverage/
-*.log
-*.bak
-*.backup*
-scripts/**
-schemas/**
+﻿.trash-php/
+.legacy-php*
+.vercel.bak*
