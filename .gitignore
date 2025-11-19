@@ -48,3 +48,7 @@ android/signing/*
 *.keystore
 *.jks
 *.p12
+
+# Dev-only handlers for local vercel dev
+api/health.ts
+api/scan.ts
