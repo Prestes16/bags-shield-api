@@ -123,7 +123,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     result = await createTokenInfo(payload);
   } catch (err) {
-    // pega qualquer erro inesperado (inclui NotSupportedError do undici, se rolar)
     return sendJson(
       res,
       502,

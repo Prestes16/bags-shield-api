@@ -45,7 +45,6 @@ export interface CreateTokenInfoRequest {
   telegram?: string;
   twitter?: string;
   website?: string;
-  // v0: não suportamos upload de arquivo direto (multipart)
 }
 
 export interface CreateTokenInfoResponse {
@@ -148,9 +147,6 @@ async function bagsFetch<T>(opts: BagsFetchOptions): Promise<BagsResult<T>> {
       Authorization: `Bearer ${apiKey}`,
     };
 
-    // IMPORTANTE: não propagamos headers do cliente (tipo Expect),
-    // só os que a Bags precisa.
-
     res = await fetch(url, {
       method: opts.method ?? "GET",
       headers,
@@ -202,7 +198,6 @@ async function bagsFetch<T>(opts: BagsFetchOptions): Promise<BagsResult<T>> {
     };
   }
 
-  // Caso a Bags responda no padrão { success:false, error:{...} }
   if (json && typeof json === "object" && json.success === false && json.error) {
     return {
       success: false,
@@ -233,7 +228,6 @@ export async function createTokenInfo(
     website: req.website,
   };
 
-  // remove undefined pra não mandar lixo
   for (const key of Object.keys(body)) {
     if (body[key] === undefined) {
       delete body[key];
