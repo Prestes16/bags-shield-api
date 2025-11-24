@@ -52,3 +52,7 @@ android/signing/*
 # Dev-only handlers for local vercel dev
 api/health.ts
 api/scan.ts
+.env.local
+backups-api/
+backups-ui/
+vercel.local.json.bak-*

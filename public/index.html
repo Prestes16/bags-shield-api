@@ -1,394 +1,969 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bags Shield API — Status & Confiabilidade</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>Bags Shield API — Status & Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Ícone e Open Graph -->
+  <link rel="icon" type="image/png" href="/assets/bags-shield-icon.png" />
+  <meta property="og:image" content="/assets/bags-shield-icon.png" />
+
   <style>
-    :root{
-      --bg:#07172b; --bg-2:#0a1f3c; --card:#0e2748;
-      --muted:#9fb6d5; --text:#e6f1ff;
-      --blue-1:#0f68dd; --blue-2:#1ea3ff; --blue-3:#4dd4ff;
-      --primary:#0f68dd; --primary-2:#1ea3ff;
-      --danger:#ff4d6d; --warn:#ffb020; --ok:#47d16a;
-      --shadow:0 12px 36px rgba(0,0,0,.35); --radius:20px;
+    :root {
+      /* Paleta navy/azul Bags Shield */
+      --bg-main: #020617;
+      --bg-card: #050b1c;
+      --bg-card-soft: #071330;
+      --accent: #2fa7ff;
+      --accent-soft: #4dd4ff;
+      --accent-green: #1fe39b;
+      --accent-yellow: #ffc94d;
+      --danger: #ff4d7d;
+      --text-main: #f7f9ff;
+      --text-soft: #c4d4ff;
+      --border-soft: rgba(70, 110, 190, 0.8);
+      --muted: #7b88c2;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.6);
+      --radius-lg: 20px;
     }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{
-      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      color:var(--text);
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, -apple-system, "SF Pro Text", sans-serif;
       background:
-        radial-gradient(1600px 600px at 80% -10%, rgba(77,212,255,.16), transparent 60%),
-        radial-gradient(1200px 500px at -10% 10%, rgba(30,163,255,.12), transparent 60%),
-        linear-gradient(180deg, var(--bg), var(--bg-2) 60%);
-      min-height:100%;
-      overflow-x:hidden;
-      animation:bgShift 12s ease-in-out infinite;
+        radial-gradient(140% 220% at 0% 0%, #132457 0%, transparent 55%),
+        radial-gradient(160% 220% at 100% 0%, #0b1537 0%, #020617 55%, #000000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-x: hidden;
     }
-    @keyframes bgShift{
-      0%{background-position:0 0,0 0,0 0}
-      50%{background-position:20px -10px,-10px 10px,0 0}
-      100%{background-position:0 0,0 0,0 0}
-    }
-    /* canvas da chuva de $ fica por trás do conteúdo */
-    #fx{
-      position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.10;
-    }
-    .wrap{position:relative; z-index:1; max-width:1200px;margin:0 auto;padding:24px}
-    a{color:var(--blue-3);text-decoration:none}
 
-    .nav{display:flex;align-items:center;gap:14px}
-    .logoApp{
-      width:54px;height:54px;border-radius:20px;position:relative;isolation:isolate;
-      background: radial-gradient(120% 120% at 30% 25%, #153863 0%, #0e2748 60%);
-      box-shadow:var(--shadow); display:grid; place-items:center; overflow:hidden; border:1px solid #123a69;
+    .app-shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
-    .brand{font-weight:800;letter-spacing:.3px}
-    .tag{font-size:12px;color:var(--muted);border:1px solid #1d3557;border-radius:999px;padding:3px 10px}
 
-    .hero{
-      margin-top:28px;border-radius:var(--radius);padding:28px;
-      background:linear-gradient(140deg, rgba(15,74,121,.65), rgba(14,39,72,.65));
-      box-shadow:var(--shadow);
-      display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
+    /* CHUVA DE $ NO FUNDO */
+    .dollar-rain {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      mix-blend-mode: screen;
+      transform: translate3d(0, 0, 0);
+      transition: transform 0.18s ease-out;
     }
-    .heroIcon{
-      width:84px;height:84px;border-radius:28px;background:rgba(17,48,87,.55);
-      display:grid;place-items:center;border:1px solid #164170;position:relative;overflow:hidden
+
+    .dollar {
+      position: absolute;
+      top: -10%;
+      color: rgba(90, 220, 255, 0.3);
+      text-shadow:
+        0 0 10px rgba(90, 220, 255, 0.9),
+        0 0 20px rgba(47, 147, 255, 0.7);
+      font-weight: 600;
+      animation-name: dollar-fall;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      will-change: transform, opacity;
     }
-    .heroIcon::after{
-      content:""; position:absolute; inset:-30%;
-      background:radial-gradient(closest-side, rgba(78,195,255,.20), transparent 60%);
-      pointer-events:none; filter:blur(12px);
-      animation:halo 6s ease-in-out infinite;
+
+    @keyframes dollar-fall {
+      0% {
+        transform: translate3d(var(--x-offset, 0px), -120%, 0) rotate(0deg);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate3d(var(--x-offset, 0px), 120%, 0) rotate(18deg);
+        opacity: 0;
+      }
     }
-    @keyframes halo{0%,100%{opacity:.7; transform:scale(1)}50%{opacity:.35; transform:scale(1.05)}}
 
-    .hero h1{margin:0 0 6px 0;font-size:30px}
-    .hero p{margin:0;color:var(--muted)}
-    .cta-row{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
-
-    .btn{
-      appearance:none;border:0;cursor:pointer;font-weight:700;padding:12px 18px;border-radius:14px;
-      transition:.15s transform,.15s opacity,.25s box-shadow;position:relative;overflow:hidden
+    header.app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
     }
-    .btn:hover{transform:translateY(-1px)}
-    .btn-primary{color:#eaf4ff;background:linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
-      box-shadow:0 10px 24px rgba(30,163,255,.25), inset 0 0 0 1px rgba(255,255,255,.06);border:1px solid rgba(0,0,0,.15)}
-    .btn-ghost{background:#0a2447;color:var(--blue-3);border:1px solid #12315a}
-    .btn-outline{background:transparent;color:var(--blue-3);border:1px solid #1b3b66}
 
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:22px}
-    .card{
-      grid-column: span 12;background:linear-gradient(180deg,rgba(20,54,96,.55),rgba(8,29,55,.7));
-      border:1px solid #113057;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
-      transform-style:preserve-3d; will-change:transform, box-shadow;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .lift{transition:transform .25s ease, box-shadow .25s ease}
-    .lift:hover{transform:translateY(-2px) scale(1.012); box-shadow:0 18px 44px rgba(30,163,255,.18)}
-    .hero.lift:hover{transform:translateY(-2px) scale(1.006)}
 
-    .card h3{margin:0 0 8px 0;font-size:16px}
-    .pill{font-size:12px;border:1px solid #13406f;background:#0a2447;color:#cfe8ff;border-radius:999px;padding:6px 10px}
-    .badge{font-size:12px;padding:4px 8px;border-radius:999px;font-weight:700}
-    .b-ok{background:rgba(71,209,106,.12);color:#47d16a;border:1px solid rgba(71,209,106,.35)}
-    .b-warn{background:rgba(255,176,32,.12);color:#ffcc66;border:1px solid rgba(255,176,32,.35)}
-    .b-err{background:rgba(255,77,109,.12);color:#ff7e95;border:1px solid rgba(255,77,109,.35)}
-    pre{white-space:pre-wrap;word-break:break-word;background:#061427;border:1px solid #13325b;border-radius:12px;padding:10px;font-size:13px;max-height:360px;overflow:auto;margin:0}
-    input,textarea{width:100%;background:#061427;color:var(--text);border:1px solid #13325b;border-radius:12px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;outline:none}
-    input:focus,textarea:focus{box-shadow: inset 0 0 0 1px var(--primary-2)}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .ghost{opacity:.9}
-    .footer{margin:26px 0 10px 0;color:#6f87a7;font-size:12px;text-align:center}
+    .brand-logo-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      padding: 4px;
+      background: radial-gradient(circle at 0% 0%, #4dd4ff 0%, #2fa7ff 40%, #020617 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 1px rgba(77, 212, 255, 0.3);
+      overflow: hidden;
+    }
 
-    .reliability{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:center}
-    .donutwrap{display:grid;place-items:center;position:relative}
-    .donut-value{font-size:34px;font-weight:800}
-    .donut-sub{font-size:12px;color:#9fb6d5;margin-top:2px}
-    .bar{display:grid;grid-template-columns:190px 1fr 52px;gap:10px;align-items:center;margin:10px 0}
-    .bar .name{color:#cfe8ff}
-    .bar .track{height:12px;border-radius:999px;background:#0a2447;border:1px solid #14335c;overflow:hidden}
-    .bar .fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1ea3ff,#4dd4ff);transition:width .6s cubic-bezier(.2,.7,.2,1)}
-    .bar .pct{font-variant-numeric:tabular-nums;color:#a7c6e8}
+    .brand-logo {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      object-fit: cover;
+      display: block;
+      background: #020617;
+    }
 
-    @media (max-width: 920px){ .reliability{grid-template-columns:1fr} .bar{grid-template-columns:1fr 1fr 52px} }
-    @media (max-width: 480px){ #donut{width:190px;height:190px} .hero h1{font-size:26px} }
-    @media (min-width: 860px){ .card.span-7{grid-column: span 7} .card.span-5{grid-column: span 5} }
-    @media (prefers-reduced-motion: reduce){ body{animation:none} #fx{display:none} }
+    /* Fallback se a imagem quebrar */
+    .brand-logo-wrap.fallback-logo {
+      background: radial-gradient(circle at 30% 0%, #4dd4ff 0%, #2fa7ff 30%, #071330 100%);
+      box-shadow:
+        0 0 0 1px rgba(77, 212, 255, 0.5),
+        0 0 18px rgba(77, 212, 255, 0.35);
+      position: relative;
+    }
+
+    .brand-logo-wrap.fallback-logo::before {
+      content: "BS";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 0.06em;
+      color: #020617;
+    }
+
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text h1 span.marker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(47, 167, 255, 0.16);
+      color: var(--accent-soft);
+      border: 1px solid rgba(77, 212, 255, 0.5);
+      text-transform: uppercase;
+    }
+
+    .brand-text p {
+      font-size: 0.83rem;
+      color: var(--text-soft);
+      margin-top: 2px;
+    }
+
+    .env-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(96, 135, 210, 0.8);
+      background: linear-gradient(120deg, rgba(9, 18, 51, 0.96), rgba(3, 7, 25, 0.96));
+      color: var(--text-soft);
+      white-space: nowrap;
+    }
+
+    .env-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 12px rgba(31, 227, 155, 0.9);
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel {
+      background: radial-gradient(circle at 0% 0%, #152a57 0%, #050b1c 55%, #020617 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 16px;
+      flex: 2;
+      min-width: 260px;
+    }
+
+    .panel h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel h2 span.badge {
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(31, 227, 155, 0.08);
+      border: 1px solid rgba(31, 227, 155, 0.6);
+      color: var(--accent-green);
+      text-transform: uppercase;
+    }
+
+    .panel p {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .base-url-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .base-url-row label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .base-url-row input {
+      flex: 1;
+      min-width: 160px;
+      border-radius: 999px;
+      border: 1px solid rgba(102, 152, 238, 0.95);
+      background: rgba(3, 8, 27, 0.96);
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .base-url-row input::placeholder {
+      color: rgba(196, 208, 255, 0.5);
+    }
+
+    .base-url-row button {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      color: #02030a;
+      box-shadow:
+        0 0 0 1px rgba(77, 212, 255, 0.4),
+        0 12px 30px rgba(0, 0, 0, 0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .base-url-row button:active {
+      transform: translateY(1px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.75);
+    }
+
+    .hint {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .card {
+      background: radial-gradient(circle at 0% 0%, #132647 0%, #050a19 55%, #020617 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(90, 138, 232, 0.9);
+      padding: 14px 14px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 0% 0%, rgba(77, 212, 255, 0.06), transparent 55%);
+      pointer-events: none;
+    }
+
+    .card-headline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-title span.label {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .method-pill {
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(90, 138, 232, 0.9);
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .method-pill[data-method="GET"] {
+      border-color: rgba(77, 212, 255, 0.9);
+      color: var(--accent-soft);
+    }
+
+    .method-pill[data-method="POST"] {
+      border-color: rgba(255, 201, 77, 0.95);
+      color: var(--accent-yellow);
+    }
+
+    .card-body {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin-bottom: 6px;
+    }
+
+    .endpoint {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.7rem;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(6, 12, 31, 0.98);
+      border: 1px solid rgba(68, 111, 190, 0.95);
+      color: var(--accent-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      word-break: break-all;
+    }
+
+    .code-tag {
+      font-size: 0.64rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    textarea.request-body {
+      width: 100%;
+      resize: vertical;
+      min-height: 80px;
+      max-height: 150px;
+      margin-top: 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(68, 111, 190, 0.95);
+      background: rgba(3, 8, 27, 0.98);
+      padding: 6px 7px;
+      font-size: 0.72rem;
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .card-footer {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(123, 136, 194, 0.8);
+      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+      transition: background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .status-chip[data-state="idle"] .status-dot {
+      background: rgba(123, 136, 194, 0.8);
+    }
+
+    .status-chip[data-state="success"] .status-dot {
+      background: var(--accent-green);
+      box-shadow: 0 0 12px rgba(31, 227, 155, 0.95);
+    }
+
+    .status-chip[data-state="warn"] .status-dot {
+      background: var(--accent-yellow);
+      box-shadow: 0 0 10px rgba(255, 201, 77, 0.9);
+    }
+
+    .status-chip[data-state="error"] .status-dot {
+      background: var(--danger);
+      box-shadow: 0 0 10px rgba(255, 77, 125, 0.95);
+    }
+
+    .status-label {
+      font-weight: 500;
+    }
+
+    .latency {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .card-footer button {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 11px;
+      font-size: 0.76rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: rgba(47, 167, 255, 0.12);
+      color: var(--accent-soft);
+      border: 1px solid rgba(77, 212, 255, 0.8);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-footer button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .response-block {
+      margin-top: 8px;
+      border-radius: 10px;
+      background: rgba(2, 7, 28, 0.98);
+      border: 1px solid rgba(60, 102, 179, 0.98);
+      padding: 6px 7px;
+      max-height: 170px;
+      overflow: auto;
+    }
+
+    .response-block pre {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.7rem;
+      color: var(--text-main);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    footer {
+      margin-top: 12px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    footer span strong {
+      color: var(--accent-soft);
+      font-weight: 500;
+    }
+
+    /* MOBILE / RESPONSIVO – “versão app” */
+    @media (max-width: 880px) {
+      header.app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 16px 10px;
+        align-items: stretch;
+      }
+
+      .app-shell {
+        width: 100%;
+      }
+
+      .panel {
+        padding: 14px 12px;
+        border-radius: 18px;
+      }
+
+      .card {
+        padding: 12px 10px 10px;
+        border-radius: 16px;
+      }
+
+      .base-url-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .base-url-row button {
+        align-self: flex-end;
+        margin-top: 2px;
+      }
+
+      footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   </style>
 </head>
 <body>
-  <!-- canvas da chuva de $ -->
-  <canvas id="fx"></canvas>
+  <!-- Fundo animado com $ -->
+  <div class="dollar-rain" id="dollar-rain" aria-hidden="true"></div>
 
-  <div class="wrap">
-    <div class="nav">
-      <div class="logoApp lift" aria-label="Bags Shield logo">
-        <!-- LOGO: escudo + $ central -->
-        <svg viewBox="0 0 96 96" width="36" height="36" fill="none" role="img" aria-label="Bags Shield">
-          <defs><linearGradient id="gShield" x1="0" x2="1"><stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/></linearGradient></defs>
-          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
-                fill="none" stroke="url(#gShield)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-          <text x="48" y="50" text-anchor="middle" dominant-baseline="middle"
-                font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" font-size="26"
-                fill="#1EA3FF">$</text>
-        </svg>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+       <div class="brand-logo-wrap" id="brand-logo-wrap">
+        <img
+          src="/assets/bags-shield-icon.png?v=1"
+          alt="Logo Bags Shield"
+          class="brand-logo"
+        />
       </div>
-      <div class="brand">Bags Shield API</div>
-      <span class="tag">v0.2.0 • navy/blue</span>
-    </div>
 
-    <div class="hero lift">
-      <div class="heroIcon">
-        <!-- versão maior -->
-        <svg viewBox="0 0 96 96" width="56" height="56" fill="none" role="img" aria-hidden="true">
-          <defs><linearGradient id="gShield2" x1="0" x2="1"><stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/></linearGradient></defs>
-          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
-                fill="none" stroke="url(#gShield2)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-          <text x="48" y="50" text-anchor="middle" dominant-baseline="middle"
-                font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" font-size="30"
-                fill="#29C1FF">$</text>
-        </svg>
-      </div>
-      <div>
-        <h1>Camada de confiança do BagsApp</h1>
-        <p class="ghost">Telemetria clara, defesa em profundidade e estabilidade de integrações. Status vivo + gráfico de confiabilidade para <code>/api/scan</code>, <code>/api/simulate</code> e Token Launch (Bags).</p>
-        <div class="cta-row">
-          <button id="btnHealth" class="btn btn-primary">Atualizar Status</button>
-          <button id="btnPing" class="btn btn-ghost">Ping Bags (canário)</button>
-          <button id="btnSecurity" class="btn btn-outline">Nota de segurança</button>
+        <div class="brand-text">
+          <h1>
+            Bags Shield API
+            <span class="marker">Status & Playground</span>
+          </h1>
+          <p>Console de testes rápido para /health, /bags/ping, /scan e /simulate.</p>
         </div>
       </div>
-    </div>
 
-    <div class="grid">
-      <div class="card span-7 lift" data-tilt>
-        <h3>Painel de Confiabilidade (tempo real)</h3>
-        <div class="reliability">
-          <div class="donutwrap">
-            <svg id="donut" width="230" height="230" viewBox="0 0 230 230" aria-hidden="true">
-              <defs><linearGradient id="dg" x1="0" x2="1"><stop stop-color="#1ea3ff"/><stop offset="1" stop-color="#4dd4ff"/></linearGradient></defs>
-              <circle cx="115" cy="115" r="92" stroke="#0b2142" stroke-width="24" fill="none"/>
-              <circle id="donutArc" cx="115" cy="115" r="92" stroke="url(#dg)" stroke-width="24" fill="none" stroke-linecap="round" transform="rotate(-90 115 115)"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center">
-              <div><div class="donut-value" id="donutVal">0%</div><div class="donut-sub">Confiabilidade geral</div></div>
+      <div class="env-pill" id="env-pill">
+        <span class="env-dot"></span>
+        <span id="env-label">Carregando ambiente…</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>
+          Painel de controle
+          <span class="badge">Live</span>
+        </h2>
+        <p>
+          Use este painel para verificar se a API está saudável e se os contratos
+          principais do Bags Shield (scan/simulate) estão respondendo com
+          <code class="code-tag">success: true</code>.
+        </p>
+
+        <div class="base-url-row">
+          <label for="base-url">Base URL</label>
+          <input
+            id="base-url"
+            type="text"
+            placeholder="https://bags-shield-api.vercel.app"
+          />
+          <button id="run-all">
+            Rodar todos os testes
+          </button>
+        </div>
+        <p class="hint">
+          Dica: em dev local, isso normalmente é <strong>http://localhost:3001</strong>.
+          Em produção, use o domínio oficial (por exemplo, bags-shield-api.vercel.app).
+        </p>
+
+        <div class="grid">
+          <!-- Card: /api/health -->
+          <article
+            class="card"
+            data-endpoint="/api/health"
+            data-method="GET"
+            data-name="Health"
+          >
+            <div class="card-headline">
+              <div class="card-title">
+                <span>Core — Health</span>
+                <span class="label">GET /api/health</span>
+              </div>
+              <span class="method-pill" data-method="GET">GET</span>
             </div>
-          </div>
-          <div>
-            <div class="bar"><div class="name">Core API (health)</div><div class="track"><div id="b-core" class="fill" style="width:0%"></div></div><div class="pct" id="p-core">0%</div></div>
-            <div class="bar"><div class="name">/api/scan</div><div class="track"><div id="b-scan" class="fill" style="width:0%"></div></div><div class="pct" id="p-scan">0%</div></div>
-            <div class="bar"><div class="name">/api/simulate</div><div class="track"><div id="b-sim" class="fill" style="width:0%"></div></div><div class="pct" id="p-sim">0%</div></div>
-            <div class="bar"><div class="name">Token Launch (Bags)</div><div class="track"><div id="b-bags" class="fill" style="width:0%"></div></div><div class="pct" id="p-bags">0%</div></div>
-            <div class="bar"><div class="name">Shield Score Engine</div><div class="track"><div id="b-ssl" class="fill" style="width:0%"></div></div><div class="pct" id="p-ssl">0%</div></div>
-            <div class="ghost" style="margin-top:6px">Shield Score = média da disponibilidade de <code>/scan</code> + <code>/simulate</code>.</div>
-          </div>
-        </div>
-      </div>
+            <div class="card-body">
+              Health check principal da API Bags Shield.
+              <div class="endpoint">
+                <span class="code-tag">Endpoint</span>
+                <span>/api/health</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="status-chip" data-state="idle">
+                <span class="status-dot"></span>
+                <span class="status-label">Aguardando…</span>
+                <span class="latency" data-latency></span>
+              </div>
+              <button class="run-btn">Testar /health</button>
+            </div>
+            <div class="response-block">
+              <pre class="response-pre">Resposta aparecerá aqui…</pre>
+            </div>
+          </article>
 
-      <div class="card span-5 lift" data-tilt>
-        <h3>Playground Rápido</h3>
-        <div class="row">
-          <input id="mint" placeholder="mint (simulate)" />
-          <button id="btnSim" class="btn btn-primary">POST /api/simulate</button>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <textarea id="tx" rows="5" placeholder="rawTransaction (scan) — cole um JSON bruto ou texto"></textarea>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <button id="btnScan" class="btn btn-ghost">POST /api/scan</button>
-          <button id="btnClear" class="btn btn-ghost">Limpar</button>
-        </div>
-        <div style="margin-top:12px">
-          <pre id="outSim">{ }</pre>
-          <div style="height:8px"></div>
-          <pre id="outScan">{ }</pre>
-        </div>
-      </div>
+          <!-- Card: /api/bags/ping -->
+          <article
+            class="card"
+            data-endpoint="/api/bags/ping"
+            data-method="GET"
+            data-name="Bags Ping"
+          >
+            <div class="card-headline">
+              <div class="card-title">
+                <span>Bags Adapter — Ping</span>
+                <span class="label">GET /api/bags/ping</span>
+              </div>
+              <span class="method-pill" data-method="GET">GET</span>
+            </div>
+            <div class="card-body">
+              Verifica se o adaptador Bags está configurado e acessível.
+              <div class="endpoint">
+                <span class="code-tag">Endpoint</span>
+                <span>/api/bags/ping</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="status-chip" data-state="idle">
+                <span class="status-dot"></span>
+                <span class="status-label">Aguardando…</span>
+                <span class="latency" data-latency></span>
+              </div>
+              <button class="run-btn">Testar /bags/ping</button>
+            </div>
+            <div class="response-block">
+              <pre class="response-pre">Resposta aparecerá aqui…</pre>
+            </div>
+          </article>
 
-      <div class="card span-7 lift" data-tilt>
-        <h3>Status da API</h3>
-        <div class="row" style="gap:12px;flex-wrap:wrap">
-          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">…</span></span>
-          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">…</span></span>
-        </div>
-        <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em “Atualizar Status”.</pre></div>
-      </div>
+          <!-- Card: /api/scan -->
+          <article
+            class="card"
+            data-endpoint="/api/scan"
+            data-method="POST"
+            data-name="Scan"
+          >
+            <div class="card-headline">
+              <div class="card-title">
+                <span>Shield — Scan</span>
+                <span class="label">POST /api/scan</span>
+              </div>
+              <span class="method-pill" data-method="POST">POST</span>
+            </div>
+            <div class="card-body">
+              Analisa uma transação crua e retorna os <strong>risk badges</strong> +
+              <strong>ShieldScore</strong>.
+              <div class="endpoint">
+                <span class="code-tag">Endpoint</span>
+                <span>/api/scan</span>
+              </div>
+              <textarea class="request-body" data-body>
+{
+  "txBase64": "AAECAwQF...",
+  "network": "solana-devnet"
+}
+              </textarea>
+            </div>
+            <div class="card-footer">
+              <div class="status-chip" data-state="idle">
+                <span class="status-dot"></span>
+                <span class="status-label">Aguardando…</span>
+                <span class="latency" data-latency></span>
+              </div>
+              <button class="run-btn">Testar /scan</button>
+            </div>
+            <div class="response-block">
+              <pre class="response-pre">Resposta aparecerá aqui…</pre>
+            </div>
+          </article>
 
-      <div class="card span-5 lift" data-tilt>
-        <h3>Deploy & Metadados</h3>
-        <div style="display:grid;grid-template-columns:140px 1fr;gap:10px">
-          <div class="ghost">RequestId</div><div id="kvReq">—</div>
-          <div class="ghost">DeploymentId</div><div id="kvDep">—</div>
-          <div class="ghost">Vercel-Id</div><div id="kvVer">—</div>
-          <div class="ghost">RateLimit</div><div id="kvRl">—</div>
+          <!-- Card: /api/simulate -->
+          <article
+            class="card"
+            data-endpoint="/api/simulate"
+            data-method="POST"
+            data-name="Simulate"
+          >
+            <div class="card-headline">
+              <div class="card-title">
+                <span>Shield — Simulate</span>
+                <span class="label">POST /api/simulate</span>
+              </div>
+              <span class="method-pill" data-method="POST">POST</span>
+            </div>
+            <div class="card-body">
+              Simula um swap/ação e retorna o risco antes de assinar a transação.
+              <div class="endpoint">
+                <span class="code-tag">Endpoint</span>
+                <span>/api/simulate</span>
+              </div>
+              <textarea class="request-body" data-body>
+{
+  "mint": "So11111111111111111111111111111111111111112",
+  "quoteLamports": 10000000,
+  "side": "buy",
+  "network": "solana-devnet"
+}
+              </textarea>
+            </div>
+            <div class="card-footer">
+              <div class="status-chip" data-state="idle">
+                <span class="status-dot"></span>
+                <span class="status-label">Aguardando…</span>
+                <span class="latency" data-latency></span>
+              </div>
+              <button class="run-btn">Testar /simulate</button>
+            </div>
+            <div class="response-block">
+              <pre class="response-pre">Resposta aparecerá aqui…</pre>
+            </div>
+          </article>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <div class="footer">© Bags Shield — navy/blue • logo escudo+$ • chuva de $ em background • hover lift + tilt</div>
+      <footer>
+        <span>
+          <strong>Bags Shield</strong> — camada nativa de confiança para memecoins na Solana.
+        </span>
+        <span>
+          Console local, pensado para dev: responda dúvidas de produção com logs e smoke tests, não só com fé.
+        </span>
+      </footer>
+    </main>
   </div>
 
   <script>
-    const $=(q)=>document.querySelector(q);
-    const fmt=(d)=>{try{return JSON.stringify(d,null,2)}catch(e){return String(d)}};
-    async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"Conteúdo não-JSON",text:await res.text()}}}
-    function badge(el,ok){el.className="badge "+(ok?"b-ok":"b-err");el.textContent=ok?"OK":"ERRO"}
+    (function () {
+      const baseInput = document.getElementById("base-url");
+      const runAllBtn = document.getElementById("run-all");
+      const envLabel = document.getElementById("env-label");
+      const rainRoot = document.getElementById("dollar-rain");
 
-    // Donut
-    const R=92,CIRC=2*Math.PI*R;
-    function setDonut(pct){const arc=$("#donutArc"); arc.setAttribute("stroke-dasharray",String(CIRC)); const t=CIRC*(1-pct/100); arc.setAttribute("stroke-dashoffset",String(t)); $("#donutVal").textContent=Math.round(pct)+"%"}
-    function setBar(id,pct){$("#b-"+id).style.width=Math.max(0,Math.min(100,pct))+"%";$("#p-"+id).textContent=Math.round(pct)+"%"}
-
-    // Checagem inteligente de rotas POST: 200/204/400/405 contam como UP; timeout curto
-    async function checkAlive(url){
-      const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),2500);
-      try{
-        // 1) HEAD primeiro
-        let r=await fetch(url,{method:"HEAD",signal:ctrl.signal}).catch(()=>null);
-        if(r && (r.ok || [400,405].includes(r.status))) return true;
-        // 2) OPTIONS
-        r=await fetch(url,{method:"OPTIONS",signal:ctrl.signal}).catch(()=>null);
-        if(r && (r.ok || [204,200,400,405].includes(r.status))) return true;
-        // 3) POST com payload inválido esperando 400 rápido
-        r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal:ctrl.signal}).catch(()=>null);
-        return !!(r && (r.ok || [400,405].includes(r.status)));
-      }catch{ return false } finally{ clearTimeout(t) }
-    }
-
-    async function head(url){const r=await fetch(url,{method:"HEAD"}).catch(()=>null);return r&&r.ok}
-
-    async function pingHealth(){
-      const res=await fetch("/api/health",{headers:{"Accept":"application/json"}}).catch(()=>null);
-      if(!res){badge($("#hStatus"),false);$("#healthOut").textContent="Falha de rede";return{ok:false,headers:new Headers(),body:null}}
-      const body=await safeJson(res); badge($("#hStatus"),res.ok); $("#healthOut").textContent=fmt(body);
-      const rid=(body&&body.meta&&(body.meta.requestId||body.meta.request_id))||res.headers.get("x-request-id")||"—"; $("#kvReq").textContent=rid;
-      return{ok:res.ok,headers:res.headers,body}
-    }
-
-    async function pingBags(){
-      const el=$("#pStatus"); el.textContent="…"; el.className="badge b-warn";
-      const res=await fetch("/api/bags/ping",{headers:{"Accept":"application/json"}}).catch(()=>null);
-      if(!res){el.textContent="ERRO";el.className="badge b-err";return{ok:false,headers:new Headers(),body:null}}
-      const body=await safeJson(res); el.textContent=res.ok?"OK":"ERRO"; el.className="badge "+(res.ok?"b-ok":"b-err");
-      const m=(body&&body.meta)||{}; const rl=[m.rateLimitRemaining,m.rateLimitLimit].every(Boolean)?`${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||"?"})`:"—";
-      $("#kvRl").textContent=rl; return{ok:res.ok,headers:res.headers,body}
-    }
-
-    async function getDeployMeta(){
-      const r=await fetch("/",{method:"HEAD"}).catch(()=>null); if(!r) return;
-      $("#kvDep").textContent=r.headers.get("x-deployment-id")||"—";
-      $("#kvVer").textContent=r.headers.get("x-vercel-id")||r.headers.get("server")||"—";
-    }
-
-    async function checkAll(){
-      const h=await pingHealth();
-      const scanUp=await checkAlive("/api/scan");  badge($("#sStatus"),scanUp);
-      const simUp =await checkAlive("/api/simulate"); badge($("#mStatus"),simUp);
-      const bags  =await pingBags(); await getDeployMeta();
-
-      const corePct=h.ok?100:0;
-      const scanPct=scanUp?100:0;
-      const simPct =simUp ?100:0;
-      const bagsPct=bags.ok?100:0;
-      const sslPct =Math.round((scanPct + simPct)/2);
-
-      // Mostra todas as porcentagens e soma no donut (peso configurado)
-      const overall=Math.round(corePct*0.35 + scanPct*0.20 + simPct*0.20 + bagsPct*0.15 + sslPct*0.10);
-
-      setBar("core",corePct); setBar("scan",scanPct); setBar("sim",simPct); setBar("bags",bagsPct); setBar("ssl",sslPct);
-      setDonut(overall);
-    }
-
-    async function postJson(url,payload,out){
-      out.textContent="POST "+url+" …";
-      try{const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(payload)});
-          const body=await safeJson(res); out.textContent=fmt(body)}catch(e){out.textContent=fmt({success:false,error:String(e)})}
-    }
-
-    // Tilt (ressaltar sob o cursor)
-    function attachTilt(node){
-      let rect=node.getBoundingClientRect();
-      function onMove(e){
-        const x=(e.clientX-rect.left)/rect.width-.5, y=(e.clientY-rect.top)/rect.height-.5;
-        node.style.transform=`perspective(900px) rotateX(${(-y*5).toFixed(2)}deg) rotateY(${(x*7).toFixed(2)}deg) translateZ(0)`;
+      // Base inicial = origin
+      try {
+        baseInput.value = window.location.origin;
+      } catch {
+        baseInput.value = "";
       }
-      function onLeave(){ node.style.transform=""; }
-      function onResize(){ rect=node.getBoundingClientRect(); }
-      node.addEventListener("pointermove",onMove);
-      node.addEventListener("pointerleave",onLeave);
-      window.addEventListener("resize",onResize);
-    }
-    document.querySelectorAll("[data-tilt]").forEach(attachTilt);
 
-    // Chuva de $
-    (function dollarRain(){
-      const canvas=$("#fx"); if(!canvas) return;
-      const ctx=canvas.getContext("2d");
-      let W=canvas.width=window.innerWidth*devicePixelRatio, H=canvas.height=window.innerHeight*devicePixelRatio;
-      canvas.style.width=window.innerWidth+"px"; canvas.style.height=window.innerHeight+"px";
+      function detectEnv() {
+        const url = baseInput.value.trim() || window.location.origin;
+        let label = "Ambiente customizado";
+        if (url.includes("localhost") || url.includes("127.0.0.1")) {
+          label = "Dev local";
+        } else if (url.includes("vercel.app")) {
+          label = "Preview / Vercel";
+        } else if (url.includes("bags-shield-api")) {
+          label = "Produção Bags Shield";
+        }
+        envLabel.textContent = label + " · " + url;
+      }
 
-      const pool=[];
-      function spawn(n){
-        for(let i=0;i<n;i++){
-          const fs = (12 + Math.random()*18)*devicePixelRatio;
-          pool.push({
-            x: Math.random()*W,
-            y: -Math.random()*H,
-            v: (20 + Math.random()*60)*devicePixelRatio/60,
-            sway: (Math.random()*0.6+0.2),
-            fs, a: 0.6*Math.random()+0.3
-          });
+      detectEnv();
+      baseInput.addEventListener("change", detectEnv);
+      baseInput.addEventListener("blur", detectEnv);
+
+      // CHUVA DE $: gera elementos
+      (function createDollarRain() {
+        if (!rainRoot) return;
+        const isMobile = window.innerWidth <= 640;
+        const COUNT = isMobile ? 24 : 40;
+
+        for (let i = 0; i < COUNT; i++) {
+          const span = document.createElement("span");
+          span.className = "dollar";
+          span.textContent = "$";
+
+          const left = Math.random() * 100;
+          const delay = Math.random() * -20; // começa já em pontos diferentes
+          const duration = 12 + Math.random() * 10;
+          const size = 14 + Math.random() * 10;
+          const drift = (Math.random() * 40 - 20).toFixed(1) + "px";
+
+          span.style.left = left + "%";
+          span.style.animationDuration = duration + "s";
+          span.style.animationDelay = delay + "s";
+          span.style.fontSize = size + "px";
+          span.style.setProperty("--x-offset", drift);
+
+          rainRoot.appendChild(span);
+        }
+
+        // Parallax sutil
+        window.addEventListener("pointermove", (evt) => {
+          const x = (evt.clientX / window.innerWidth) - 0.5;
+          const y = (evt.clientY / window.innerHeight) - 0.5;
+          const tx = x * 16; // intensidade pequena
+          const ty = y * 10;
+          rainRoot.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+        }, { passive: true });
+      })();
+
+      async function runCard(card) {
+        const endpoint = card.getAttribute("data-endpoint");
+        const method = (card.getAttribute("data-method") || "GET").toUpperCase();
+        const statusChip = card.querySelector(".status-chip");
+        const statusLabel = card.querySelector(".status-label");
+        const latencySpan = card.querySelector("[data-latency]");
+        const responsePre = card.querySelector(".response-pre");
+        const btn = card.querySelector(".run-btn");
+        const textarea = card.querySelector(".request-body");
+
+        const base = (baseInput.value || "").trim() || window.location.origin;
+        const url = base.replace(/\/+$/, "") + endpoint;
+
+        statusChip.setAttribute("data-state", "idle");
+        statusLabel.textContent = "Testando…";
+        latencySpan.textContent = "";
+        btn.disabled = true;
+
+        const requestInit = {
+          method,
+          headers: {}
+        };
+
+        if (method === "POST" || method === "PUT" || method === "PATCH") {
+          requestInit.headers["Content-Type"] = "application/json";
+          const raw = textarea ? textarea.value.trim() : "";
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              requestInit.body = JSON.stringify(parsed);
+            } catch (e) {
+              statusChip.setAttribute("data-state", "error");
+              statusLabel.textContent = "JSON inválido no corpo";
+              responsePre.textContent = String(e);
+              btn.disabled = false;
+              return;
+            }
+          } else {
+            requestInit.body = "{}";
+          }
+        }
+
+        const started = performance.now();
+        try {
+          const res = await fetch(url, requestInit);
+          const elapsed = Math.round(performance.now() - started);
+          latencySpan.textContent = `${elapsed} ms`;
+
+          let bodyText = await res.text();
+          let parsedBody = null;
+
+          try {
+            parsedBody = JSON.parse(bodyText);
+          } catch {
+            // mantém bodyText mesmo assim
+          }
+
+          const summary = {
+            ok: res.ok,
+            status: res.status,
+            statusText: res.statusText,
+            headers: Object.fromEntries(res.headers.entries()),
+            body: parsedBody ?? bodyText
+          };
+
+          responsePre.textContent = JSON.stringify(summary, null, 2);
+
+          if (res.ok) {
+            statusChip.setAttribute("data-state", "success");
+            statusLabel.textContent = "OK · " + res.status;
+          } else if (res.status >= 400 && res.status < 500) {
+            statusChip.setAttribute("data-state", "warn");
+            statusLabel.textContent = "4xx · " + res.status;
+          } else {
+            statusChip.setAttribute("data-state", "error");
+            statusLabel.textContent = "5xx / erro · " + res.status;
+          }
+        } catch (err) {
+          statusChip.setAttribute("data-state", "error");
+          statusLabel.textContent = "Falha de rede";
+          latencySpan.textContent = "";
+          responsePre.textContent = String(err);
+        } finally {
+          btn.disabled = false;
         }
       }
-      function resize(){
-        W=canvas.width=window.innerWidth*devicePixelRatio;
-        H=canvas.height=window.innerHeight*devicePixelRatio;
-        canvas.style.width=window.innerWidth+"px";
-        canvas.style.height=window.innerHeight+"px";
-        pool.length=0; spawn(Math.min(120, Math.round((W*H)/(25000*devicePixelRatio))));
-      }
-      resize(); window.addEventListener("resize",resize);
 
-      ctx.font=`bold 20px Inter, system-ui, -apple-system, Segoe UI`;
-      function color(t){ // gradiente navy/blue vibes
-        const c1=[41,193,255], c2=[30,163,255];
-        const r=Math.round(c1[0]+(c2[0]-c1[0])*t), g=Math.round(c1[1]+(c2[1]-c1[1])*t), b=Math.round(c1[2]+(c2[2]-c1[2])*t);
-        return `rgba(${r},${g},${b},`;
+      const cards = Array.from(document.querySelectorAll(".card"));
+      cards.forEach((card) => {
+        const btn = card.querySelector(".run-btn");
+        if (!btn) return;
+        btn.addEventListener("click", () => runCard(card));
+      });
+
+      runAllBtn.addEventListener("click", () => {
+        cards.forEach((card, idx) => {
+          setTimeout(() => runCard(card), idx * 200);
+        });
+      });
+
+      // Rodar health automaticamente na carga
+      const healthCard = document.querySelector('.card[data-endpoint="/api/health"]');
+      if (healthCard) {
+        runCard(healthCard);
       }
-      function tick(){
-        ctx.clearRect(0,0,W,H);
-        for(const p of pool){
-          p.y += p.v; p.x += Math.sin(p.y*0.01)*p.sway;
-          if(p.y>H+40*devicePixelRatio){ p.y=-20*devicePixelRatio; p.x=Math.random()*W; }
-          ctx.save();
-          ctx.font = `800 ${p.fs}px Inter, system-ui, -apple-system, Segoe UI`;
-          ctx.fillStyle = color((p.fs/ (30*devicePixelRatio)));
-          ctx.fillText("$", p.x, p.y);
-          ctx.restore();
-        }
-        requestAnimationFrame(tick);
-      }
-      spawn(Math.min(120, Math.round((W*H)/(25000*devicePixelRatio))));
-      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      tick();
     })();
-
-    // Wireup
-    $("#btnHealth").addEventListener("click",checkAll);
-    $("#btnPing").addEventListener("click",pingBags);
-    $("#btnSecurity").addEventListener("click",()=>alert("Segurança: CORS restritivo, requestId em todas as respostas, rate limit + retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
-    $("#btnSim").addEventListener("click",()=>postJson("/api/simulate",{mint:$("#mint").value.trim()},$("#outSim")));
-    $("#btnScan").addEventListener("click",()=>postJson("/api/scan",{rawTransaction:$("#tx").value},$("#outScan")));
-    $("#btnClear").addEventListener("click",()=>{ $("#outSim").textContent="{ }"; $("#outScan").textContent="{ }"; });
-
-    checkAll(); setInterval(checkAll,10000);
   </script>
 </body>
 </html>

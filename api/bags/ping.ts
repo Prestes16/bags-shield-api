@@ -1,35 +1,69 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, guardMethod, noStore, ensureRequestId } from "../../lib/cors";
+import { randomUUID } from "crypto";
+import { bagsPing } from "../../lib/bags";
+import type { BagsFailure } from "../../lib/bags";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS + cache
-  setCors(res);
-  noStore(res);
+function newRequestId(): string {
+  try {
+    return randomUUID();
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
+}
 
-  // Permitimos GET e HEAD
-  if (!guardMethod(req, res, ["GET", "HEAD"])) return;
-
-  const requestId = ensureRequestId(res);
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+): Promise<void> {
+  const requestId = newRequestId();
+  res.setHeader("X-Request-Id", requestId);
 
   // HEAD: só confirma que a rota existe
   if (req.method === "HEAD") {
-    return res.status(204).end();
+    res.status(200).json({
+      success: true,
+      response: null,
+      meta: { requestId },
+    });
+    return;
   }
 
-  const now = Math.floor(Date.now() / 1000);
+  // Só aceitamos GET aqui
+  if (req.method !== "GET") {
+    res.status(405).json({
+      success: false,
+      error: {
+        code: "METHOD_NOT_ALLOWED",
+        details: { method: req.method },
+      },
+      meta: { requestId },
+    });
+    return;
+  }
 
-  return res.status(200).json({
+  const result = await bagsPing();
+
+  if (!result.success) {
+    const failure = result as BagsFailure;
+    const err = failure.error;
+
+    res.status(502).json({
+      success: false,
+      error: {
+        code: err.code,
+        details: {
+          ...(err.details ?? {}),
+          upstream: "bags",
+        },
+      },
+      meta: { requestId },
+    });
+    return;
+  }
+
+  res.status(200).json({
     success: true,
-    response: {
-      upstream: "bags-mock",
-      mode: "dev-local",
-      ok: true
-    },
-    meta: {
-      requestId,
-      rateLimitRemaining: 1000,
-      rateLimitLimit: 1000,
-      rateLimitReset: now + 3600
-    }
+    response: result.response,
+    meta: { requestId },
   });
 }

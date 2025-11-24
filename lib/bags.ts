@@ -1,95 +1,280 @@
-import { CONFIG } from "./constants";
+﻿import { BAGS_API_BASE, BAGS_TIMEOUT_MS } from "./constants";
 
-const RETRY_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+export type BagsErrorCode =
+  | "BAGS_NOT_CONFIGURED"
+  | "UPSTREAM_REQUEST_FAILED"
+  | "UPSTREAM_RATE_LIMITED"
+  | "UPSTREAM_BAD_RESPONSE";
 
-function sleep(ms: number) { return new Promise(res => setTimeout(res, ms)); }
-function backoffMs(attempt: number) {
-  const min = CONFIG.BAGS_BACKOFF_MS_MIN;
-  const max = CONFIG.BAGS_BACKOFF_MS_MAX;
-  const raw = Math.min(max, min * Math.pow(2, attempt));
-  const jitter = Math.random() * raw * 0.25;
-  return Math.round(raw + jitter);
+export interface BagsError {
+  code: BagsErrorCode;
+  details?: Record<string, unknown>;
 }
-function toUrl(path: string): string {
-  if (/^https?:\/\//i.test(path)) return path;
-  const base = CONFIG.BAGS_API_BASE;
-  if (!base) throw new Error("BAGS_API_BASE ausente; forneça URL absoluta ou configure o ambiente.");
-  const b = base.endsWith("/") ? base : base + "/";
-  return new URL(path.replace(/^\/+/, ""), b).toString();
+
+export interface BagsSuccess<T> {
+  success: true;
+  response: T;
+}
+
+export interface BagsFailure {
+  success: false;
+  error: BagsError;
+}
+
+export type BagsResult<T> = BagsSuccess<T> | BagsFailure;
+
+/**
+ * Init simplificado para requests HTTP ao upstream Bags.
+ */
+type HttpRequestInit = {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+};
+
+const _fetch: any = (globalThis as any).fetch;
+
+/**
+ * Função base para chamadas HTTP à Bags API.
+ * Retorna sempre um BagsResult<TResponse>.
+ */
+async function bagsFetch<TResponse>(
+  path: string,
+  init: HttpRequestInit = {}
+): Promise<BagsResult<TResponse>> {
+  if (!BAGS_API_BASE) {
+    return {
+      success: false,
+      error: {
+        code: "BAGS_NOT_CONFIGURED",
+        details: { path, reason: "MISSING_BASE_URL" },
+      },
+    };
+  }
+
+  const apiKey = (process.env.BAGS_API_KEY ?? "").trim();
+  if (!apiKey) {
+    return {
+      success: false,
+      error: {
+        code: "BAGS_NOT_CONFIGURED",
+        details: { path, reason: "MISSING_API_KEY" },
+      },
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), BAGS_TIMEOUT_MS);
+
+  try {
+    const base = BAGS_API_BASE.replace(/\/+$/, "");
+    const cleanPath = path.replace(/^\/+/, "");
+    const url = `${base}/${cleanPath}`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
+      ...(init.headers ?? {}),
+    };
+
+    const requestInit: any = {
+      method: init.method ?? "GET",
+      headers,
+      body: init.body,
+      signal: controller.signal,
+    };
+
+    const res = await _fetch(url, requestInit);
+    const text = await res.text();
+
+    let json: any = null;
+    if (text) {
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = null;
+      }
+    }
+
+    if (!res.ok) {
+      const code: BagsErrorCode =
+        res.status === 429
+          ? "UPSTREAM_RATE_LIMITED"
+          : "UPSTREAM_REQUEST_FAILED";
+
+      return {
+        success: false,
+        error: {
+          code,
+          details: {
+            status: res.status,
+            statusText: res.statusText,
+            body: json ?? text,
+          },
+        },
+      };
+    }
+
+    if (!json || typeof json !== "object") {
+      return {
+        success: false,
+        error: {
+          code: "UPSTREAM_BAD_RESPONSE",
+          details: { body: text },
+        },
+      };
+    }
+
+    // Padrão esperado da Bags: { success:boolean, response|error:... }
+    if (typeof json.success === "boolean") {
+      return json as BagsResult<TResponse>;
+    }
+
+    return {
+      success: false,
+      error: {
+        code: "UPSTREAM_BAD_RESPONSE",
+        details: { body: json },
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: {
+        code: "UPSTREAM_REQUEST_FAILED",
+        details: {
+          message: String(err),
+          path,
+        },
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**
- * bagsFetch: fetch com timeout, retries/backoff e headers padrão Bags.
- * - Define Accept: application/json
- * - Se houver chave: x-api-key e Authorization: Bearer <key>
- * - Re-tenta em erros de rede e 408/425/429/5xx
+ * Ping "local": verifica se a config da Bags está presente.
+ * Não chama HTTP externo – é um health de configuração.
  */
-export async function bagsFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const url = toUrl(path);
-  const headers = new Headers(init.headers || {});
-  headers.set("Accept", "application/json");
-  headers.set("x-client", "bags-shield-api/1.0");
-  if (CONFIG.BAGS_API_KEY) {
-    headers.set("x-api-key", CONFIG.BAGS_API_KEY);
-    headers.set("Authorization", `Bearer ${CONFIG.BAGS_API_KEY}`);
-  }
-
-  const attempts = CONFIG.BAGS_RETRIES + 1;
-
-  for (let i = 0; i < attempts; i++) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), CONFIG.BAGS_TIMEOUT_MS);
-    try {
-      const res = await fetch(url, { ...init, headers, signal: ctrl.signal });
-      clearTimeout(timer);
-      if (RETRY_STATUSES.has(res.status) && i < attempts - 1) {
-        await sleep(backoffMs(i));
-        continue;
-      }
-      return res;
-    } catch (err) {
-      clearTimeout(timer);
-      if (i < attempts - 1) {
-        await sleep(backoffMs(i));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error("bagsFetch: retries esgotados");
-}
-
-export interface BagsMeta {
-  status: number;
-  requestId?: string;
-  rateLimitLimit?: number;
-  rateLimitRemaining?: number;
-  rateLimitReset?: number;
-  url: string;
-}
-export type BagsOk<T> = { success: true; response: T; meta: BagsMeta };
-export type BagsErr = { success: false; error: string; meta: BagsMeta };
-export type BagsResult<T> = BagsOk<T> | BagsErr;
-
-function toInt(h: string | null | undefined) {
-  const n = Number(h ?? "");
-  return Number.isFinite(n) ? n : undefined;
-}
-
-/** bagsJson: retorna envelope { success, response|error, meta } já parseado */
-export async function bagsJson<T = unknown>(path: string, init: RequestInit = {}): Promise<BagsResult<T>> {
-  const res = await bagsFetch(path, init);
-  let data: any;
-  try { data = await res.json(); } catch { data = undefined; }
-  const meta: BagsMeta = {
-    status: res.status,
-    requestId: res.headers.get("x-request-id") ?? undefined,
-    rateLimitLimit: toInt(res.headers.get("x-ratelimit-limit")),
-    rateLimitRemaining: toInt(res.headers.get("x-ratelimit-remaining")),
-    rateLimitReset: toInt(res.headers.get("x-ratelimit-reset")),
-    url: res.url,
+export interface BagsPingResponse {
+  upstream: "bags";
+  ok: boolean;
+  timestamp: string;
+  config: {
+    base: string | null;
+    hasApiKey: boolean;
   };
-  if (res.ok) return { success: true, response: (data as T), meta };
-  const error = (data && (data.error || data.message)) || `HTTP ${res.status}`;
-  return { success: false, error, meta };
+}
+
+export async function bagsPing(): Promise<BagsResult<BagsPingResponse>> {
+  const base = BAGS_API_BASE ?? null;
+  const apiKey = (process.env.BAGS_API_KEY ?? "").trim();
+  const hasApiKey = apiKey.length > 0;
+
+  if (!base || !hasApiKey) {
+    return {
+      success: false,
+      error: {
+        code: "BAGS_NOT_CONFIGURED",
+        details: {
+          base,
+          hasApiKey,
+        },
+      },
+    };
+  }
+
+  return {
+    success: true,
+    response: {
+      upstream: "bags",
+      ok: true,
+      timestamp: new Date().toISOString(),
+      config: {
+        base,
+        hasApiKey,
+      },
+    },
+  };
+}
+
+/**
+ * Criação de token info via Bags (token-launch/create-token-info).
+ * Aqui usamos imageUrl/metadataUrl para simplificar (sem multipart ainda).
+ */
+export interface CreateTokenInfoRequest {
+  name: string;
+  symbol: string;
+  description?: string;
+  imageUrl?: string;
+  metadataUrl?: string;
+  telegram?: string;
+  twitter?: string;
+  website?: string;
+}
+
+export interface CreateTokenInfoResponse {
+  tokenMint: string;
+  tokenMetadata: Record<string, unknown>;
+  tokenLaunch: {
+    status: "PRE_LAUNCH" | "PRE_GRAD" | "MIGRATING" | "MIGRATED";
+    [key: string]: unknown;
+  };
+}
+
+export async function createTokenInfo(
+  payload: CreateTokenInfoRequest
+): Promise<BagsResult<CreateTokenInfoResponse>> {
+  return bagsFetch<CreateTokenInfoResponse>("/token-launch/create-token-info", {
+    method: "POST",
+    headers: {},
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Criação de config de lançamento (token-launch/create-config).
+ */
+export interface CreateLaunchConfigRequest {
+  launchWallet: string;
+  tipWallet?: string;
+  tipLamports?: number;
+}
+
+export interface CreateLaunchConfigResponse {
+  configKey: string;
+  tx: string | null;
+}
+
+export async function createLaunchConfig(
+  payload: CreateLaunchConfigRequest
+): Promise<BagsResult<CreateLaunchConfigResponse>> {
+  return bagsFetch<CreateLaunchConfigResponse>("/token-launch/create-config", {
+    method: "POST",
+    headers: {},
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Consulta de pool config keys a partir de feeClaimerVaults.
+ */
+export interface PoolConfigKeysRequest {
+  feeClaimerVaults: string[];
+}
+
+export interface PoolConfigKeysResponse {
+  poolConfigKeys: string[];
+}
+
+export async function getPoolConfigKeys(
+  payload: PoolConfigKeysRequest
+): Promise<BagsResult<PoolConfigKeysResponse>> {
+  return bagsFetch<PoolConfigKeysResponse>("/token-launch/state/pool-config", {
+    method: "POST",
+    headers: {},
+    body: JSON.stringify(payload),
+  });
 }

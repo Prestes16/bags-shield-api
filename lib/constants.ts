@@ -1,40 +1,29 @@
+﻿export const BAGS_API_BASE: string = (process.env.BAGS_API_BASE ?? "").trim();
+
 /**
- * Config central do Bags Shield (Node 20 / ESM).
- * Mantém defaults seguros para ambiente local/canário.
+ * Timeout padrão (em ms) para chamadas HTTP ao upstream Bags.
+ * Se a env estiver vazia/ruim, cai para 5000 ms (5s).
  */
+export const BAGS_TIMEOUT_MS: number = (() => {
+  const raw = (process.env.BAGS_TIMEOUT_MS ?? "").trim();
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 5000;
+  return parsed;
+})();
 
-export const IS_PROD =
-  process.env.VERCEL_ENV === "production" ||
-  process.env.NODE_ENV === "production";
+/**
+ * LUT pública sugerida para tips/fee share.
+ * Pode ser ajustada no futuro sem quebrar o contrato da API.
+ */
+export const BAGS_LUT = "Eq1EVs15EAWww1YtPTtWPzJRLPJoS6VYP9oW9SbNr3yp" as const;
 
-function toInt(v: string | undefined, d: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : d;
-}
-
-export const CONFIG = {
-  // Base de chamadas ao upstream Bags. Ex.: https://public-api-v2.bags.fm/api/v1/
-  BAGS_API_BASE: (process.env.BAGS_API_BASE || "").trim(),
-
-  // Chave da Bags (x-api-key e também Authorization: Bearer <key>)
-  BAGS_API_KEY: (process.env.BAGS_API_KEY || "").trim(),
-
-  // Timeouts e retries (canário)
-  BAGS_TIMEOUT_MS: toInt(process.env.BAGS_TIMEOUT_MS, 5000),
-  BAGS_RETRIES: toInt(process.env.BAGS_RETRIES, 2),
-  BAGS_BACKOFF_MS_MIN: toInt(process.env.BAGS_BACKOFF_MS_MIN, 200),
-  BAGS_BACKOFF_MS_MAX: toInt(process.env.BAGS_BACKOFF_MS_MAX, 1200),
-
-  // Identidade opcional do deployment (para logs/headers)
-  DEPLOYMENT_ID: (process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || "").trim(),
+/**
+ * IDs de programas relevantes para o ecossistema Bags/Meteora.
+ * Placeholders por enquanto – serão atualizados quando
+ * os IDs oficiais forem consolidados na documentação.
+ */
+export const PROGRAMS = {
+  FEE_CLAIMER: "FeeClaimer11111111111111111111111111111111",
+  METEORA_DBC: "MeteoraDbc111111111111111111111111111111",
+  METEORA_DAMM: "MeteoraDamm1111111111111111111111111111",
 } as const;
-
-/**
- * Helper simples para validar envs críticas quando necessário.
- * Use apenas em rotas/admin onde falhar cedo é desejável.
- */
-export function ensureEnv(name: keyof typeof CONFIG): string {
-  const v = CONFIG[name];
-  if (!v) throw new Error(`Missing required env: ${String(name)}`);
-  return String(v);
-}
