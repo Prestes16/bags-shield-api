@@ -6,7 +6,7 @@
         "start": "echo 'Vercel usa a pasta /api'",
         "build": "echo 'Vercel usa o builder padrao @vercel/node'",
         "dev-v0": "node scripts/dev-server.cjs",
-        "test:prod": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api-4.vercel.app --reporters cli",
+        "test:prod": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api.vercel.app --reporters cli",
         "test:local": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder \"Local Dev (AJV)\" --env-var baseUrlLocal=http://127.0.0.1:8888 --reporters cli",
         "test:all": "npm run test:prod && npm run test:local",
         "smoke": "npm run test:all",
@@ -26,3 +26,4 @@
         "typescript": "5.5.3"
     }
 }
+
