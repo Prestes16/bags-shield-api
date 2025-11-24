@@ -1,4 +1,4 @@
-# Node / Package managers
+﻿# Node / Package managers
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -25,7 +25,7 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Dados locais / temporários
+# Dados locais / temporÃ¡rios
 logs/
 tmp/
 *.bak
@@ -37,7 +37,7 @@ logs/smoke-*.txt
 
 # SO
 desktop.ini
-# --- Android signing (não commitar) ---
+# --- Android signing (nÃ£o commitar) ---
 android/signing/*
 *.keystore
 *.jks
@@ -50,8 +50,6 @@ android/signing/*
 *.p12
 
 # Dev-only handlers for local vercel dev
-api/health.ts
-api/scan.ts
 .env.local
 backups-api/
 backups-ui/
