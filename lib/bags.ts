@@ -1,13 +1,16 @@
-﻿import { BAGS_API_BASE, BAGS_TIMEOUT_MS } from "./constants";
+﻿import { URL } from "node:url";
+
+export const BAGS_DEFAULT_BASE = "https://public-api-v2.bags.fm/api/v1";
 
 export type BagsErrorCode =
   | "BAGS_NOT_CONFIGURED"
   | "UPSTREAM_REQUEST_FAILED"
+  | "UPSTREAM_BAD_RESPONSE"
   | "UPSTREAM_RATE_LIMITED"
-  | "UPSTREAM_BAD_RESPONSE";
+  | "UPSTREAM_UNEXPECTED_ERROR";
 
 export interface BagsError {
-  code: BagsErrorCode;
+  code: BagsErrorCode | string;
   details?: Record<string, unknown>;
 }
 
@@ -23,164 +26,71 @@ export interface BagsFailure {
 
 export type BagsResult<T> = BagsSuccess<T> | BagsFailure;
 
-/**
- * Init simplificado para requests HTTP ao upstream Bags.
- */
-type HttpRequestInit = {
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
-};
-
-const _fetch: any = (globalThis as any).fetch;
-
-/**
- * Função base para chamadas HTTP à Bags API.
- * Retorna sempre um BagsResult<TResponse>.
- */
-async function bagsFetch<TResponse>(
-  path: string,
-  init: HttpRequestInit = {}
-): Promise<BagsResult<TResponse>> {
-  if (!BAGS_API_BASE) {
-    return {
-      success: false,
-      error: {
-        code: "BAGS_NOT_CONFIGURED",
-        details: { path, reason: "MISSING_BASE_URL" },
-      },
-    };
-  }
-
-  const apiKey = (process.env.BAGS_API_KEY ?? "").trim();
-  if (!apiKey) {
-    return {
-      success: false,
-      error: {
-        code: "BAGS_NOT_CONFIGURED",
-        details: { path, reason: "MISSING_API_KEY" },
-      },
-    };
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), BAGS_TIMEOUT_MS);
-
-  try {
-    const base = BAGS_API_BASE.replace(/\/+$/, "");
-    const cleanPath = path.replace(/^\/+/, "");
-    const url = `${base}/${cleanPath}`;
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      Authorization: `Bearer ${apiKey}`,
-      ...(init.headers ?? {}),
-    };
-
-    const requestInit: any = {
-      method: init.method ?? "GET",
-      headers,
-      body: init.body,
-      signal: controller.signal,
-    };
-
-    const res = await _fetch(url, requestInit);
-    const text = await res.text();
-
-    let json: any = null;
-    if (text) {
-      try {
-        json = JSON.parse(text);
-      } catch {
-        json = null;
-      }
-    }
-
-    if (!res.ok) {
-      const code: BagsErrorCode =
-        res.status === 429
-          ? "UPSTREAM_RATE_LIMITED"
-          : "UPSTREAM_REQUEST_FAILED";
-
-      return {
-        success: false,
-        error: {
-          code,
-          details: {
-            status: res.status,
-            statusText: res.statusText,
-            body: json ?? text,
-          },
-        },
-      };
-    }
-
-    if (!json || typeof json !== "object") {
-      return {
-        success: false,
-        error: {
-          code: "UPSTREAM_BAD_RESPONSE",
-          details: { body: text },
-        },
-      };
-    }
-
-    // Padrão esperado da Bags: { success:boolean, response|error:... }
-    if (typeof json.success === "boolean") {
-      return json as BagsResult<TResponse>;
-    }
-
-    return {
-      success: false,
-      error: {
-        code: "UPSTREAM_BAD_RESPONSE",
-        details: { body: json },
-      },
-    };
-  } catch (err) {
-    return {
-      success: false,
-      error: {
-        code: "UPSTREAM_REQUEST_FAILED",
-        details: {
-          message: String(err),
-          path,
-        },
-      },
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-/**
- * Ping "local": verifica se a config da Bags está presente.
- * Não chama HTTP externo – é um health de configuração.
- */
 export interface BagsPingResponse {
   upstream: "bags";
   ok: boolean;
   timestamp: string;
   config: {
-    base: string | null;
+    base: string;
     hasApiKey: boolean;
   };
 }
 
-export async function bagsPing(): Promise<BagsResult<BagsPingResponse>> {
-  const base = BAGS_API_BASE ?? null;
-  const apiKey = (process.env.BAGS_API_KEY ?? "").trim();
-  const hasApiKey = apiKey.length > 0;
+export interface CreateTokenInfoRequest {
+  name: string;
+  symbol: string;
+  description?: string;
+  imageUrl?: string;
+  metadataUrl?: string;
+  telegram?: string;
+  twitter?: string;
+  website?: string;
+  // v0: não suportamos upload de arquivo direto (multipart)
+}
 
-  if (!base || !hasApiKey) {
+export interface CreateTokenInfoResponse {
+  tokenMint: string;
+  tokenMetadata: unknown;
+  tokenLaunch: unknown;
+}
+
+function normalizeBase(baseRaw: string | undefined | null): string | null {
+  if (!baseRaw) return null;
+  const trimmed = baseRaw.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function getBagsBase(): string | null {
+  const raw = process.env.BAGS_API_BASE || BAGS_DEFAULT_BASE;
+  return normalizeBase(raw);
+}
+
+function getApiKey(): string | null {
+  const key = process.env.BAGS_API_KEY;
+  if (!key) return null;
+  const trimmed = key.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export async function pingBagsConfig(): Promise<BagsResult<BagsPingResponse>> {
+  const base = getBagsBase();
+  const apiKey = getApiKey();
+
+  if (!base || !apiKey) {
     return {
       success: false,
       error: {
         code: "BAGS_NOT_CONFIGURED",
         details: {
           base,
-          hasApiKey,
+          hasApiKey: Boolean(apiKey),
         },
       },
     };
@@ -194,87 +104,145 @@ export async function bagsPing(): Promise<BagsResult<BagsPingResponse>> {
       timestamp: new Date().toISOString(),
       config: {
         base,
-        hasApiKey,
+        hasApiKey: true,
       },
     },
   };
 }
 
-/**
- * Criação de token info via Bags (token-launch/create-token-info).
- * Aqui usamos imageUrl/metadataUrl para simplificar (sem multipart ainda).
- */
-export interface CreateTokenInfoRequest {
-  name: string;
-  symbol: string;
-  description?: string;
-  imageUrl?: string;
-  metadataUrl?: string;
-  telegram?: string;
-  twitter?: string;
-  website?: string;
+interface BagsFetchOptions {
+  path: string;
+  method?: string;
+  body?: unknown;
 }
 
-export interface CreateTokenInfoResponse {
-  tokenMint: string;
-  tokenMetadata: Record<string, unknown>;
-  tokenLaunch: {
-    status: "PRE_LAUNCH" | "PRE_GRAD" | "MIGRATING" | "MIGRATED";
-    [key: string]: unknown;
+async function bagsFetch<T>(opts: BagsFetchOptions): Promise<BagsResult<T>> {
+  const base = getBagsBase();
+  const apiKey = getApiKey();
+
+  if (!base || !apiKey) {
+    return {
+      success: false,
+      error: {
+        code: "BAGS_NOT_CONFIGURED",
+        details: {
+          base,
+          hasApiKey: Boolean(apiKey),
+        },
+      },
+    };
+  }
+
+  const url = base + opts.path;
+  const timeoutMs = Number(process.env.BAGS_TIMEOUT_MS ?? "15000");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: any;
+
+  try {
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
+    };
+
+    // IMPORTANTE: não propagamos headers do cliente (tipo Expect),
+    // só os que a Bags precisa.
+
+    res = await fetch(url, {
+      method: opts.method ?? "GET",
+      headers,
+      body: opts.body != null ? JSON.stringify(opts.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    return {
+      success: false,
+      error: {
+        code: "UPSTREAM_REQUEST_FAILED",
+        details: {
+          message: err instanceof Error ? err.message : String(err),
+          url,
+        },
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const text = await res.text();
+  let json: any = null;
+
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // deixa em texto mesmo
+    }
+  }
+
+  if (!res.ok) {
+    const code: BagsErrorCode =
+      res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE";
+
+    return {
+      success: false,
+      error: {
+        code,
+        details: {
+          status: res.status,
+          statusText: res.statusText,
+          url,
+          body: json ?? text,
+        },
+      },
+    };
+  }
+
+  // Caso a Bags responda no padrão { success:false, error:{...} }
+  if (json && typeof json === "object" && json.success === false && json.error) {
+    return {
+      success: false,
+      error: {
+        code: json.error.code ?? "UPSTREAM_BAD_RESPONSE",
+        details: json.error,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    response: (json ?? (text as any)) as T,
   };
 }
 
 export async function createTokenInfo(
-  payload: CreateTokenInfoRequest
+  req: CreateTokenInfoRequest
 ): Promise<BagsResult<CreateTokenInfoResponse>> {
-  return bagsFetch<CreateTokenInfoResponse>("/token-launch/create-token-info", {
+  const body: any = {
+    name: req.name,
+    symbol: req.symbol,
+    description: req.description ?? "",
+    imageUrl: req.imageUrl,
+    metadataUrl: req.metadataUrl,
+    telegram: req.telegram,
+    twitter: req.twitter,
+    website: req.website,
+  };
+
+  // remove undefined pra não mandar lixo
+  for (const key of Object.keys(body)) {
+    if (body[key] === undefined) {
+      delete body[key];
+    }
+  }
+
+  return bagsFetch<CreateTokenInfoResponse>({
+    path: "/token-launch/create-token-info",
     method: "POST",
-    headers: {},
-    body: JSON.stringify(payload),
-  });
-}
-
-/**
- * Criação de config de lançamento (token-launch/create-config).
- */
-export interface CreateLaunchConfigRequest {
-  launchWallet: string;
-  tipWallet?: string;
-  tipLamports?: number;
-}
-
-export interface CreateLaunchConfigResponse {
-  configKey: string;
-  tx: string | null;
-}
-
-export async function createLaunchConfig(
-  payload: CreateLaunchConfigRequest
-): Promise<BagsResult<CreateLaunchConfigResponse>> {
-  return bagsFetch<CreateLaunchConfigResponse>("/token-launch/create-config", {
-    method: "POST",
-    headers: {},
-    body: JSON.stringify(payload),
-  });
-}
-
-/**
- * Consulta de pool config keys a partir de feeClaimerVaults.
- */
-export interface PoolConfigKeysRequest {
-  feeClaimerVaults: string[];
-}
-
-export interface PoolConfigKeysResponse {
-  poolConfigKeys: string[];
-}
-
-export async function getPoolConfigKeys(
-  payload: PoolConfigKeysRequest
-): Promise<BagsResult<PoolConfigKeysResponse>> {
-  return bagsFetch<PoolConfigKeysResponse>("/token-launch/state/pool-config", {
-    method: "POST",
-    headers: {},
-    body: JSON.stringify(payload),
+    body,
   });
 }
