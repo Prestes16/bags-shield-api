@@ -1,116 +1,124 @@
 # Bags Shield API
 
-**PROD (alias):** https://bags-shield-api.vercel.app  
-**PROJETO:** https://bags-shield-api-prestes16.vercel.app
+> Solana-native security gateway for scanning transactions, simulating risk and integrating with the Bags ecosystem.
 
-## Setup rÃƒÂ¡pido
-1. Copie o exemplo:
-```bash
-cp .env.example .env
-```
-2. Preencha (NÃƒÆ’O comitar segredos): BAGS_BEARER, ALLOWED_ORIGINS; e quando usar integraÃƒÂ§ÃƒÂµes, BAGS_API_KEY, SOLANA_RPC_URL.
+Bags Shield is an API layer that sits between Solana dApps/wallets and raw on-chain transactions.  
+It provides a simple, opinionated interface for:
 
-## Checks rÃƒÂ¡pidos
-- `/api/health` deve retornar **200** com headers:
-  - `X-Request-Id`
-  - `Access-Control-Expose-Headers: X-Request-Id`
-- No corpo: `meta.requestId`.
+- Scanning transactions before broadcast;
+- Simulating effects and assigning a **ShieldScore** (risk grade);
+- Querying token creators and lifetime fees via Bags;
+- Helping creators bootstrap their launch configuration with Bags' public APIs.
 
-## Deploy (PROD)
-```bash
-npx -y vercel@latest deploy --prod
-npx -y vercel@latest alias set https://bags-shield-api-prestes16.vercel.app bags-shield-api.vercel.app
-```
+---
 
-## Smokes diÃƒÂ¡rios
-- Script: `scripts/morning-smokes.ps1` (logs em `./logs/smoke-*.txt`)
-- Tarefa agendada: **BagsShield Morning Smokes** Ã¢â‚¬â€ 09:15 local.
+## Status
 
-## Higiene
-- `.gitignore` ignora `logs/`, `tmp/`, `.env*`, `.bak/.tmp`.
-- `.vercelignore` evita enviar tralha/mocks no build.
+- **Stage:** Early Alpha (actively evolving)
+- **Network focus:** Solana (Bags ecosystem + token launches)
+- **Deployment:** Vercel (serverless functions, Hobby plan)
 
-## Dica de console (acentos)
-```powershell
-chcp 65001 > $null
-[Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
-```
+This repository is used both as a production API and as my public Web3 portfolio.  
+The goal is to demonstrate real-world experience with Solana integrations, security-minded API design and Vercel infrastructure.
 
-redeploy 2025-11-04 18:20:20
-rnrn<!-- BAGS_SHIELD_RELEASE_V0_START -->
-## Release v0 (mock) â€” Checklist
+---
 
-**Estado**: mock (controlado por env).  
-**Docs**: docs/api-v0.md â€¢ **Collection**: docs/postman/bags-shield-api-v0.postman_collection.json
+## Features
 
-### 1) VariÃ¡veis de ambiente
-- BAGS_API_BASE âœ… (ex.: https://public-api-v2.bags.fm/api/v1/)
-- BAGS_API_KEY âœ… (presente no ambiente)
-- BAGS_SCAN_MODE = mock (prod/preview/dev)
-- BAGS_SIM_MODE  = mock (prod/preview/dev)
+### 🔍 Transaction Scan — `/api/scan`
 
-**Debug em produÃ§Ã£o**
-- GET /api/debug/env-bags â†’ mostra BAGS_API_BASE
-- GET /api/debug/env-bags-key â†’ { present: true, masked: "bag***" }
-- GET /api/debug/env-modes â†’ { BAGS_SCAN_MODE: "mock", BAGS_SIM_MODE: "mock" }
+- **Method:** `POST`
+- **Purpose:** Validate and score raw transaction data before sending it on-chain.
+- **Output:**
+  - `ShieldScore` (0–100)
+  - Risk grade (A–E)
+  - Risk badges (e.g. liquidity, ownership, mint risks)
+  - `isSafe` flag + explanations
 
-### 2) Smokes (produÃ§Ã£o)
-`ash
-curl -sS -X POST https://bags-shield-api-4.vercel.app/api/scan \
-  -H 'Content-Type: application/json' -H 'Accept: application/json' \
-  -d '{ "rawTransaction": "AQAAAAAAAAAAAAAA" }'
+### 🧪 Transaction Simulation — `/api/simulate`
 
-curl -sS -X POST https://bags-shield-api-4.vercel.app/api/simulate \
-  -H 'Content-Type: application/json' -H 'Accept: application/json' \
-  -d '{ "mint": "So11111111111111111111111111111111111111112" }'
-Retorno esperado: success: true e meta.mode: "mock".
+- **Method:** `POST`
+- **Purpose:** Simulate the effect of a transaction and estimate risk/impact.
+- **Output:**
+  - `ShieldScore` focused on impact
+  - Warnings and risk categories
+  - Metadata useful for UX (what the user is actually doing)
 
-3) Testes automatizados (Newman)
-Prod: npm run test:prod
+### 🎯 Apply / Decision — `/api/apply`
 
-Local (AJV, precisa do dev-server):
+- **Method:** `POST`
+- **Purpose:** Take a scan/simulation result and apply rules (e.g. block/allow, require warnings, log event).
+- **Notes:**
+  - Designed to be idempotent and safe to call from wallets or backend services.
 
-subir: PORT=8888 npm run dev-v0
+### 🧱 Token Intelligence — `/api/token/*`
 
-testar: npm run test:local
+Integrations with Bags public API to enrich the security context:
 
-Tudo: npm run test:all
+- `GET /api/token/:mint/creators` → list creators for a given token mint
+- `GET /api/token/:mint/lifetime-fees` → aggregate lifetime fees collected, in lamports and SOL
 
-4) Endpoints v0 (mock)
-POST /api/scan â†’ { rawTransaction: base64 }
+These endpoints are used to power risk badges and metadata in the Bags Shield app.
 
-POST /api/simulate â†’ { mint: base58 }
-Envelope padrÃ£o:
-{ success: boolean, response|error, meta:{ requestId, mode } }
+### 🤝 Bags Launch Integration — `/api/bags/create-config`
 
-5) Observabilidade
-Header X-Request-Id exposto (Access-Control-Expose-Headers)
+- **Method:** `POST`
+- **Purpose:** Proxy to Bags `token-launch/create-config` endpoint.
+- **Input:**
+  - `launchWallet` (required, Solana public key)
+  - `tipWallet?`, `tipLamports?` (optional, tips to a vault)
+- **Output:**
+  - `tx`: base64-encoded transaction to be signed by the wallet
+  - `configKey`: Bags launch configuration key
+- **Behavior:**
+  - Validates inputs (e.g. wallet length, non-empty body)
+  - Adds `x-api-key` and `Authorization: Bearer ...` using `BAGS_API_KEY`
+  - Normalizes upstream errors into the `{ success, error, meta }` envelope
 
-Cache-Control: no-store em rotas debug e handlers v0
+---
 
-PrÃ³ximos marcos: implementar modo real (501 hoje), documentar auth/limites, e preparar rollout controlado (Rolling Releases) quando migrarmos do mock.
+## Tech Stack
 
-<!-- BAGS_SHIELD_RELEASE_V0_END -->r
+**Languages & Runtime**
 
+- TypeScript
+- Node.js 20 (serverless on Vercel)
 
-<!-- BAGS_SHIELD_ROADMAP_V02_START -->
-## Roadmap v0.2.0 (real) — NEXT
+**Platform & Infra**
 
-### Objetivo
-Ativar **modo real** em scan e simulate, integrando a Bags API com timeouts, backoff e observabilidade.
+- Vercel Functions (`@vercel/node`)
+- Vercel Dev / `vercel dev` for local emulation
+- Environment variables managed via `vercel env`
 
-### Tarefas
-- [ ] lib/bags.ts: agsFetch (x-api-key + Bearer), timeout 5000ms, retries exponenciais (429/5xx), repassar X-RateLimit-*.
-- [ ] /api/scan (real): validar schema v0, chamar upstream, mapear 2xx/4xx/5xx para envelope { success:false|true, ... }.
-- [ ] /api/simulate (real): idem acima.
-- [ ] **Segurança**: nunca logar chaves; sanitizar mensagens de erro.
-- [ ] **Observabilidade**: X-Request-Id, Cache-Control: no-store, logs estruturados, meta.rate com limites.
-- [ ] **Toggles**: BAGS_SCAN_MODE=real, BAGS_SIM_MODE=real em **Preview** (canário).
-- [ ] **Docs/Collection**: atualizar exemplos “real”; adicionar testes de 401/429.
-- [ ] **CI (opcional)**: workflow Newman para Production e Local (mock).
-- [ ] **Rollout**: Rolling Releases 5%→25%→100% + Skew Protection habilitado.
+**Validation & Testing**
 
-### Critério de aceite
-- Smokes “prod (real)” e “local (AJV)” verdes.
-- Sem vazamento de segredo em logs/headers.
-<!-- BAGS_SHIELD_ROADMAP_V02_END -->
+- AJV (JSON Schema) for v0 contracts (`/api/v0/scan`, `/api/v0/simulate`)
+- Newman collections for smoke testing:
+  - `npm run test:prod`
+  - `npm run test:local`
+  - `npm run smoke` (both)
+
+**Ecosystem Integrations**
+
+- Bags public API v2 (`https://public-api-v2.bags.fm/api/v1/`)
+- Solana wallets (via generated `tx` to be signed by Phantom/Backpack/etc.)
+- Future: direct on-chain modules (Rust/Anchor) as a separate repository
+
+---
+
+## API Design & Conventions
+
+All JSON responses follow the same envelope:
+
+```json
+{
+  "success": true,
+  "response": {},
+  "error": {},
+  "meta": {
+    "requestId": "uuid-or-random-id",
+    "upstream": "bags|internal|mock",
+    "upstreamStatus": 200,
+    "elapsedMs": 1234
+  }
+}
