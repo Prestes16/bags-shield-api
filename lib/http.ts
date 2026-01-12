@@ -223,6 +223,25 @@ export function badGateway(
 }
 
 /**
+ * Too Many Requests (429).
+ */
+export function tooManyRequests(
+  res: VercelResponse,
+  message: string = "Too many requests",
+  requestId?: string
+): void {
+  fail(
+    res,
+    429,
+    {
+      code: "TOO_MANY_REQUESTS",
+      message,
+    },
+    requestId
+  );
+}
+
+/**
  * Service Unavailable (503).
  */
 export function serviceUnavailable(

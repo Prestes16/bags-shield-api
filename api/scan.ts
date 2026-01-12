@@ -1,5 +1,7 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "crypto";
+import { rateLimitMiddleware } from "../lib/rate";
+import { getScanMode } from "../lib/env";
 
 function setBasicCors(res: VercelResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -30,10 +32,16 @@ export default async function handler(
     return;
   }
 
+  const requestId = getRequestId(req);
+  res.setHeader("X-Request-Id", requestId);
+  res.setHeader("Cache-Control", "no-store");
+
+  // Rate limiting (only active if env vars are set)
+  if (!rateLimitMiddleware(req, res)) {
+    return;
+  }
+
   if (req.method !== "POST") {
-    const requestId = getRequestId(req);
-    res.setHeader("X-Request-Id", requestId);
-    res.setHeader("Cache-Control", "no-store");
 
     res.status(405).json({
       success: false,
@@ -42,10 +50,6 @@ export default async function handler(
     });
     return;
   }
-
-  const requestId = getRequestId(req);
-  res.setHeader("X-Request-Id", requestId);
-  res.setHeader("Cache-Control", "no-store");
 
   const body: any = req.body ?? {};
 
@@ -74,6 +78,7 @@ export default async function handler(
   // Stub de resposta de risco – em produção vamos plugar o engine real
   const shieldScore = 80;
   const riskLevel = "B";
+  const mode = getScanMode();
 
   const response = {
     network,
@@ -99,6 +104,6 @@ export default async function handler(
   res.status(200).json({
     success: true,
     response,
-    meta: { requestId },
+    meta: { requestId, mode },
   });
 }

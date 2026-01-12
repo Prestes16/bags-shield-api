@@ -1,4 +1,4 @@
-﻿import { getBagsBase as getBagsBaseFromEnv, getBagsApiKey, getBagsTimeoutMs } from "./env";
+import { getBagsBase as getBagsBaseFromEnv, getBagsApiKey, getBagsTimeoutMs } from "./env";
 
 export const BAGS_DEFAULT_BASE = "https://public-api-v2.bags.fm/api/v1";
 

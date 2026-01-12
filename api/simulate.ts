@@ -1,7 +1,8 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { preflight, guardMethod, ensureRequestId } from "../lib/cors";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
 import { badRequest, ok } from "../lib/http";
 import { getSimMode } from "../lib/env";
+import { rateLimitMiddleware } from "../lib/rate";
 
 interface SimulateRequestBody {
   mint?: string;
@@ -15,13 +16,24 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
+  // Set CORS and cache headers first
+  setCors(res);
+  noStore(res);
+
   if (req.method === "OPTIONS") {
-    preflight(res, ["POST"]);
+    res.status(204).end();
     return;
   }
+
   if (!guardMethod(req, res, ["POST"])) return;
 
+  // Ensure request ID is set before rate limiting
   const requestId = ensureRequestId(res);
+
+  // Rate limiting (only active if env vars are set)
+  if (!rateLimitMiddleware(req, res)) {
+    return;
+  }
   const body = (req.body ?? {}) as SimulateRequestBody;
   const mint = body.mint;
 

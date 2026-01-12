@@ -1,5 +1,6 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
+import { rateLimitMiddleware } from "../lib/rate";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Tratamento CORS manual só para OPTIONS (preflight)
@@ -16,6 +17,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   noStore(res);
 
   if (!guardMethod(req, res, ["POST"])) return;
+
+  // Rate limiting (only active if env vars are set)
+  if (!rateLimitMiddleware(req, res)) {
+    return;
+  }
 
   const requestId = ensureRequestId(res);
 
