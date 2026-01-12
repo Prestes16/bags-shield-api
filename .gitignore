@@ -1,10 +1,10 @@
-﻿# Node / Package managers
+# Node / Package managers
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-lock.yaml
-package-lock.json
+# Note: package-lock.json SHOULD be committed for reproducible builds
 
 # Build / IDE
 dist/
@@ -24,13 +24,12 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.env.local
 
 # Dados locais / temporários
 logs/
 logs/_archive/
 tmp/
-*.bak
-*.bak-*
 *.tmp
 .rate-store.json
 
@@ -38,20 +37,16 @@ tmp/
 logs/smoke-*.txt
 
 # Backups e arquivos antigos
-backups-api/
-backups-ui/
+backups-*/
 .backups/
 *.bak
 *.bak-*
 
 # SO
 desktop.ini
-# --- Android signing (não commitar) ---
+
+# Android signing (não commitar)
 android/signing/*
 *.keystore
 *.jks
 *.p12
-
-# Dev-only handlers for local vercel dev
-.env.local
-vercel.local.json.bak-*

@@ -1,5 +1,7 @@
 {
+  "setup-worktree-unix": "setup-worktree-unix.sh",
+  "setup-worktree-windows": "setup-worktree-windows.ps1",
   "setup-worktree": [
-    "npm install"
+    "echo \"Using generic fallback. Prefer OS-specific scripts.\""
   ]
 }
