@@ -1,468 +1,148 @@
-﻿<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <title>Bags Shield · Status</title>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #050816;
-      --card: #050b1c;
-      --accent: #2fa7ff;
-      --accent-soft: rgba(47, 167, 255, 0.15);
-      --danger: #ff4d6a;
-      --ok: #4dff88;
-      --text: #f5f7ff;
-      --muted: #9ba4c4;
-      --border: #10182b;
-      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0;
-      padding: 24px;
-      font-family: var(--font);
-      background: radial-gradient(circle at top, #07142a 0, #020614 52%, #01020b 100%);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-    header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .title {
-      font-size: 24px;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .title-pill {
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      border: 1px solid rgba(47, 167, 255, 0.5);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-    }
-    .subtitle {
-      font-size: 13px;
-      color: var(--muted);
-      max-width: 520px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-      align-items: stretch;
-    }
-    .card {
-      background: radial-gradient(circle at top left, rgba(47,167,255,0.16) 0, #050b1c 55%);
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
-    }
-    .card--simple {
-      background: #050b1c;
-    }
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-    .card-title {
-      font-size: 14px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .tag {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      padding: 2px 6px;
-      border-radius: 999px;
-      border: 1px solid rgba(155, 164, 196, 0.3);
-      color: var(--muted);
-      background: rgba(3, 10, 30, 0.9);
-    }
-    .status-pill {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid rgba(155,164,196,0.4);
-      background: rgba(3, 10, 30, 0.9);
-      color: var(--muted);
-    }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--muted);
-      box-shadow: 0 0 0 1px rgba(155,164,196,0.5);
-    }
-    .status-pill--ok {
-      border-color: rgba(77,255,136,0.4);
-      color: var(--ok);
-    }
-    .status-pill--ok .status-dot {
-      background: var(--ok);
-      box-shadow: 0 0 12px rgba(77,255,136,0.7);
-    }
-    .status-pill--fail {
-      border-color: rgba(255,77,106,0.5);
-      color: var(--danger);
-    }
-    .status-pill--fail .status-dot {
-      background: var(--danger);
-      box-shadow: 0 0 10px rgba(255,77,106,0.7);
-    }
-    .card-body {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .endpoint {
-      font-family: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Monaco, monospace;
-      font-size: 11px;
-      padding: 4px 6px;
-      border-radius: 8px;
-      background: rgba(4, 10, 26, 0.9);
-      border: 1px solid rgba(38, 52, 89, 0.9);
-      color: #d4dcff;
-      display: inline-block;
-      margin-top: 4px;
-    }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      align-items: center;
-    }
-    .btn {
-      font-size: 12px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(47,167,255,0.7);
-      background: linear-gradient(135deg, rgba(47,167,255,0.18), rgba(20,51,101,0.9));
-      color: var(--text);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn:hover {
-      filter: brightness(1.1);
-    }
-    .meta {
-      font-size: 11px;
-      color: var(--muted);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .meta span {
-      opacity: 0.9;
-    }
-    .log {
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-      max-height: 130px;
-      overflow: auto;
-      padding: 8px;
-      border-radius: 10px;
-      background: rgba(3, 8, 22, 0.95);
-      border: 1px solid rgba(20, 37, 78, 0.9);
-      color: #d4dcff;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .chip {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(7, 19, 46, 0.9);
-      border: 1px solid rgba(43, 81, 143, 0.9);
-      color: var(--muted);
-    }
-    footer {
-      margin-top: auto;
-      font-size: 11px;
-      color: var(--muted);
-      opacity: 0.85;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: space-between;
-      align-items: center;
-      border-top: 1px solid rgba(12, 24, 54, 0.9);
-      padding-top: 10px;
-    }
-  </style>
+  <title>Bags Shield API — Status Dashboard</title>
+  <link rel="stylesheet" href="/status.css" />
 </head>
 <body>
-  <header>
-    <div>
-      <div class="title">
-        <span class="title-pill">Bags shield</span>
-        <span>API Status Console</span>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <h1 class="app-title">
+          <span class="title-badge">Bags Shield</span>
+          <span>API Status</span>
+        </h1>
+        <p class="app-subtitle">Monitor de saúde e testes rápidos da API</p>
       </div>
-      <p class="subtitle">
-        Painel local para acompanhar a saúde da API enquanto desenvolvemos. Use os testes rápidos abaixo
-        para bater nas rotas principais e inspecionar as respostas em tempo real.
-      </p>
-    </div>
-    <div class="controls">
-      <button class="btn" id="run-all">Rodar todos os testes</button>
-      <span class="chip" id="env-label">Local · http://localhost:3001</span>
-    </div>
-  </header>
+    </header>
 
-  <section class="grid" id="cards">
-    <article class="card card--simple" data-check="health">
-      <div class="card-header">
-        <div class="card-title">
-          <span>Core · Health</span>
-          <span class="tag">GET</span>
+    <main class="main-content">
+      <!-- API Health Card -->
+      <section class="status-card" id="health-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">API Health</h2>
+            <span class="method-tag method-get">GET</span>
+          </div>
+          <div class="status-indicator" data-status="idle">
+            <span class="status-dot"></span>
+            <span class="status-text">Aguardando...</span>
+          </div>
         </div>
-        <div class="status-pill" data-status-pill>
-          <span class="status-dot"></span>
-          <span data-status-text>idle</span>
+        <div class="card-body">
+          <p class="card-description">Verifica se a API está respondendo corretamente.</p>
+          <code class="endpoint-path">/api/health</code>
+        </div>
+        <div class="card-meta">
+          <span class="meta-item">HTTP <strong data-http-status>—</strong></span>
+          <span class="meta-item">Latência <strong data-latency>—</strong></span>
+          <span class="meta-item">Request ID <strong data-request-id>—</strong></span>
+        </div>
+        <div class="response-summary" data-response-summary>
+          <pre class="response-json">// Aguardando teste...</pre>
+        </div>
+      </section>
+
+      <!-- Quick Actions Grid -->
+      <div class="actions-grid">
+        <!-- Scan Action -->
+        <section class="status-card action-card" id="scan-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">Scan Transaction</h2>
+              <span class="method-tag method-post">POST</span>
+            </div>
+            <div class="status-indicator" data-status="idle">
+              <span class="status-dot"></span>
+              <span class="status-text">Aguardando...</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="card-description">Analisa uma transação e retorna ShieldScore e badges de risco.</p>
+            <code class="endpoint-path">/api/scan</code>
+            <button class="action-button" data-action="scan">Executar Scan</button>
+          </div>
+          <div class="card-meta">
+            <span class="meta-item">HTTP <strong data-http-status>—</strong></span>
+            <span class="meta-item">Latência <strong data-latency>—</strong></span>
+            <span class="meta-item">Request ID <strong data-request-id>—</strong></span>
+          </div>
+          <div class="response-summary" data-response-summary>
+            <div class="response-highlights" data-highlights></div>
+            <pre class="response-json">// Aguardando teste...</pre>
+          </div>
+        </section>
+
+        <!-- Simulate Action -->
+        <section class="status-card action-card" id="simulate-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">Simulate Swap</h2>
+              <span class="method-tag method-post">POST</span>
+            </div>
+            <div class="status-indicator" data-status="idle">
+              <span class="status-dot"></span>
+              <span class="status-text">Aguardando...</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="card-description">Simula uma operação e retorna o risco antes de assinar.</p>
+            <code class="endpoint-path">/api/simulate</code>
+            <button class="action-button" data-action="simulate">Executar Simulate</button>
+          </div>
+          <div class="card-meta">
+            <span class="meta-item">HTTP <strong data-http-status>—</strong></span>
+            <span class="meta-item">Latência <strong data-latency>—</strong></span>
+            <span class="meta-item">Request ID <strong data-request-id>—</strong></span>
+          </div>
+          <div class="response-summary" data-response-summary>
+            <div class="response-highlights" data-highlights></div>
+            <pre class="response-json">// Aguardando teste...</pre>
+          </div>
+        </section>
+      </div>
+
+      <!-- Upstream Status Card -->
+      <section class="status-card" id="upstream-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Upstream Status</h2>
+            <span class="method-tag method-get">GET</span>
+          </div>
+          <div class="status-indicator" data-status="idle">
+            <span class="status-dot"></span>
+            <span class="status-text">Aguardando...</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-description">Verifica o status da integração com a API upstream (Bags).</p>
+          <code class="endpoint-path">/api/bags/ping</code>
+        </div>
+        <div class="card-meta">
+          <span class="meta-item">HTTP <strong data-http-status>—</strong></span>
+          <span class="meta-item">Latência <strong data-latency>—</strong></span>
+          <span class="meta-item">Request ID <strong data-request-id>—</strong></span>
+        </div>
+        <div class="response-summary" data-response-summary>
+          <pre class="response-json">// Aguardando teste...</pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <span class="build-info">Build: <time id="build-date"></time></span>
+        </div>
+        <div class="footer-right">
+          <a href="../docs/api.md" class="footer-link" target="_blank" rel="noopener noreferrer">API Documentation</a>
         </div>
       </div>
-      <div class="card-body">
-        Verifica se a API está respondendo e retorna <code>status=ok</code>.
-        <div class="endpoint">/api/health</div>
-      </div>
-      <div class="meta">
-        <span>HTTP <strong data-http>—</strong></span>
-        <span>Latency <strong data-latency>—</strong></span>
-        <span>ReqId <strong data-request-id>—</strong></span>
-      </div>
-      <pre class="log" data-log>// aguardando teste...</pre>
-    </article>
+    </footer>
+  </div>
 
-    <article class="card card--simple" data-check="bags-ping">
-      <div class="card-header">
-        <div class="card-title">
-          <span>Bags · Ping</span>
-          <span class="tag">GET</span>
-        </div>
-        <div class="status-pill" data-status-pill>
-          <span class="status-dot"></span>
-          <span data-status-text>idle</span>
-        </div>
-      </div>
-      <div class="card-body">
-        Canário da mina para a integração Bags: testa a rota <code>/api/bags/ping</code> com CORS, no-store e X-Request-Id.
-        <div class="endpoint">/api/bags/ping</div>
-      </div>
-      <div class="meta">
-        <span>HTTP <strong data-http>—</strong></span>
-        <span>Latency <strong data-latency>—</strong></span>
-        <span>ReqId <strong data-request-id>—</strong></span>
-      </div>
-      <pre class="log" data-log>// aguardando teste...</pre>
-    </article>
-
-    <article class="card" data-check="scan">
-      <div class="card-header">
-        <div class="card-title">
-          <span>Engine · Scan</span>
-          <span class="tag">POST</span>
-        </div>
-        <div class="status-pill" data-status-pill>
-          <span class="status-dot"></span>
-          <span data-status-text>idle</span>
-        </div>
-      </div>
-      <div class="card-body">
-        Envia um payload mínimo de teste para <code>/api/scan</code> e verifica se o ShieldScore está vindo no envelope padrão.
-        <div class="endpoint">/api/scan</div>
-      </div>
-      <div class="meta">
-        <span>HTTP <strong data-http>—</strong></span>
-        <span>Latency <strong data-latency>—</strong></span>
-        <span>ReqId <strong data-request-id>—</strong></span>
-      </div>
-      <pre class="log" data-log>// aguardando teste...</pre>
-    </article>
-
-    <article class="card" data-check="simulate">
-      <div class="card-header">
-        <div class="card-title">
-          <span>Engine · Simulate</span>
-          <span class="tag">POST</span>
-        </div>
-        <div class="status-pill" data-status-pill>
-          <span class="status-dot"></span>
-          <span data-status-text>idle</span>
-        </div>
-      </div>
-      <div class="card-body">
-        Chama <code>/api/simulate</code> usando o mint mock padrão (So111... devnet) e exibe grade e ShieldScore.
-        <div class="endpoint">/api/simulate</div>
-      </div>
-      <div class="meta">
-        <span>HTTP <strong data-http>—</strong></span>
-        <span>Latency <strong data-latency>—</strong></span>
-        <span>ReqId <strong data-request-id>—</strong></span>
-      </div>
-      <pre class="log" data-log>// aguardando teste...</pre>
-    </article>
-  </section>
-
-  <footer>
-    <span>Bags Shield · Local Dev Status</span>
-    <span id="last-run">Nenhum teste executado ainda.</span>
-  </footer>
-
-  <script>
-    const checks = [
-      {
-        key: "health",
-        method: "GET",
-        url: "/api/health"
-      },
-      {
-        key: "bags-ping",
-        method: "GET",
-        url: "/api/bags/ping"
-      },
-      {
-        key: "scan",
-        method: "POST",
-        url: "/api/scan",
-        body: { rawTransaction: "0".repeat(64) }
-      },
-      {
-        key: "simulate",
-        method: "POST",
-        url: "/api/simulate",
-        body: { mint: "So11111111111111111111111111111111111111112" }
-      }
-    ];
-
-    function formatMs(ms) {
-      if (!Number.isFinite(ms)) return "—";
-      if (ms < 1) return "<1 ms";
-      if (ms < 1000) return ms.toFixed(0) + " ms";
-      return (ms / 1000).toFixed(2) + " s";
-    }
-
-    function stringify(obj) {
-      try {
-        return JSON.stringify(obj, null, 2);
-      } catch {
-        return String(obj);
-      }
-    }
-
-    async function runCheck(def) {
-      const card = document.querySelector('[data-check="' + def.key + '"]');
-      if (!card) return;
-
-      const pill = card.querySelector("[data-status-pill]");
-      const statusText = card.querySelector("[data-status-text]");
-      const httpEl = card.querySelector("[data-http]");
-      const latencyEl = card.querySelector("[data-latency]");
-      const reqIdEl = card.querySelector("[data-request-id]");
-      const logEl = card.querySelector("[data-log]");
-
-      pill.classList.remove("status-pill--ok", "status-pill--fail");
-      statusText.textContent = "running…";
-      httpEl.textContent = "—";
-      latencyEl.textContent = "—";
-      reqIdEl.textContent = "—";
-      logEl.textContent = "// executando request...";
-
-      const started = performance.now();
-      let ok = false;
-
-      try {
-        const options = {
-          method: def.method,
-          headers: {
-            "Accept": "application/json"
-          }
-        };
-
-        if (def.method === "POST") {
-          options.headers["Content-Type"] = "application/json";
-          options.body = JSON.stringify(def.body || {});
-        }
-
-        const res = await fetch(def.url, options);
-        const elapsed = performance.now() - started;
-        const text = await res.text();
-        let data = null;
-
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = text;
-        }
-
-        httpEl.textContent = String(res.status);
-        latencyEl.textContent = formatMs(elapsed);
-
-        const reqId =
-          res.headers.get("x-request-id") ||
-          (data && data.meta && data.meta.requestId) ||
-          "—";
-
-        reqIdEl.textContent = reqId;
-
-        ok = res.ok && data && data.success === true;
-
-        pill.classList.add(ok ? "status-pill--ok" : "status-pill--fail");
-        statusText.textContent = ok ? "ok" : "erro";
-
-        logEl.textContent = stringify(data);
-      } catch (err) {
-        pill.classList.add("status-pill--fail");
-        statusText.textContent = "erro";
-        logEl.textContent = "Falha ao executar request:\\n" + String(err);
-      }
-    }
-
-    async function runAll() {
-      const lastRun = document.getElementById("last-run");
-      lastRun.textContent = "Executando testes...";
-      for (const def of checks) {
-        await runCheck(def);
-      }
-      const ts = new Date();
-      lastRun.textContent = "Última execução: " + ts.toLocaleTimeString();
-    }
-
-    document.getElementById("run-all")?.addEventListener("click", () => {
-      runAll();
-    });
-
-    // Executa automaticamente na primeira carga
-    runAll();
-  </script>
+  <script src="/status.js"></script>
 </body>
 </html>
