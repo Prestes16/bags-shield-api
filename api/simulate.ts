@@ -1,8 +1,103 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
-import { badRequest, ok } from "../lib/http";
-import { getSimMode } from "../lib/env";
-import { rateLimitMiddleware } from "../lib/rate";
+// import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
+
+// Dynamic import for cors helpers
+async function getCorsHelpers() {
+  try {
+    return await import("../lib/cors");
+  } catch (error) {
+    console.error("[simulate] Error importing cors module:", error);
+    // Fallback implementations
+    return {
+      setCors: (res: VercelResponse) => {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Expose-Headers", "X-Request-Id");
+      },
+      noStore: (res: VercelResponse) => {
+        res.setHeader("Cache-Control", "no-store");
+      },
+      ensureRequestId: (res: VercelResponse): string => {
+        const id = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+        res.setHeader("X-Request-Id", id);
+        return id;
+      },
+      guardMethod: (req: VercelRequest, res: VercelResponse, allowed: string[]): boolean => {
+        const method = req.method ?? "";
+        if (!allowed.includes(method)) {
+          res.status(405).json({ success: false, error: "method_not_allowed", meta: { requestId: "unknown" } });
+          return false;
+        }
+        return true;
+      },
+    };
+  }
+}
+// import { badRequest, ok } from "../lib/http";
+
+// Dynamic import for http helpers
+async function badRequestSafe(
+  res: VercelResponse,
+  message: string,
+  requestId?: string,
+  details?: unknown
+): Promise<void> {
+  try {
+    const httpModule = await import("../lib/http");
+    httpModule.badRequest(res, message, requestId, details);
+  } catch (error) {
+    console.error("[simulate] Error importing http module:", error);
+    res.status(400).json({
+      success: false,
+      error: { code: "BAD_REQUEST", message },
+      meta: { requestId: requestId || "unknown" },
+    });
+  }
+}
+
+async function okSafe<T>(
+  res: VercelResponse,
+  data: T,
+  requestId?: string,
+  meta?: Partial<{ requestId: string; [key: string]: unknown }>
+): Promise<void> {
+  try {
+    const httpModule = await import("../lib/http");
+    httpModule.ok(res, data, requestId, meta);
+  } catch (error) {
+    console.error("[simulate] Error importing http module:", error);
+    res.status(200).json({
+      success: true,
+      response: data,
+      meta: { requestId: requestId || "unknown", ...meta },
+    });
+  }
+}
+// import { getSimMode } from "../lib/env";
+// import { rateLimitMiddleware } from "../lib/rate";
+
+// Dynamic imports to catch module loading errors
+async function getSimModeSafe(): Promise<string> {
+  try {
+    const envModule = await import("../lib/env");
+    return envModule.getSimMode();
+  } catch (error) {
+    console.error("[simulate] Error importing env module:", error);
+    return "mock";
+  }
+}
+
+async function rateLimitMiddlewareSafe(
+  req: VercelRequest,
+  res: VercelResponse
+): Promise<boolean> {
+  try {
+    const rateModule = await import("../lib/rate");
+    return rateModule.rateLimitMiddleware(req, res);
+  } catch (error) {
+    console.error("[simulate] Error importing rate module:", error);
+    return true; // Allow request if rate limiting fails
+  }
+}
 
 interface SimulateRequestBody {
   mint?: string;
@@ -16,48 +111,64 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  // Set CORS and cache headers first
-  setCors(res);
-  noStore(res);
+  try {
+    const cors = await getCorsHelpers();
+    
+    // Set CORS and cache headers first
+    cors.setCors(res);
+    cors.noStore(res);
 
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+
+    if (!cors.guardMethod(req, res, ["POST"])) return;
+
+    // Ensure request ID is set before rate limiting
+    const requestId = cors.ensureRequestId(res);
+
+    // Rate limiting (only active if env vars are set)
+    if (!(await rateLimitMiddlewareSafe(req, res))) {
+      return;
+    }
+    const body = (req.body ?? {}) as SimulateRequestBody;
+    const mint = body.mint;
+
+    if (!isBase58ish(mint)) {
+      await badRequestSafe(res, "mint field is missing or invalid.", requestId);
+      return;
+    }
+
+    const score = 68;
+    const grade =
+      score >= 80 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "E";
+    const mode = await getSimModeSafe();
+
+    await okSafe(
+      res,
+      {
+        isSafe: score >= 80,
+        shieldScore: score,
+        grade,
+        warnings: [],
+        metadata: { mode, mintLength: mint.length, base: null },
+      },
+      requestId,
+      { mode }
+    );
     return;
+  } catch (error) {
+    const cors = await getCorsHelpers();
+    const requestId = cors.ensureRequestId(res);
+    console.error("[simulate] Error:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: error instanceof Error ? error.message : "Internal server error",
+      },
+      meta: { requestId },
+    });
   }
-
-  if (!guardMethod(req, res, ["POST"])) return;
-
-  // Ensure request ID is set before rate limiting
-  const requestId = ensureRequestId(res);
-
-  // Rate limiting (only active if env vars are set)
-  if (!rateLimitMiddleware(req, res)) {
-    return;
-  }
-  const body = (req.body ?? {}) as SimulateRequestBody;
-  const mint = body.mint;
-
-  if (!isBase58ish(mint)) {
-    badRequest(res, "mint field is missing or invalid.", requestId);
-    return;
-  }
-
-  const score = 68;
-  const grade =
-    score >= 80 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "E";
-  const mode = getSimMode();
-
-  ok(
-    res,
-    {
-      isSafe: score >= 80,
-      shieldScore: score,
-      grade,
-      warnings: [],
-      metadata: { mode, mintLength: mint.length, base: null },
-    },
-    requestId,
-    { mode }
-  );
-  return;
 }

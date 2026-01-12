@@ -1,7 +1,31 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "crypto";
-import { rateLimitMiddleware } from "../lib/rate";
-import { getScanMode } from "../lib/env";
+// import { rateLimitMiddleware } from "../lib/rate";
+// import { getScanMode } from "../lib/env";
+
+// Dynamic imports to catch module loading errors
+async function getScanModeSafe(): Promise<string> {
+  try {
+    const envModule = await import("../lib/env");
+    return envModule.getScanMode();
+  } catch (error) {
+    console.error("[scan] Error importing env module:", error);
+    return "mock";
+  }
+}
+
+async function rateLimitMiddlewareSafe(
+  req: VercelRequest,
+  res: VercelResponse
+): Promise<boolean> {
+  try {
+    const rateModule = await import("../lib/rate");
+    return rateModule.rateLimitMiddleware(req, res);
+  } catch (error) {
+    console.error("[scan] Error importing rate module:", error);
+    return true; // Allow request if rate limiting fails
+  }
+}
 
 function setBasicCors(res: VercelResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -25,21 +49,22 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  setBasicCors(res);
+  try {
+    setBasicCors(res);
 
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
 
-  const requestId = getRequestId(req);
-  res.setHeader("X-Request-Id", requestId);
-  res.setHeader("Cache-Control", "no-store");
+    const requestId = getRequestId(req);
+    res.setHeader("X-Request-Id", requestId);
+    res.setHeader("Cache-Control", "no-store");
 
-  // Rate limiting (only active if env vars are set)
-  if (!rateLimitMiddleware(req, res)) {
-    return;
-  }
+    // Rate limiting (only active if env vars are set)
+    if (!(await rateLimitMiddlewareSafe(req, res))) {
+      return;
+    }
 
   if (req.method !== "POST") {
 
@@ -78,7 +103,7 @@ export default async function handler(
   // Stub de resposta de risco – em produção vamos plugar o engine real
   const shieldScore = 80;
   const riskLevel = "B";
-  const mode = getScanMode();
+  const mode = await getScanModeSafe();
 
   const response = {
     network,
@@ -101,9 +126,21 @@ export default async function handler(
     ],
   };
 
-  res.status(200).json({
-    success: true,
-    response,
-    meta: { requestId, mode },
-  });
+    res.status(200).json({
+      success: true,
+      response,
+      meta: { requestId, mode },
+    });
+  } catch (error) {
+    const requestId = getRequestId(req);
+    console.error("[scan] Error:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: error instanceof Error ? error.message : "Internal server error",
+      },
+      meta: { requestId },
+    });
+  }
 }

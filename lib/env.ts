@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { URL } from "node:url";
 
 /**
  * Schema de validação para variáveis de ambiente.
@@ -74,7 +73,18 @@ const EnvSchema = z.object({
 
   // Optional: Auth & RPC
   BAGS_BEARER: z.string().optional(),
-  SOLANA_RPC_URL: z.string().url().optional().or(z.literal("")),
+  SOLANA_RPC_URL: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val || val.trim() === "") return null;
+      try {
+        new URL(val);
+        return val;
+      } catch {
+        return null;
+      }
+    }),
 });
 
 type EnvConfig = z.infer<typeof EnvSchema>;
@@ -88,24 +98,50 @@ let cachedEnv: EnvConfig | null = null;
 export function getEnv(): EnvConfig {
   if (cachedEnv) return cachedEnv;
 
-  const raw = {
-    BAGS_API_BASE: process.env.BAGS_API_BASE,
-    BAGS_API_KEY: process.env.BAGS_API_KEY,
-    BAGS_TIMEOUT_MS: process.env.BAGS_TIMEOUT_MS,
-    BAGS_ALLOW_MOCK_FALLBACK: process.env.BAGS_ALLOW_MOCK_FALLBACK,
-    BAGS_SCAN_MODE: process.env.BAGS_SCAN_MODE,
-    BAGS_SIM_MODE: process.env.BAGS_SIM_MODE,
-    CORS_ORIGINS: process.env.CORS_ORIGINS,
-    VERCEL_ENV: process.env.VERCEL_ENV,
-    NODE_ENV: process.env.NODE_ENV,
-    BAGS_BEARER: process.env.BAGS_BEARER,
-    SOLANA_RPC_URL: process.env.SOLANA_RPC_URL,
-  };
+  try {
+    // Safe env access for non-Node environments
+    const ENV: Record<string, string | undefined> =
+      typeof process !== "undefined" && process.env ? (process.env as any) : {};
 
-  const result = EnvSchema.safeParse(raw);
-  if (!result.success) {
-    // Em caso de erro de validação, usa defaults seguros
-    console.warn("[env] Validation failed, using defaults:", result.error);
+    const raw = {
+      BAGS_API_BASE: ENV.BAGS_API_BASE,
+      BAGS_API_KEY: ENV.BAGS_API_KEY,
+      BAGS_TIMEOUT_MS: ENV.BAGS_TIMEOUT_MS,
+      BAGS_ALLOW_MOCK_FALLBACK: ENV.BAGS_ALLOW_MOCK_FALLBACK,
+      BAGS_SCAN_MODE: ENV.BAGS_SCAN_MODE,
+      BAGS_SIM_MODE: ENV.BAGS_SIM_MODE,
+      CORS_ORIGINS: ENV.CORS_ORIGINS,
+      VERCEL_ENV: ENV.VERCEL_ENV,
+      NODE_ENV: ENV.NODE_ENV,
+      BAGS_BEARER: ENV.BAGS_BEARER,
+      SOLANA_RPC_URL: ENV.SOLANA_RPC_URL,
+    };
+
+    const result = EnvSchema.safeParse(raw);
+    if (!result.success) {
+      // Em caso de erro de validação, usa defaults seguros
+      console.warn("[env] Validation failed, using defaults:", result.error);
+      cachedEnv = {
+      BAGS_API_BASE: null,
+      BAGS_API_KEY: null,
+      BAGS_TIMEOUT_MS: 15000,
+      BAGS_ALLOW_MOCK_FALLBACK: false,
+      BAGS_SCAN_MODE: "mock",
+      BAGS_SIM_MODE: "mock",
+      CORS_ORIGINS: "*",
+      VERCEL_ENV: undefined,
+      NODE_ENV: undefined,
+      BAGS_BEARER: undefined,
+      SOLANA_RPC_URL: null,
+    };
+    return cachedEnv;
+  }
+
+    cachedEnv = result.data;
+    return cachedEnv;
+  } catch (error) {
+    // Fallback seguro em caso de erro inesperado
+    console.error("[env] Unexpected error, using defaults:", error);
     cachedEnv = {
       BAGS_API_BASE: null,
       BAGS_API_KEY: null,
@@ -117,13 +153,10 @@ export function getEnv(): EnvConfig {
       VERCEL_ENV: undefined,
       NODE_ENV: undefined,
       BAGS_BEARER: undefined,
-      SOLANA_RPC_URL: undefined,
+      SOLANA_RPC_URL: null,
     };
     return cachedEnv;
   }
-
-  cachedEnv = result.data;
-  return cachedEnv;
 }
 
 /**
