@@ -1,0 +1,186 @@
+import { z } from "zod";
+import { URL } from "node:url";
+
+/**
+ * Schema de validação para variáveis de ambiente.
+ * Usa fallbacks seguros para manter demo/dev funcionando.
+ */
+const EnvSchema = z.object({
+  // Bags API Configuration
+  BAGS_API_BASE: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val) return null;
+      const trimmed = val.trim();
+      if (!trimmed) return null;
+      try {
+        const url = new URL(trimmed);
+        return url.toString().replace(/\/+$/, "");
+      } catch {
+        return null;
+      }
+    }),
+  BAGS_API_KEY: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val) return null;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }),
+  BAGS_TIMEOUT_MS: z
+    .string()
+    .optional()
+    .default("15000")
+    .transform((val: string | undefined) => {
+      const parsed = Number(val);
+      if (!Number.isFinite(parsed) || parsed <= 0) return 15000;
+      return parsed;
+    }),
+  BAGS_ALLOW_MOCK_FALLBACK: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val) return false;
+      const s = val.toLowerCase().trim();
+      return s === "1" || s === "true" || s === "yes" || s === "on";
+    }),
+
+  // Mode Configuration (mock/prod/preview/dev)
+  BAGS_SCAN_MODE: z
+    .enum(["mock", "prod", "preview", "dev"])
+    .optional()
+    .default("mock"),
+  BAGS_SIM_MODE: z
+    .enum(["mock", "prod", "preview", "dev"])
+    .optional()
+    .default("mock"),
+
+  // CORS Configuration
+  CORS_ORIGINS: z
+    .string()
+    .optional()
+    .transform((val: string | undefined): string | string[] => {
+      if (!val) return "*";
+      const trimmed = val.trim();
+      if (!trimmed) return "*";
+      return trimmed.split(",").map((s: string) => s.trim()).filter(Boolean);
+    }),
+
+  // Vercel/Node Environment
+  VERCEL_ENV: z.string().optional(),
+  NODE_ENV: z.string().optional(),
+
+  // Optional: Auth & RPC
+  BAGS_BEARER: z.string().optional(),
+  SOLANA_RPC_URL: z.string().url().optional().or(z.literal("")),
+});
+
+type EnvConfig = z.infer<typeof EnvSchema>;
+
+let cachedEnv: EnvConfig | null = null;
+
+/**
+ * Lê e valida variáveis de ambiente uma vez, com cache.
+ * Fail-closed apenas para variáveis críticas em produção.
+ */
+export function getEnv(): EnvConfig {
+  if (cachedEnv) return cachedEnv;
+
+  const raw = {
+    BAGS_API_BASE: process.env.BAGS_API_BASE,
+    BAGS_API_KEY: process.env.BAGS_API_KEY,
+    BAGS_TIMEOUT_MS: process.env.BAGS_TIMEOUT_MS,
+    BAGS_ALLOW_MOCK_FALLBACK: process.env.BAGS_ALLOW_MOCK_FALLBACK,
+    BAGS_SCAN_MODE: process.env.BAGS_SCAN_MODE,
+    BAGS_SIM_MODE: process.env.BAGS_SIM_MODE,
+    CORS_ORIGINS: process.env.CORS_ORIGINS,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NODE_ENV: process.env.NODE_ENV,
+    BAGS_BEARER: process.env.BAGS_BEARER,
+    SOLANA_RPC_URL: process.env.SOLANA_RPC_URL,
+  };
+
+  const result = EnvSchema.safeParse(raw);
+  if (!result.success) {
+    // Em caso de erro de validação, usa defaults seguros
+    console.warn("[env] Validation failed, using defaults:", result.error);
+    cachedEnv = {
+      BAGS_API_BASE: null,
+      BAGS_API_KEY: null,
+      BAGS_TIMEOUT_MS: 15000,
+      BAGS_ALLOW_MOCK_FALLBACK: false,
+      BAGS_SCAN_MODE: "mock",
+      BAGS_SIM_MODE: "mock",
+      CORS_ORIGINS: "*",
+      VERCEL_ENV: undefined,
+      NODE_ENV: undefined,
+      BAGS_BEARER: undefined,
+      SOLANA_RPC_URL: undefined,
+    };
+    return cachedEnv;
+  }
+
+  cachedEnv = result.data;
+  return cachedEnv;
+}
+
+/**
+ * Helper: retorna BAGS_API_BASE com fallback para default.
+ */
+export function getBagsBase(): string {
+  const env = getEnv();
+  return env.BAGS_API_BASE ?? "https://public-api-v2.bags.fm/api/v1";
+}
+
+/**
+ * Helper: retorna BAGS_API_KEY (pode ser null em dev/mock).
+ */
+export function getBagsApiKey(): string | null {
+  return getEnv().BAGS_API_KEY;
+}
+
+/**
+ * Helper: verifica se Bags está configurado (base + key).
+ */
+export function isBagsConfigured(): boolean {
+  const env = getEnv();
+  return env.BAGS_API_BASE !== null && env.BAGS_API_KEY !== null;
+}
+
+/**
+ * Helper: retorna timeout em ms (com fallback).
+ */
+export function getBagsTimeoutMs(): number {
+  return getEnv().BAGS_TIMEOUT_MS;
+}
+
+/**
+ * Helper: retorna CORS origins (array ou "*").
+ */
+export function getCorsOrigins(): string | string[] {
+  return getEnv().CORS_ORIGINS;
+}
+
+/**
+ * Helper: retorna modo de scan (mock/prod/preview/dev).
+ */
+export function getScanMode(): "mock" | "prod" | "preview" | "dev" {
+  return getEnv().BAGS_SCAN_MODE;
+}
+
+/**
+ * Helper: retorna modo de simulação (mock/prod/preview/dev).
+ */
+export function getSimMode(): "mock" | "prod" | "preview" | "dev" {
+  return getEnv().BAGS_SIM_MODE;
+}
+
+/**
+ * Helper: verifica se está em produção.
+ */
+export function isProduction(): boolean {
+  const env = getEnv();
+  return env.VERCEL_ENV === "production" || env.NODE_ENV === "production";
+}

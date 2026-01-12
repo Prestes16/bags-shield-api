@@ -6,6 +6,9 @@
         "start": "echo 'Vercel usa a pasta /api'",
         "build": "echo 'Vercel usa o builder padrao @vercel/node'",
         "dev-v0": "node scripts/dev-server.cjs",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint . --ext .ts",
+        "format": "prettier . --write",
         "test:prod": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api.vercel.app --reporters cli",
         "test:local": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder \"Local Dev (AJV)\" --env-var baseUrlLocal=http://127.0.0.1:8888 --reporters cli",
         "test:all": "npm run test:prod && npm run test:local",
@@ -17,12 +20,18 @@
     },
     "dependencies": {
         "@vercel/node": "3.1.1",
-        "express": "4.21.1"
+        "express": "4.21.1",
+        "zod": "^3.25.76"
     },
     "devDependencies": {
         "@types/node": "20.14.9",
+        "@typescript-eslint/eslint-plugin": "^8.52.0",
+        "@typescript-eslint/parser": "^8.52.0",
         "ajv": "^8.17.1",
+        "eslint": "^8.57.0",
+        "eslint-config-prettier": "^10.1.8",
         "newman": "^6.2.1",
+        "prettier": "^3.7.4",
         "typescript": "5.5.3"
     }
 }

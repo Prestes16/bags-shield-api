@@ -25,25 +25,28 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Dados locais / temporÃ¡rios
+# Dados locais / temporários
 logs/
+logs/_archive/
 tmp/
 *.bak
+*.bak-*
 *.tmp
 .rate-store.json
 
 # Artefatos de smoke/tests
 logs/smoke-*.txt
 
+# Backups e arquivos antigos
+backups-api/
+backups-ui/
+.backups/
+*.bak
+*.bak-*
+
 # SO
 desktop.ini
-# --- Android signing (nÃ£o commitar) ---
-android/signing/*
-*.keystore
-*.jks
-*.p12
-
-# Android signing
+# --- Android signing (não commitar) ---
 android/signing/*
 *.keystore
 *.jks
@@ -51,6 +54,4 @@ android/signing/*
 
 # Dev-only handlers for local vercel dev
 .env.local
-backups-api/
-backups-ui/
 vercel.local.json.bak-*

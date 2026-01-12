@@ -1,4 +1,4 @@
-﻿import { URL } from "node:url";
+﻿import { getBagsBase as getBagsBaseFromEnv, getBagsApiKey, getBagsTimeoutMs } from "./env";
 
 export const BAGS_DEFAULT_BASE = "https://public-api-v2.bags.fm/api/v1";
 
@@ -53,29 +53,13 @@ export interface CreateTokenInfoResponse {
   tokenLaunch: unknown;
 }
 
-function normalizeBase(baseRaw: string | undefined | null): string | null {
-  if (!baseRaw) return null;
-  const trimmed = baseRaw.trim();
-  if (!trimmed) return null;
-
-  try {
-    const url = new URL(trimmed);
-    return url.toString().replace(/\/+$/, "");
-  } catch {
-    return null;
-  }
-}
-
-function getBagsBase(): string | null {
-  const raw = process.env.BAGS_API_BASE || BAGS_DEFAULT_BASE;
-  return normalizeBase(raw);
+function getBagsBase(): string {
+  const base = getBagsBaseFromEnv();
+  return base ?? BAGS_DEFAULT_BASE;
 }
 
 function getApiKey(): string | null {
-  const key = process.env.BAGS_API_KEY;
-  if (!key) return null;
-  const trimmed = key.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return getBagsApiKey();
 }
 
 export async function pingBagsConfig(): Promise<BagsResult<BagsPingResponse>> {
@@ -133,7 +117,7 @@ async function bagsFetch<T>(opts: BagsFetchOptions): Promise<BagsResult<T>> {
   }
 
   const url = base + opts.path;
-  const timeoutMs = Number(process.env.BAGS_TIMEOUT_MS ?? "15000");
+  const timeoutMs = getBagsTimeoutMs();
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
