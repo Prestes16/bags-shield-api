@@ -12,7 +12,9 @@
         "test:prod": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api.vercel.app --reporters cli",
         "test:local": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder \"Local Dev (AJV)\" --env-var baseUrlLocal=http://127.0.0.1:8888 --reporters cli",
         "test:all": "npm run test:prod && npm run test:local",
-        "smoke": "npm run test:all",
+        "smoke": "node scripts/smoke-local.cjs",
+        "smoke:prod": "node -e \"process.env.SMOKE_BASE_URL='https://bags-shield-api.vercel.app'; process.env.SMOKE_STRICT='1'; require('./scripts/smoke-runner.js')\"",
+        "smoke:relaxed": "node scripts/smoke-runner.js",
         "start:render": "node scripts/server.cjs"
     },
     "engines": {
