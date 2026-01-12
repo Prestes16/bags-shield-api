@@ -1,5 +1,48 @@
 # Bags Shield API - Usage Guide
 
+## TypeScript Client
+
+The project includes a typed internal client to prevent API contract drift.
+
+**Location:** `lib/client.ts`
+
+**Usage Example:**
+
+```typescript
+import { createClient, scan, simulate } from './lib/client';
+
+// Using the class-based API
+const client = createClient({
+  baseUrl: 'https://bags-shield-api.vercel.app',
+  headers: { 'X-Request-Id': 'custom-id' }
+});
+
+const result = await client.scan({
+  rawTransaction: 'AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+  network: 'solana-devnet'
+});
+
+if (result.success) {
+  console.log('Shield Score:', result.response.shieldScore);
+  console.log('Risk Level:', result.response.riskLevel);
+} else {
+  console.error('Error:', result.error);
+}
+
+// Using functional API
+const simResult = await simulate(
+  'https://bags-shield-api.vercel.app',
+  { mint: 'So11111111111111111111111111111111111111112' }
+);
+
+if (simResult.success) {
+  console.log('Is Safe:', simResult.response.isSafe);
+  console.log('Grade:', simResult.response.grade);
+}
+```
+
+---
+
 ## Base URLs
 
 **Production:**
