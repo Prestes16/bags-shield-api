@@ -145,10 +145,40 @@
     `).join('');
   }
 
+  // Escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Render headers
+  function renderHeaders(container, headers) {
+    if (!container) return;
+
+    if (!headers || Object.keys(headers).length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="headers-section">
+        <div class="headers-title">Headers</div>
+        <div class="headers-list">
+          <div class="header-item"><span class="header-name">x-vercel-id:</span> <span class="header-value">${escapeHtml(headers['x-vercel-id'])}</span></div>
+          <div class="header-item"><span class="header-name">x-vercel-cache:</span> <span class="header-value">${escapeHtml(headers['x-vercel-cache'])}</span></div>
+          <div class="header-item"><span class="header-name">date:</span> <span class="header-value">${escapeHtml(headers['date'])}</span></div>
+          <div class="header-item"><span class="header-name">content-type:</span> <span class="header-value">${escapeHtml(headers['content-type'])}</span></div>
+        </div>
+      </div>
+    `;
+  }
+
   // Update response display
-  function updateResponse(card, data, endpoint) {
+  function updateResponse(card, data, endpoint, headers = null) {
     const responsePre = card.querySelector('.response-json');
     const highlightsContainer = card.querySelector('[data-highlights]');
+    const headersContainer = card.querySelector('[data-headers]');
 
     if (responsePre) {
       try {
@@ -161,6 +191,10 @@
     if (highlightsContainer) {
       const highlights = extractHighlights(data, endpoint);
       renderHighlights(highlightsContainer, highlights);
+    }
+
+    if (headersContainer && headers) {
+      renderHeaders(headersContainer, headers);
     }
   }
 
@@ -198,12 +232,21 @@
                       (data?.meta?.requestId) || 
                       null;
 
+      // Capture Vercel/debug headers
+      const headers = {
+        'x-vercel-id': response.headers.get('x-vercel-id') || '—',
+        'x-vercel-cache': response.headers.get('x-vercel-cache') || '—',
+        'date': response.headers.get('date') || '—',
+        'content-type': response.headers.get('content-type') || '—'
+      };
+
       return {
         success: response.ok,
         status: response.status,
         data,
         latency: elapsed,
-        requestId
+        requestId,
+        headers
       };
     } catch (error) {
       const elapsed = performance.now() - startTime;
@@ -212,7 +255,13 @@
         status: 0,
         data: { error: error.message },
         latency: elapsed,
-        requestId: null
+        requestId: null,
+        headers: {
+          'x-vercel-id': '—',
+          'x-vercel-cache': '—',
+          'date': '—',
+          'content-type': '—'
+        }
       };
     }
   }
@@ -224,7 +273,7 @@
 
     updateStatus(card, 'running', 'Verificando...');
     updateMeta(card, '—', null, '—');
-    updateResponse(card, null, '/api/health');
+    updateResponse(card, null, '/api/health', null);
 
     const result = await makeRequest('/api/health', 'GET');
 
@@ -235,7 +284,7 @@
     }
 
     updateMeta(card, result.status, result.latency, result.requestId);
-    updateResponse(card, result.data, '/api/health');
+    updateResponse(card, result.data, '/api/health', result.headers);
   }
 
   // Run scan
@@ -248,7 +297,7 @@
 
     updateStatus(card, 'running', 'Executando...');
     updateMeta(card, '—', null, '—');
-    updateResponse(card, null, '/api/scan');
+    updateResponse(card, null, '/api/scan', null);
 
     const result = await makeRequest('/api/scan', 'POST', SAMPLE_PAYLOADS.scan);
 
@@ -259,7 +308,7 @@
     }
 
     updateMeta(card, result.status, result.latency, result.requestId);
-    updateResponse(card, result.data, '/api/scan');
+    updateResponse(card, result.data, '/api/scan', result.headers);
 
     if (button) button.disabled = false;
   }
@@ -274,7 +323,7 @@
 
     updateStatus(card, 'running', 'Executando...');
     updateMeta(card, '—', null, '—');
-    updateResponse(card, null, '/api/simulate');
+    updateResponse(card, null, '/api/simulate', null);
 
     const result = await makeRequest('/api/simulate', 'POST', SAMPLE_PAYLOADS.simulate);
 
@@ -285,7 +334,7 @@
     }
 
     updateMeta(card, result.status, result.latency, result.requestId);
-    updateResponse(card, result.data, '/api/simulate');
+    updateResponse(card, result.data, '/api/simulate', result.headers);
 
     if (button) button.disabled = false;
   }
@@ -297,7 +346,7 @@
 
     updateStatus(card, 'running', 'Verificando...');
     updateMeta(card, '—', null, '—');
-    updateResponse(card, null, '/api/bags/ping');
+    updateResponse(card, null, '/api/bags/ping', null);
 
     const result = await makeRequest('/api/bags/ping', 'GET');
 
@@ -306,13 +355,13 @@
     } else if (result.status === 0) {
       // Network error or endpoint doesn't exist
       updateStatus(card, 'error', 'N/A');
-      updateResponse(card, { message: 'Endpoint não disponível ou erro de rede' }, '/api/bags/ping');
+      updateResponse(card, { message: 'Endpoint não disponível ou erro de rede' }, '/api/bags/ping', result.headers);
     } else {
       updateStatus(card, 'error', 'Erro');
     }
 
     updateMeta(card, result.status, result.latency, result.requestId);
-    updateResponse(card, result.data, '/api/bags/ping');
+    updateResponse(card, result.data, '/api/bags/ping', result.headers);
   }
 
   // Initialize
@@ -350,7 +399,7 @@
       const card = document.getElementById('upstream-card');
       if (card) {
         updateStatus(card, 'error', 'N/A');
-        updateResponse(card, { message: 'Endpoint não disponível' }, '/api/bags/ping');
+        updateResponse(card, { message: 'Endpoint não disponível' }, '/api/bags/ping', null);
       }
     });
   }
