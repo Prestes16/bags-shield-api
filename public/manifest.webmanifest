@@ -1,0 +1,18 @@
+{
+  "name": "Bags Shield",
+  "short_name": "Bags Shield",
+  "description": "Security gateway for Solana dApps — scan + simulate with traceable results.",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#4dd4ff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

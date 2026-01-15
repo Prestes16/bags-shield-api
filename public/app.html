@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bags Shield â€” App</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#4dd4ff" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- Topbar -->
+    <header class="app-topbar">
+      <div class="topbar-content">
+        <h1 class="app-logo">Bags Shield</h1>
+        <span class="env-badge" id="env-badge">Production</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- Health Card -->
+      <section class="app-card" id="health-card">
+        <div class="card-header">
+          <h2 class="card-title">Health</h2>
+          <div class="status-badge" data-status="idle">
+            <span class="status-dot"></span>
+            <span class="status-text">Idle</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="meta-item">HTTP <strong data-http-status>â€”</strong></span>
+            <span class="meta-item">Latency <strong data-latency>â€”</strong></span>
+            <span class="meta-item">Request ID <strong data-request-id>â€”</strong></span>
+          </div>
+          <button class="action-btn" data-action="health">Recheck</button>
+        </div>
+        <div class="card-response" data-response-area>
+          <div class="response-highlights" data-highlights></div>
+          <div data-headers></div>
+          <div class="response-json-container">
+            <button class="copy-btn" data-copy="health">Copy JSON</button>
+            <pre class="response-json" data-json="health">// Waiting...</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scan Card -->
+      <section class="app-card" id="scan-card">
+        <div class="card-header">
+          <h2 class="card-title">Scan Transaction</h2>
+          <div class="status-badge" data-status="idle">
+            <span class="status-dot"></span>
+            <span class="status-text">Idle</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="input-group">
+            <label for="scan-input">Raw Transaction</label>
+            <textarea id="scan-input" class="input-textarea" rows="3" placeholder="Enter base64 transaction..."></textarea>
+            <button class="sample-btn" data-sample="scan">Use sample</button>
+          </div>
+          <button class="action-btn" data-action="scan">Scan</button>
+        </div>
+        <div class="card-meta">
+          <span class="meta-item">HTTP <strong data-http-status>â€”</strong></span>
+          <span class="meta-item">Latency <strong data-latency>â€”</strong></span>
+          <span class="meta-item">Request ID <strong data-request-id>â€”</strong></span>
+        </div>
+        <div class="card-response" data-response-area>
+          <div class="response-highlights" data-highlights></div>
+          <div data-headers></div>
+          <div class="response-json-container">
+            <button class="copy-btn" data-copy="scan">Copy JSON</button>
+            <pre class="response-json" data-json="scan">// Waiting...</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Simulate Card -->
+      <section class="app-card" id="simulate-card">
+        <div class="card-header">
+          <h2 class="card-title">Simulate Swap</h2>
+          <div class="status-badge" data-status="idle">
+            <span class="status-dot"></span>
+            <span class="status-text">Idle</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="input-group">
+            <label for="simulate-input">Mint Address</label>
+            <input type="text" id="simulate-input" class="input-text" placeholder="Enter mint address..." />
+            <button class="sample-btn" data-sample="simulate">Use sample</button>
+          </div>
+          <button class="action-btn" data-action="simulate">Simulate</button>
+        </div>
+        <div class="card-meta">
+          <span class="meta-item">HTTP <strong data-http-status>â€”</strong></span>
+          <span class="meta-item">Latency <strong data-latency>â€”</strong></span>
+          <span class="meta-item">Request ID <strong data-request-id>â€”</strong></span>
+        </div>
+        <div class="card-response" data-response-area>
+          <div class="response-highlights" data-highlights></div>
+          <div data-headers></div>
+          <div class="response-json-container">
+            <button class="copy-btn" data-copy="simulate">Copy JSON</button>
+            <pre class="response-json" data-json="simulate">// Waiting...</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
