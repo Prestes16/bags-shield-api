@@ -1,9 +1,9 @@
 {
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/bags/ping",
-      "destination": "/api/ping"
-    }
-  ]
+    "version":  2,
+    "rewrites":  [
+                     {
+                         "source":  "/api/bags/ping",
+                         "destination":  "/api/ping"
+                     }
+                 ]
 }
