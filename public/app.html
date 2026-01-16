@@ -1,118 +1,284 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bags Shield â€” App</title>
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="theme-color" content="#4dd4ff" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Bags Shield</title>
   <link rel="stylesheet" href="/app.css" />
 </head>
+
 <body>
-  <div class="app-wrapper">
-    <!-- Topbar -->
-    <header class="app-topbar">
-      <div class="topbar-content">
-        <h1 class="app-logo">Bags Shield</h1>
-        <span class="env-badge" id="env-badge">Production</span>
-      </div>
-    </header>
+  <main class="screen screen-app">
+    <div class="radar" aria-hidden="true"></div>
 
-    <!-- Main Content -->
-    <main class="app-main">
-      <!-- Health Card -->
-      <section class="app-card" id="health-card">
-        <div class="card-header">
-          <h2 class="card-title">Health</h2>
-          <div class="status-badge" data-status="idle">
-            <span class="status-dot"></span>
-            <span class="status-text">Idle</span>
-          </div>
+    <div class="wrap">
+      <header class="topbar">
+        <div class="brand">
+          <h1 class="h1">Bags Shield</h1>
+          <div class="tag"><span class="dot"></span><span id="envTag">PRODUCTION</span></div>
         </div>
-        <div class="card-body">
-          <div class="card-meta">
-            <span class="meta-item">HTTP <strong data-http-status>â€”</strong></span>
-            <span class="meta-item">Latency <strong data-latency>â€”</strong></span>
-            <span class="meta-item">Request ID <strong data-request-id>â€”</strong></span>
-          </div>
-          <button class="action-btn" data-action="health">Recheck</button>
+        <div class="metaRight">
+          <div id="nowTxt">—</div>
+          <div id="originTxt">—</div>
         </div>
-        <div class="card-response" data-response-area>
-          <div class="response-highlights" data-highlights></div>
-          <div data-headers></div>
-          <div class="response-json-container">
-            <button class="copy-btn" data-copy="health">Copy JSON</button>
-            <pre class="response-json" data-json="health">// Waiting...</pre>
+      </header>
+
+      <section class="grid">
+
+        <!-- HEALTH -->
+        <article class="card" id="cardHealth">
+          <div class="cardHeader">
+            <h2 class="cardTitle">Health</h2>
+            <div class="pill" id="pillHealth"><span class="dot"></span><span id="pillHealthTxt">Idle</span></div>
           </div>
-        </div>
+          <div class="cardBody">
+            <div class="kv">
+              <div class="line"><div class="k">HTTP - Latency</div><div class="v" id="healthLatency">—</div></div>
+              <div class="line"><div class="k">Request ID</div><div class="v" id="healthReqId">—</div></div>
+              <div class="line"><div class="k">Endpoint</div><div class="v" id="healthEp">/api/health</div></div>
+            </div>
+
+            <div class="row">
+              <button class="btn" id="btnHealth">Recheck</button>
+              <button class="btn secondary" id="btnCopyHealth">Copy JSON</button>
+            </div>
+
+            <div class="pre"><pre id="healthJson">{ }</pre></div>
+            <div class="small" id="healthNote">Mostra o envelope da API e headers úteis.</div>
+          </div>
+        </article>
+
+        <!-- SCAN -->
+        <article class="card" id="cardScan">
+          <div class="cardHeader">
+            <h2 class="cardTitle">Scan Transaction</h2>
+            <div class="pill" id="pillScan"><span class="dot"></span><span id="pillScanTxt">Idle</span></div>
+          </div>
+          <div class="cardBody">
+
+            <div class="field">
+              <div class="label">Raw Transaction (base64)</div>
+              <textarea id="scanRaw" placeholder="Cole aqui a transação em base64..."></textarea>
+            </div>
+
+            <div class="field">
+              <div class="label">Endpoint</div>
+              <input id="scanEp" value="/api/scan" />
+            </div>
+
+            <div class="row" style="margin-top:12px">
+              <button class="btn" id="btnScan">Run Scan</button>
+              <button class="btn secondary" id="btnCopyScan">Copy JSON</button>
+            </div>
+
+            <div class="kv" style="margin-top:12px">
+              <div class="line"><div class="k">HTTP - Latency</div><div class="v" id="scanLatency">—</div></div>
+              <div class="line"><div class="k">Request ID</div><div class="v" id="scanReqId">—</div></div>
+            </div>
+
+            <div class="pre"><pre id="scanJson">{ }</pre></div>
+            <div class="small">Dica: se tua API v0 estiver pronta, troca o endpoint pra <span style="font-family:var(--mono)">/api/v0/scan</span>.</div>
+          </div>
+        </article>
+
+        <!-- SIMULATE -->
+        <article class="card" id="cardSim">
+          <div class="cardHeader">
+            <h2 class="cardTitle">Simulate</h2>
+            <div class="pill" id="pillSim"><span class="dot"></span><span id="pillSimTxt">Idle</span></div>
+          </div>
+          <div class="cardBody">
+
+            <div class="field">
+              <div class="label">Mint (opcional)</div>
+              <input id="simMint" placeholder="Ex.: So11111111111111111111111111111111111111112" />
+            </div>
+
+            <div class="field">
+              <div class="label">Endpoint</div>
+              <input id="simEp" value="/api/simulate" />
+            </div>
+
+            <div class="row" style="margin-top:12px">
+              <button class="btn" id="btnSim">Run Simulate</button>
+              <button class="btn secondary" id="btnCopySim">Copy JSON</button>
+            </div>
+
+            <div class="kv" style="margin-top:12px">
+              <div class="line"><div class="k">HTTP - Latency</div><div class="v" id="simLatency">—</div></div>
+              <div class="line"><div class="k">Request ID</div><div class="v" id="simReqId">—</div></div>
+            </div>
+
+            <div class="pre"><pre id="simJson">{ }</pre></div>
+            <div class="small">Se tua rota v0 existir: usa <span style="font-family:var(--mono)">/api/v0/simulate</span>.</div>
+          </div>
+        </article>
+
       </section>
+    </div>
+  </main>
 
-      <!-- Scan Card -->
-      <section class="app-card" id="scan-card">
-        <div class="card-header">
-          <h2 class="card-title">Scan Transaction</h2>
-          <div class="status-badge" data-status="idle">
-            <span class="status-dot"></span>
-            <span class="status-text">Idle</span>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="input-group">
-            <label for="scan-input">Raw Transaction</label>
-            <textarea id="scan-input" class="input-textarea" rows="3" placeholder="Enter base64 transaction..."></textarea>
-            <button class="sample-btn" data-sample="scan">Use sample</button>
-          </div>
-          <button class="action-btn" data-action="scan">Scan</button>
-        </div>
-        <div class="card-meta">
-          <span class="meta-item">HTTP <strong data-http-status>â€”</strong></span>
-          <span class="meta-item">Latency <strong data-latency>â€”</strong></span>
-          <span class="meta-item">Request ID <strong data-request-id>â€”</strong></span>
-        </div>
-        <div class="card-response" data-response-area>
-          <div class="response-highlights" data-highlights></div>
-          <div data-headers></div>
-          <div class="response-json-container">
-            <button class="copy-btn" data-copy="scan">Copy JSON</button>
-            <pre class="response-json" data-json="scan">// Waiting...</pre>
-          </div>
-        </div>
-      </section>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
 
-      <!-- Simulate Card -->
-      <section class="app-card" id="simulate-card">
-        <div class="card-header">
-          <h2 class="card-title">Simulate Swap</h2>
-          <div class="status-badge" data-status="idle">
-            <span class="status-dot"></span>
-            <span class="status-text">Idle</span>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="input-group">
-            <label for="simulate-input">Mint Address</label>
-            <input type="text" id="simulate-input" class="input-text" placeholder="Enter mint address..." />
-            <button class="sample-btn" data-sample="simulate">Use sample</button>
-          </div>
-          <button class="action-btn" data-action="simulate">Simulate</button>
-        </div>
-        <div class="card-meta">
-          <span class="meta-item">HTTP <strong data-http-status>â€”</strong></span>
-          <span class="meta-item">Latency <strong data-latency>â€”</strong></span>
-          <span class="meta-item">Request ID <strong data-request-id>â€”</strong></span>
-        </div>
-        <div class="card-response" data-response-area>
-          <div class="response-highlights" data-highlights></div>
-          <div data-headers></div>
-          <div class="response-json-container">
-            <button class="copy-btn" data-copy="simulate">Copy JSON</button>
-            <pre class="response-json" data-json="simulate">// Waiting...</pre>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
+  const statePill = (pillEl, txtEl, mode) => {
+    pillEl.classList.remove("ok","warn","bad");
+    if (mode) pillEl.classList.add(mode);
+    txtEl.textContent = mode === "ok" ? "OK" : mode === "warn" ? "Attention" : mode === "bad" ? "Error" : "Idle";
+  };
 
-  <script src="/app.js"></script>
+  const pretty = (obj) => JSON.stringify(obj, null, 2);
+
+  const copy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const fetchJson = async (url, opts = {}) => {
+    const t0 = performance.now();
+    const res = await fetch(url, opts);
+    const ms = Math.round(performance.now() - t0);
+
+    let data = null;
+    let errText = null;
+    try {
+      data = await res.json();
+    } catch (e) {
+      errText = await res.text().catch(() => "");
+    }
+
+    const reqId = res.headers.get("x-request-id") || (data && data.meta && data.meta.requestId) || "—";
+    return { ok: res.ok, status: res.status, ms, reqId, data, errText };
+  };
+
+  // Top meta
+  const updateNow = () => {
+    const d = new Date();
+    $("nowTxt").textContent = d.toLocaleString();
+    $("originTxt").textContent = location.origin.replace("https://", "");
+  };
+  updateNow();
+  setInterval(updateNow, 30000);
+
+  // Health
+  let lastHealth = "{ }";
+  const runHealth = async () => {
+    statePill($("pillHealth"), $("pillHealthTxt"), null);
+    $("healthLatency").textContent = "…";
+    $("healthReqId").textContent = "…";
+    $("healthJson").textContent = "{ }";
+
+    const r = await fetchJson("/api/health", { headers: { "cache-control": "no-store" } });
+    $("healthLatency").textContent = r.ms + "ms";
+    $("healthReqId").textContent = r.reqId;
+
+    if (r.ok && r.data) {
+      statePill($("pillHealth"), $("pillHealthTxt"), "ok");
+      lastHealth = pretty(r.data);
+      $("healthJson").textContent = lastHealth;
+    } else {
+      statePill($("pillHealth"), $("pillHealthTxt"), "bad");
+      const payload = r.data || { success:false, error:"Non-JSON response", status:r.status, body:r.errText || "" };
+      lastHealth = pretty(payload);
+      $("healthJson").textContent = lastHealth;
+    }
+  };
+
+  $("btnHealth").addEventListener("click", runHealth);
+  $("btnCopyHealth").addEventListener("click", async () => {
+    await copy(lastHealth);
+  });
+
+  // Scan
+  let lastScan = "{ }";
+  const runScan = async () => {
+    statePill($("pillScan"), $("pillScanTxt"), null);
+    $("scanLatency").textContent = "…";
+    $("scanReqId").textContent = "…";
+    $("scanJson").textContent = "{ }";
+
+    const ep = ($("scanEp").value || "/api/scan").trim();
+    const raw = ($("scanRaw").value || "").trim();
+
+    // payload tolerante: tenta ambos nomes comuns
+    const payload = raw
+      ? { rawTransaction: raw, rawTransactionBase64: raw, txBase64: raw }
+      : { };
+
+    const r = await fetchJson(ep, {
+      method: "POST",
+      headers: { "content-type": "application/json", "cache-control":"no-store" },
+      body: JSON.stringify(payload)
+    });
+
+    $("scanLatency").textContent = r.ms + "ms";
+    $("scanReqId").textContent = r.reqId;
+
+    if (r.ok && r.data) {
+      statePill($("pillScan"), $("pillScanTxt"), "ok");
+      lastScan = pretty(r.data);
+      $("scanJson").textContent = lastScan;
+    } else {
+      statePill($("pillScan"), $("pillScanTxt"), "bad");
+      const payload2 = r.data || { success:false, error:"Non-JSON response", status:r.status, body:r.errText || "" };
+      lastScan = pretty(payload2);
+      $("scanJson").textContent = lastScan;
+    }
+  };
+
+  $("btnScan").addEventListener("click", runScan);
+  $("btnCopyScan").addEventListener("click", async () => {
+    await copy(lastScan);
+  });
+
+  // Simulate
+  let lastSim = "{ }";
+  const runSim = async () => {
+    statePill($("pillSim"), $("pillSimTxt"), null);
+    $("simLatency").textContent = "…";
+    $("simReqId").textContent = "…";
+    $("simJson").textContent = "{ }";
+
+    const ep = ($("simEp").value || "/api/simulate").trim();
+    const mint = ($("simMint").value || "").trim();
+
+    const payload = mint ? { mint } : { };
+
+    const r = await fetchJson(ep, {
+      method: "POST",
+      headers: { "content-type": "application/json", "cache-control":"no-store" },
+      body: JSON.stringify(payload)
+    });
+
+    $("simLatency").textContent = r.ms + "ms";
+    $("simReqId").textContent = r.reqId;
+
+    if (r.ok && r.data) {
+      statePill($("pillSim"), $("pillSimTxt"), "ok");
+      lastSim = pretty(r.data);
+      $("simJson").textContent = lastSim;
+    } else {
+      statePill($("pillSim"), $("pillSimTxt"), "bad");
+      const payload2 = r.data || { success:false, error:"Non-JSON response", status:r.status, body:r.errText || "" };
+      lastSim = pretty(payload2);
+      $("simJson").textContent = lastSim;
+    }
+  };
+
+  $("btnSim").addEventListener("click", runSim);
+  $("btnCopySim").addEventListener("click", async () => {
+    await copy(lastSim);
+  });
+
+  // auto-run health at open
+  runHealth();
+})();
+</script>
 </body>
 </html>
