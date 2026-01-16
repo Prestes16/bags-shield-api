@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#020617">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07122a" />
@@ -8,6 +11,7 @@
   <link rel="stylesheet" href="/app.css" />
 </head>
 <body>
+  <button id="btnMenu" class="twaMenuBtn" aria-label="Menu">☰</button>
   <div class="bg">
     <div class="radar" aria-hidden="true"></div>
     <div class="vignette" aria-hidden="true"></div>
@@ -36,7 +40,7 @@
       </div>
       <div class="splashTitle">Bags Shield</div>
       <div class="splashSub">Risk verification for Solana memecoins</div>
-      <div class="splashHint">Carregandoâ€¦</div>
+      <div class="splashHint">CarregandoÃ¢â‚¬Â¦</div>
     </div>
   </div>
 
@@ -70,7 +74,7 @@
             <button id="btnScan" class="btn primary">Scan</button>
           </div>
           <div class="hintRow">
-            <span class="hint" id="healthHint">API: checandoâ€¦</span>
+            <span class="hint" id="healthHint">API: checandoÃ¢â‚¬Â¦</span>
             <button id="btnDev" class="btn ghost tiny" title="Dev panel">Dev</button>
           </div>
         </div>
@@ -84,7 +88,7 @@
             <div class="recentList" id="recentList"></div>
             <div class="recentFoot">
               <div class="mini">Data freshness ~10s</div>
-              <div class="mini">Sources: Solana RPC Â· Bags API</div>
+              <div class="mini">Sources: Solana RPC Ã‚Â· Bags API</div>
               <div class="mini">Privacy: no personal data collected</div>
             </div>
           </div>
@@ -100,12 +104,12 @@
     <!-- REPORT -->
     <section class="screen hidden" id="screenReport">
       <div class="reportTop">
-        <button id="btnBack" class="btn icon" aria-label="Back">â€¹</button>
+        <button id="btnBack" class="btn icon" aria-label="Back">Ã¢â‚¬Â¹</button>
         <div class="rtTitle">
           <div class="rtMain">Bags Shield</div>
           <div class="rtSub" id="tokenSub">Token</div>
         </div>
-        <button id="btnShare" class="btn icon" aria-label="Share">â¤´</button>
+        <button id="btnShare" class="btn icon" aria-label="Share">Ã¢Â¤Â´</button>
       </div>
 
       <div class="reportHead glass">
@@ -113,7 +117,7 @@
           <div class="tokenIcon" id="tokenIcon"></div>
           <div class="tokenTxt">
             <div class="tokenName" id="tokenName">TOKEN</div>
-            <div class="tokenMint" id="tokenMint">mintâ€¦</div>
+            <div class="tokenMint" id="tokenMint">mintÃ¢â‚¬Â¦</div>
           </div>
           <div class="statusPill ok" id="reportState"><span class="dot"></span><span id="reportStateTxt">OK</span></div>
         </div>
@@ -140,13 +144,13 @@
         <button id="btnShare2" class="btn secondary wide">Share report</button>
       </div>
 
-      <div class="footNote">Data sources â€” Solana RPC Â· Bags API Â· No personal data collected</div>
+      <div class="footNote">Data sources Ã¢â‚¬â€ Solana RPC Ã‚Â· Bags API Ã‚Â· No personal data collected</div>
     </section>
 
     <!-- DEV PANEL (escondido) -->
     <section class="screen hidden" id="screenDev">
       <div class="devTop">
-        <button id="btnDevBack" class="btn icon" aria-label="Back">â€¹</button>
+        <button id="btnDevBack" class="btn icon" aria-label="Back">Ã¢â‚¬Â¹</button>
         <div class="rtTitle">
           <div class="rtMain">Developer</div>
           <div class="rtSub">Health / raw responses</div>
@@ -178,7 +182,7 @@
       <div class="sheetCard glass">
         <div class="sheetTop">
           <div class="sheetTitle" id="sheetTitle">Details</div>
-          <button class="btn icon" id="sheetClose" aria-label="Close">Ã—</button>
+          <button class="btn icon" id="sheetClose" aria-label="Close">Ãƒâ€”</button>
         </div>
         <div class="sheetBody" id="sheetBody"></div>
         <div class="sheetActions">
@@ -193,7 +197,7 @@
       <div class="modalCard glass">
         <div class="modalTop">
           <div class="modalTitle">Connect wallet</div>
-          <button class="btn icon" id="modalClose" aria-label="Close">Ã—</button>
+          <button class="btn icon" id="modalClose" aria-label="Close">Ãƒâ€”</button>
         </div>
 
         <div class="walletList">
@@ -203,7 +207,7 @@
               <span class="wName">Phantom</span>
               <span class="wSub">Recommended (works if provider is available)</span>
             </span>
-            <span class="wTag" id="tagPhantom">Detectingâ€¦</span>
+            <span class="wTag" id="tagPhantom">DetectingÃ¢â‚¬Â¦</span>
           </button>
 
           <button class="walletRow" data-wallet="solflare">
@@ -236,7 +240,7 @@
         </div>
 
         <div class="modalFoot mini">
-          Powered by provider (Phantom in-app) Â· MWA integration is our next step
+          Powered by provider (Phantom in-app) Ã‚Â· MWA integration is our next step
         </div>
       </div>
     </div>
@@ -352,7 +356,7 @@
         }));
       }
 
-      // fallback bonito (mock) quando o backend nÃ£o manda badges ainda
+      // fallback bonito (mock) quando o backend nÃƒÂ£o manda badges ainda
       return [
         { key:"liq",  title:"Liquidity Locked",  level:"ok",        details:"Liquidity appears locked or stable." },
         { key:"mint", title:"Mint Authority",    level:"ok",        details:"Mint authority looks renounced." },
@@ -489,7 +493,7 @@
         row.innerHTML = `
           <span class="rDot"></span>
           <span class="rMint mono">${escapeHtml(mint)}</span>
-          <span class="rGo">â€º</span>
+          <span class="rGo">Ã¢â‚¬Âº</span>
         `;
         row.addEventListener("click", () => {
           $("mintInput").value = mint;
@@ -515,7 +519,7 @@
     async function checkHealth(){
       const r = await API.get("/api/health");
       if (r.ok && r.json?.success){
-        $("healthHint").textContent = `API: OK Â· ${r.ms}ms`;
+        $("healthHint").textContent = `API: OK Ã‚Â· ${r.ms}ms`;
         return true;
       }
       $("healthHint").textContent = "API: offline / erro";
@@ -527,7 +531,7 @@
       if (!mint) { toast("Cole um mint primeiro."); return; }
 
       $("btnScan").disabled = true;
-      $("btnScan").textContent = "Scanningâ€¦";
+      $("btnScan").textContent = "ScanningÃ¢â‚¬Â¦";
 
       // tenta /api/v0/simulate -> fallback /api/simulate
       let r = await API.post("/api/v0/simulate", { mint });
@@ -543,9 +547,9 @@
 
       const env = r.json;
       const resp = env.response || {};
-      // score: tenta pegar do backend; se nÃ£o tiver, cria um "score" estÃ¡vel pro demo
+      // score: tenta pegar do backend; se nÃƒÂ£o tiver, cria um "score" estÃƒÂ¡vel pro demo
       const score = Number(resp.shieldScore ?? resp.score ?? resp.totalScore ?? 0) || 0;
-      const finalScore = score > 0 ? score : 80; // fallback demo (pra UI nÃ£o ficar vazia)
+      const finalScore = score > 0 ? score : 80; // fallback demo (pra UI nÃƒÂ£o ficar vazia)
       const grade = gradeFromScore(finalScore);
       const badges = normalizeBadges(resp);
 
@@ -556,7 +560,7 @@
       // render report
       $("tokenName").textContent = "TOKEN";
       $("tokenMint").textContent = mint;
-      $("tokenSub").textContent = mint.slice(0,4) + "â€¦" + mint.slice(-4);
+      $("tokenSub").textContent = mint.slice(0,4) + "Ã¢â‚¬Â¦" + mint.slice(-4);
       setGauge(finalScore);
       renderBadges(badges);
 
@@ -580,8 +584,8 @@
       const last = loadLast();
       if (!last){ toast("No last report yet."); return; }
       $("mintInput").value = last.mint || "";
-      $("tokenMint").textContent = last.mint || "mintâ€¦";
-      $("tokenSub").textContent = (last.mint||"").slice(0,4) + "â€¦" + (last.mint||"").slice(-4);
+      $("tokenMint").textContent = last.mint || "mintÃ¢â‚¬Â¦";
+      $("tokenSub").textContent = (last.mint||"").slice(0,4) + "Ã¢â‚¬Â¦" + (last.mint||"").slice(-4);
       setGauge(Number(last.finalScore||0));
       renderBadges(last.badges || []);
       go("screenReport");
@@ -651,5 +655,26 @@
       }, 900);
     })();
   </script>
+  <script type="module" src="/app.js"></script>
+
+  <div id="menuOverlay" class="twaOverlay hidden" role="dialog" aria-modal="true">
+    <div class="twaSheet" role="document">
+      <div class="twaSheetTop">
+        <div class="twaSheetTitle">Bags Shield</div>
+        <button id="btnCloseMenu" class="twaIconBtn" aria-label="Close">✕</button>
+      </div>
+
+      <button class="twaMenuItem" data-nav="home" data-i18n="navHome">Home</button>
+      <button class="twaMenuItem" data-nav="report" data-i18n="navReport">Report</button>
+      <button class="twaMenuItem" data-nav="dev" data-i18n="navDev">Dev</button>
+
+      <div class="twaDivider"></div>
+
+      <div class="twaRow">
+        <button id="langEN" class="twaChip">EN</button>
+        <button id="langPT" class="twaChip">PT-BR</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

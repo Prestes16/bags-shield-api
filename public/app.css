@@ -656,3 +656,57 @@ body{
   .h1{ font-size: 40px; }
   .badgeGrid{ grid-template-columns: 1fr; }
 }
+
+/* --- TWA fallback: menu button + overlay (safe to keep) --- */
+.twaMenuBtn{
+  position: fixed; top: 14px; right: 14px; z-index: 9999;
+  width: 44px; height: 44px; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(2,6,23,.55);
+  color: rgba(255,255,255,.92);
+  backdrop-filter: blur(10px);
+}
+.twaOverlay{
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: end center;
+  padding: 18px;
+}
+.twaOverlay.hidden{ display:none; }
+.twaSheet{
+  width: min(520px, 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(2,6,23,.80);
+  box-shadow: 0 20px 80px rgba(0,0,0,.55);
+  padding: 14px;
+}
+.twaSheetTop{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 6px 6px 10px; }
+.twaSheetTitle{ font-weight: 700; letter-spacing:.02em; color: rgba(255,255,255,.92); }
+.twaIconBtn{
+  width: 40px; height: 40px; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.92);
+}
+.twaMenuItem{
+  width: 100%;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.05);
+  padding: 14px 12px;
+  margin: 8px 0;
+  color: rgba(255,255,255,.92);
+}
+.twaDivider{ height:1px; background: rgba(255,255,255,.10); margin: 10px 0; }
+.twaRow{ display:flex; gap:10px; justify-content:flex-end; padding-top: 6px; }
+.twaChip{
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  padding: 10px 12px;
+  color: rgba(255,255,255,.92);
+}
+/* --- end --- */
