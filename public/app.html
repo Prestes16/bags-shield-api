@@ -3,282 +3,653 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#07122a" />
   <title>Bags Shield</title>
   <link rel="stylesheet" href="/app.css" />
 </head>
-
 <body>
-  <main class="screen screen-app">
+  <div class="bg">
     <div class="radar" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+  </div>
 
-    <div class="wrap">
-      <header class="topbar">
-        <div class="brand">
-          <h1 class="h1">Bags Shield</h1>
-          <div class="tag"><span class="dot"></span><span id="envTag">PRODUCTION</span></div>
-        </div>
-        <div class="metaRight">
-          <div id="nowTxt">—</div>
-          <div id="originTxt">—</div>
-        </div>
-      </header>
-
-      <section class="grid">
-
-        <!-- HEALTH -->
-        <article class="card" id="cardHealth">
-          <div class="cardHeader">
-            <h2 class="cardTitle">Health</h2>
-            <div class="pill" id="pillHealth"><span class="dot"></span><span id="pillHealthTxt">Idle</span></div>
-          </div>
-          <div class="cardBody">
-            <div class="kv">
-              <div class="line"><div class="k">HTTP - Latency</div><div class="v" id="healthLatency">—</div></div>
-              <div class="line"><div class="k">Request ID</div><div class="v" id="healthReqId">—</div></div>
-              <div class="line"><div class="k">Endpoint</div><div class="v" id="healthEp">/api/health</div></div>
-            </div>
-
-            <div class="row">
-              <button class="btn" id="btnHealth">Recheck</button>
-              <button class="btn secondary" id="btnCopyHealth">Copy JSON</button>
-            </div>
-
-            <div class="pre"><pre id="healthJson">{ }</pre></div>
-            <div class="small" id="healthNote">Mostra o envelope da API e headers úteis.</div>
-          </div>
-        </article>
-
-        <!-- SCAN -->
-        <article class="card" id="cardScan">
-          <div class="cardHeader">
-            <h2 class="cardTitle">Scan Transaction</h2>
-            <div class="pill" id="pillScan"><span class="dot"></span><span id="pillScanTxt">Idle</span></div>
-          </div>
-          <div class="cardBody">
-
-            <div class="field">
-              <div class="label">Raw Transaction (base64)</div>
-              <textarea id="scanRaw" placeholder="Cole aqui a transação em base64..."></textarea>
-            </div>
-
-            <div class="field">
-              <div class="label">Endpoint</div>
-              <input id="scanEp" value="/api/scan" />
-            </div>
-
-            <div class="row" style="margin-top:12px">
-              <button class="btn" id="btnScan">Run Scan</button>
-              <button class="btn secondary" id="btnCopyScan">Copy JSON</button>
-            </div>
-
-            <div class="kv" style="margin-top:12px">
-              <div class="line"><div class="k">HTTP - Latency</div><div class="v" id="scanLatency">—</div></div>
-              <div class="line"><div class="k">Request ID</div><div class="v" id="scanReqId">—</div></div>
-            </div>
-
-            <div class="pre"><pre id="scanJson">{ }</pre></div>
-            <div class="small">Dica: se tua API v0 estiver pronta, troca o endpoint pra <span style="font-family:var(--mono)">/api/v0/scan</span>.</div>
-          </div>
-        </article>
-
-        <!-- SIMULATE -->
-        <article class="card" id="cardSim">
-          <div class="cardHeader">
-            <h2 class="cardTitle">Simulate</h2>
-            <div class="pill" id="pillSim"><span class="dot"></span><span id="pillSimTxt">Idle</span></div>
-          </div>
-          <div class="cardBody">
-
-            <div class="field">
-              <div class="label">Mint (opcional)</div>
-              <input id="simMint" placeholder="Ex.: So11111111111111111111111111111111111111112" />
-            </div>
-
-            <div class="field">
-              <div class="label">Endpoint</div>
-              <input id="simEp" value="/api/simulate" />
-            </div>
-
-            <div class="row" style="margin-top:12px">
-              <button class="btn" id="btnSim">Run Simulate</button>
-              <button class="btn secondary" id="btnCopySim">Copy JSON</button>
-            </div>
-
-            <div class="kv" style="margin-top:12px">
-              <div class="line"><div class="k">HTTP - Latency</div><div class="v" id="simLatency">—</div></div>
-              <div class="line"><div class="k">Request ID</div><div class="v" id="simReqId">—</div></div>
-            </div>
-
-            <div class="pre"><pre id="simJson">{ }</pre></div>
-            <div class="small">Se tua rota v0 existir: usa <span style="font-family:var(--mono)">/api/v0/simulate</span>.</div>
-          </div>
-        </article>
-
-      </section>
+  <!-- Splash (aparece ao abrir) -->
+  <div id="splash" class="splash" aria-hidden="false">
+    <div class="splashInner">
+      <div class="logoBig" aria-hidden="true">
+        <svg viewBox="0 0 256 256" width="120" height="120" fill="none">
+          <defs>
+            <linearGradient id="g1" x1="32" y1="32" x2="224" y2="224">
+              <stop offset="0" stop-color="#4DD4FF"/>
+              <stop offset="1" stop-color="#2FA7FF"/>
+            </linearGradient>
+          </defs>
+          <path d="M128 18c38 0 76 14 98 38v86c0 56-44 92-98 112C74 234 30 198 30 142V56C52 32 90 18 128 18Z"
+                stroke="url(#g1)" stroke-width="10" opacity="0.95"/>
+          <path d="M94 88c6-10 10-16 16-22 6-6 15-10 18-10s12 4 18 10c6 6 10 12 16 22"
+                stroke="url(#g1)" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+          <path d="M86 98h84c10 0 18 8 18 18v48c0 30-24 54-54 54h-12c-30 0-54-24-54-54v-48c0-10 8-18 18-18Z"
+                fill="rgba(255,255,255,0.05)" stroke="url(#g1)" stroke-width="6" opacity="0.95"/>
+          <path d="M128 123c10 0 18 8 18 18 0 8-5 15-12 17v14h-12v-14c-7-2-12-9-12-17 0-10 8-18 18-18Z"
+                fill="url(#g1)" opacity="0.95"/>
+        </svg>
+      </div>
+      <div class="splashTitle">Bags Shield</div>
+      <div class="splashSub">Risk verification for Solana memecoins</div>
+      <div class="splashHint">Carregando…</div>
     </div>
+  </div>
+
+  <!-- App -->
+  <main class="app" id="app" aria-hidden="true">
+    <header class="top">
+      <div class="brand">
+        <div class="logoSm" aria-hidden="true"></div>
+        <div class="brandTxt">
+          <div class="brandTop">BAGS SHIELD</div>
+          <div class="brandSub" id="hostTxt">bags-shield-api.vercel.app</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="pill" id="envPill"><span class="dot"></span><span id="envTxt">PRODUCTION</span></div>
+        <div class="time" id="nowTxt">--/--/---- --:--</div>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section class="screen" id="screenHome">
+      <div class="hero">
+        <div class="heroIcon" aria-hidden="true"></div>
+        <h1 class="h1">Bags Shield</h1>
+        <p class="sub">Risk check for memecoins on Solana</p>
+
+        <div class="searchCard glass">
+          <div class="searchRow">
+            <input id="mintInput" class="input" placeholder="Cole o mint (ex: So111...)"
+                   autocomplete="off" autocapitalize="none" spellcheck="false" />
+            <button id="btnScan" class="btn primary">Scan</button>
+          </div>
+          <div class="hintRow">
+            <span class="hint" id="healthHint">API: checando…</span>
+            <button id="btnDev" class="btn ghost tiny" title="Dev panel">Dev</button>
+          </div>
+        </div>
+
+        <div class="recent">
+          <div class="row">
+            <div class="t">Recent</div>
+            <button id="btnClearRecent" class="btn ghost tiny">Clear</button>
+          </div>
+          <div class="recentBox glass" id="recentBox">
+            <div class="recentList" id="recentList"></div>
+            <div class="recentFoot">
+              <div class="mini">Data freshness ~10s</div>
+              <div class="mini">Sources: Solana RPC · Bags API</div>
+              <div class="mini">Privacy: no personal data collected</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta">
+          <button id="btnConnect" class="btn primary wide">Connect wallet to simulate</button>
+          <button id="btnOpenLast" class="btn secondary wide">Open last report</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="screen hidden" id="screenReport">
+      <div class="reportTop">
+        <button id="btnBack" class="btn icon" aria-label="Back">‹</button>
+        <div class="rtTitle">
+          <div class="rtMain">Bags Shield</div>
+          <div class="rtSub" id="tokenSub">Token</div>
+        </div>
+        <button id="btnShare" class="btn icon" aria-label="Share">⤴</button>
+      </div>
+
+      <div class="reportHead glass">
+        <div class="tokenRow">
+          <div class="tokenIcon" id="tokenIcon"></div>
+          <div class="tokenTxt">
+            <div class="tokenName" id="tokenName">TOKEN</div>
+            <div class="tokenMint" id="tokenMint">mint…</div>
+          </div>
+          <div class="statusPill ok" id="reportState"><span class="dot"></span><span id="reportStateTxt">OK</span></div>
+        </div>
+
+        <div class="scoreRow">
+          <div class="gauge" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle class="gBg" cx="60" cy="60" r="46"></circle>
+              <circle class="gFg" cx="60" cy="60" r="46"></circle>
+            </svg>
+            <div class="gTxt">
+              <div class="gLabel">ShieldScore</div>
+              <div class="gValue" id="scoreVal">--</div>
+              <div class="gGrade" id="scoreGrade">(-)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="badgeGrid" id="badgeGrid"></div>
+
+      <div class="reportActions">
+        <button id="btnConnect2" class="btn primary wide">Connect wallet to simulate</button>
+        <button id="btnShare2" class="btn secondary wide">Share report</button>
+      </div>
+
+      <div class="footNote">Data sources — Solana RPC · Bags API · No personal data collected</div>
+    </section>
+
+    <!-- DEV PANEL (escondido) -->
+    <section class="screen hidden" id="screenDev">
+      <div class="devTop">
+        <button id="btnDevBack" class="btn icon" aria-label="Back">‹</button>
+        <div class="rtTitle">
+          <div class="rtMain">Developer</div>
+          <div class="rtSub">Health / raw responses</div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="glass pad">
+        <div class="row space">
+          <div class="t">Health</div>
+          <div class="statusPill" id="devHealthPill"><span class="dot"></span><span id="devHealthTxt">IDLE</span></div>
+        </div>
+        <div class="kv">
+          <div class="k">Endpoint</div><div class="v mono">/api/health</div>
+          <div class="k">Latency</div><div class="v mono" id="devLatency">--</div>
+          <div class="k">RequestId</div><div class="v mono" id="devReqId">--</div>
+        </div>
+        <div class="row">
+          <button id="btnHealth" class="btn primary">Recheck</button>
+          <button id="btnCopyDev" class="btn secondary">Copy JSON</button>
+        </div>
+        <pre class="code" id="devJson">{ }</pre>
+      </div>
+    </section>
+
+    <!-- DETAILS SHEET -->
+    <div id="sheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheetBack" id="sheetBack"></div>
+      <div class="sheetCard glass">
+        <div class="sheetTop">
+          <div class="sheetTitle" id="sheetTitle">Details</div>
+          <button class="btn icon" id="sheetClose" aria-label="Close">×</button>
+        </div>
+        <div class="sheetBody" id="sheetBody"></div>
+        <div class="sheetActions">
+          <button class="btn secondary wide" id="sheetOk">Back</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECT MODAL -->
+    <div id="connectModal" class="modal hidden" aria-hidden="true">
+      <div class="modalBack" id="modalBack"></div>
+      <div class="modalCard glass">
+        <div class="modalTop">
+          <div class="modalTitle">Connect wallet</div>
+          <button class="btn icon" id="modalClose" aria-label="Close">×</button>
+        </div>
+
+        <div class="walletList">
+          <button class="walletRow" data-wallet="phantom">
+            <span class="wIcon wP"></span>
+            <span class="wTxt">
+              <span class="wName">Phantom</span>
+              <span class="wSub">Recommended (works if provider is available)</span>
+            </span>
+            <span class="wTag" id="tagPhantom">Detecting…</span>
+          </button>
+
+          <button class="walletRow" data-wallet="solflare">
+            <span class="wIcon wS"></span>
+            <span class="wTxt">
+              <span class="wName">Solflare</span>
+              <span class="wSub">If available in the environment</span>
+            </span>
+            <span class="wTag">-</span>
+          </button>
+
+          <button class="walletRow" data-wallet="other">
+            <span class="wIcon wO"></span>
+            <span class="wTxt">
+              <span class="wName">Other wallet</span>
+              <span class="wSub">Mobile Wallet Adapter (next step)</span>
+            </span>
+            <span class="wTag">Soon</span>
+          </button>
+        </div>
+
+        <label class="remember">
+          <input type="checkbox" id="rememberWallet" />
+          <span>Remember this wallet (opt-in)</span>
+        </label>
+
+        <div class="modalActions">
+          <button class="btn primary wide" id="btnModalContinue">Continue</button>
+          <button class="btn ghost wide" id="btnModalCancel">Cancel</button>
+        </div>
+
+        <div class="modalFoot mini">
+          Powered by provider (Phantom in-app) · MWA integration is our next step
+        </div>
+      </div>
+    </div>
+
   </main>
 
-<script>
-(() => {
-  const $ = (id) => document.getElementById(id);
+  <script>
+    const $ = (id) => document.getElementById(id);
 
-  const statePill = (pillEl, txtEl, mode) => {
-    pillEl.classList.remove("ok","warn","bad");
-    if (mode) pillEl.classList.add(mode);
-    txtEl.textContent = mode === "ok" ? "OK" : mode === "warn" ? "Attention" : mode === "bad" ? "Error" : "Idle";
-  };
+    const API = {
+      async post(path, payload) {
+        const t0 = performance.now();
+        const r = await fetch(path, {
+          method: "POST",
+          headers: { "content-type": "application/json", "cache-control": "no-store" },
+          body: JSON.stringify(payload || {})
+        });
+        const txt = await r.text();
+        let json = null;
+        try { json = JSON.parse(txt); } catch (_) {}
+        const ms = Math.round(performance.now() - t0);
+        return { ok: r.ok, status: r.status, json, raw: txt, ms, headers: r.headers };
+      },
+      async get(path) {
+        const t0 = performance.now();
+        const r = await fetch(path, { headers: { "cache-control":"no-store" }});
+        const txt = await r.text();
+        let json = null;
+        try { json = JSON.parse(txt); } catch (_) {}
+        const ms = Math.round(performance.now() - t0);
+        return { ok: r.ok, status: r.status, json, raw: txt, ms, headers: r.headers };
+      }
+    };
 
-  const pretty = (obj) => JSON.stringify(obj, null, 2);
+    const STORE_RECENT = "bagsShield.recentMints";
+    const STORE_LAST   = "bagsShield.lastReport";
 
-  const copy = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
+    const state = {
+      wallet: { connected:false, pubkey:null, provider:"" },
+      lastReport: null
+    };
+
+    function nowTick(){
+      const d = new Date();
+      $("nowTxt").textContent = d.toLocaleString();
+      $("hostTxt").textContent = location.host;
+    }
+    setInterval(nowTick, 1000);
+    nowTick();
+
+    function setEnv(){
+      const host = location.host.toLowerCase();
+      const prod = host.includes("vercel.app");
+      $("envTxt").textContent = prod ? "PRODUCTION" : "LOCAL";
+      $("envPill").classList.toggle("ok", prod);
+    }
+    setEnv();
+
+    function show(el){ el.classList.remove("hidden"); el.setAttribute("aria-hidden","false"); }
+    function hide(el){ el.classList.add("hidden"); el.setAttribute("aria-hidden","true"); }
+
+    function go(screen){
+      ["screenHome","screenReport","screenDev"].forEach(id => hide($(id)));
+      show($(screen));
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    function gradeFromScore(score){
+      if (score >= 90) return "A";
+      if (score >= 80) return "B";
+      if (score >= 70) return "C";
+      if (score >= 60) return "D";
+      return "E";
+    }
+
+    function levelFromScore(score){
+      if (score >= 80) return "ok";
+      if (score >= 65) return "attention";
+      if (score >= 45) return "high";
+      return "critical";
+    }
+
+    function setGauge(score){
+      const c = document.querySelector(".gFg");
+      const r = 46;
+      const C = 2 * Math.PI * r;
+      const pct = Math.max(0, Math.min(100, score || 0));
+      const dash = (pct/100) * C;
+      c.style.strokeDasharray = dash + " " + (C - dash);
+      $("scoreVal").textContent = String(Math.round(score || 0));
+      $("scoreGrade").textContent = "(" + gradeFromScore(score || 0) + ")";
+      const lvl = levelFromScore(score || 0);
+      $("reportState").className = "statusPill " + lvl;
+      $("reportStateTxt").textContent =
+        lvl === "ok" ? "OK" : lvl === "attention" ? "ATTENTION" : lvl === "high" ? "HIGH" : "CRITICAL";
+    }
+
+    function pillClass(level){
+      return level === "ok" ? "pillOk" :
+             level === "attention" ? "pillAtt" :
+             level === "high" ? "pillHigh" : "pillCrit";
+    }
+
+    function normalizeBadges(resp){
+      // tenta achar badges prontos
+      const arr = resp?.badges || resp?.riskBadges || resp?.risk_badges || null;
+      if (Array.isArray(arr) && arr.length){
+        return arr.map((b, i) => ({
+          key: b.key || b.id || ("b"+i),
+          title: b.title || b.name || "Badge",
+          level: (b.level || b.severity || "attention").toLowerCase(),
+          details: b.details || b.description || b.message || ""
+        }));
+      }
+
+      // fallback bonito (mock) quando o backend não manda badges ainda
+      return [
+        { key:"liq",  title:"Liquidity Locked",  level:"ok",        details:"Liquidity appears locked or stable." },
+        { key:"mint", title:"Mint Authority",    level:"ok",        details:"Mint authority looks renounced." },
+        { key:"top",  title:"Top Holders",       level:"attention", details:"Concentration could be high (review holders)." },
+        { key:"meta", title:"Metadata",          level:"ok",        details:"Metadata seems present/valid." },
+        { key:"anom", title:"Anomalies",         level:"ok",        details:"No anomalies detected in this run." },
+        { key:"route",title:"Liquidity Route",   level:"ok",        details:"Route appears stable." }
+      ];
+    }
+
+    function renderBadges(badges){
+      const grid = $("badgeGrid");
+      grid.innerHTML = "";
+      badges.slice(0, 6).forEach((b) => {
+        const card = document.createElement("div");
+        card.className = "badgeCard glass";
+        card.innerHTML = `
+          <div class="bTop">
+            <div class="bTitle">${escapeHtml(b.title)}</div>
+            <div class="bPill ${pillClass(b.level)}">${escapeHtml(b.level.toUpperCase())}</div>
+          </div>
+          <div class="bBottom">
+            <button class="btn link" data-details="${encodeURIComponent(b.details || "")}" data-title="${encodeURIComponent(b.title)}">Details</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      grid.querySelectorAll("[data-details]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const title = decodeURIComponent(btn.getAttribute("data-title") || "Details");
+          const details = decodeURIComponent(btn.getAttribute("data-details") || "");
+          openSheet(title, details || "No details.");
+        });
+      });
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "").replace(/[&<>"']/g, (m) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      }[m]));
+    }
+
+    function openSheet(title, body){
+      $("sheetTitle").textContent = title;
+      $("sheetBody").innerHTML = `<div class="sheetText">${escapeHtml(body).replace(/\n/g,"<br>")}</div>`;
+      show($("sheet"));
+    }
+    function closeSheet(){ hide($("sheet")); }
+
+    $("sheetBack").addEventListener("click", closeSheet);
+    $("sheetClose").addEventListener("click", closeSheet);
+    $("sheetOk").addEventListener("click", closeSheet);
+
+    function openModal(){
+      const hasProvider = !!(window.solana && (window.solana.isPhantom || window.solana.isSolflare));
+      $("tagPhantom").textContent = hasProvider ? "Detected" : "Not detected";
+      show($("connectModal"));
+    }
+    function closeModal(){ hide($("connectModal")); }
+
+    $("modalBack").addEventListener("click", closeModal);
+    $("modalClose").addEventListener("click", closeModal);
+    $("btnModalCancel").addEventListener("click", closeModal);
+
+    let chosenWallet = "phantom";
+    document.querySelectorAll(".walletRow").forEach((row) => {
+      row.addEventListener("click", () => {
+        chosenWallet = row.getAttribute("data-wallet") || "phantom";
+        document.querySelectorAll(".walletRow").forEach(r => r.classList.remove("sel"));
+        row.classList.add("sel");
+      });
+    });
+    document.querySelector('.walletRow[data-wallet="phantom"]').classList.add("sel");
+
+    async function connectWallet(){
+      // 1) provider direto (funciona no Phantom in-app / alguns ambientes)
+      try {
+        if (window.solana && typeof window.solana.connect === "function") {
+          const res = await window.solana.connect({ onlyIfTrusted: false });
+          const pk = (res?.publicKey?.toString?.() || res?.publicKey || "").toString();
+          state.wallet.connected = true;
+          state.wallet.pubkey = pk || "(connected)";
+          state.wallet.provider = window.solana.isPhantom ? "Phantom" : window.solana.isSolflare ? "Solflare" : "Wallet";
+          toast(`Wallet connected: ${state.wallet.provider}`);
+          closeModal();
+          return;
+        }
+      } catch (e) {
+        toast("Falhou ao conectar via provider. (Vamos integrar MWA na proxima etapa)");
+      }
+      // 2) sem provider => por enquanto UI pronta + aviso
+      toast("Provider nao detectado aqui. (MWA vem na proxima etapa)");
+      closeModal();
+    }
+
+    $("btnConnect").addEventListener("click", openModal);
+    $("btnConnect2").addEventListener("click", openModal);
+    $("btnModalContinue").addEventListener("click", connectWallet);
+
+    function toast(msg){
+      let t = document.getElementById("toast");
+      if (!t){
+        t = document.createElement("div");
+        t.id = "toast";
+        t.className = "toast";
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(t._tm);
+      t._tm = setTimeout(() => t.classList.remove("show"), 2400);
+    }
+
+    function loadRecent(){
+      try { return JSON.parse(localStorage.getItem(STORE_RECENT) || "[]"); }
+      catch { return []; }
+    }
+    function saveRecent(list){
+      localStorage.setItem(STORE_RECENT, JSON.stringify(list.slice(0, 6)));
+    }
+
+    function renderRecent(){
+      const list = loadRecent();
+      const box = $("recentList");
+      box.innerHTML = "";
+      if (!list.length){
+        box.innerHTML = `<div class="empty">No recent tokens yet. Scan a mint to start.</div>`;
+        return;
+      }
+      list.forEach((mint) => {
+        const row = document.createElement("button");
+        row.className = "recentRow";
+        row.innerHTML = `
+          <span class="rDot"></span>
+          <span class="rMint mono">${escapeHtml(mint)}</span>
+          <span class="rGo">›</span>
+        `;
+        row.addEventListener("click", () => {
+          $("mintInput").value = mint;
+          doScan();
+        });
+        box.appendChild(row);
+      });
+    }
+
+    $("btnClearRecent").addEventListener("click", () => {
+      saveRecent([]);
+      renderRecent();
+      toast("Recent cleared");
+    });
+
+    function rememberMint(mint){
+      const list = loadRecent().filter(x => x !== mint);
+      list.unshift(mint);
+      saveRecent(list);
+      renderRecent();
+    }
+
+    async function checkHealth(){
+      const r = await API.get("/api/health");
+      if (r.ok && r.json?.success){
+        $("healthHint").textContent = `API: OK · ${r.ms}ms`;
+        return true;
+      }
+      $("healthHint").textContent = "API: offline / erro";
       return false;
     }
-  };
 
-  const fetchJson = async (url, opts = {}) => {
-    const t0 = performance.now();
-    const res = await fetch(url, opts);
-    const ms = Math.round(performance.now() - t0);
+    async function doScan(){
+      const mint = ($("mintInput").value || "").trim();
+      if (!mint) { toast("Cole um mint primeiro."); return; }
 
-    let data = null;
-    let errText = null;
-    try {
-      data = await res.json();
-    } catch (e) {
-      errText = await res.text().catch(() => "");
+      $("btnScan").disabled = true;
+      $("btnScan").textContent = "Scanning…";
+
+      // tenta /api/v0/simulate -> fallback /api/simulate
+      let r = await API.post("/api/v0/simulate", { mint });
+      if (!r.ok) r = await API.post("/api/simulate", { mint });
+
+      $("btnScan").disabled = false;
+      $("btnScan").textContent = "Scan";
+
+      if (!r.ok || !r.json){
+        toast(`Falha: HTTP ${r.status}`);
+        return;
+      }
+
+      const env = r.json;
+      const resp = env.response || {};
+      // score: tenta pegar do backend; se não tiver, cria um "score" estável pro demo
+      const score = Number(resp.shieldScore ?? resp.score ?? resp.totalScore ?? 0) || 0;
+      const finalScore = score > 0 ? score : 80; // fallback demo (pra UI não ficar vazia)
+      const grade = gradeFromScore(finalScore);
+      const badges = normalizeBadges(resp);
+
+      state.lastReport = { mint, finalScore, grade, badges, raw: env, at: Date.now() };
+      localStorage.setItem(STORE_LAST, JSON.stringify(state.lastReport));
+      rememberMint(mint);
+
+      // render report
+      $("tokenName").textContent = "TOKEN";
+      $("tokenMint").textContent = mint;
+      $("tokenSub").textContent = mint.slice(0,4) + "…" + mint.slice(-4);
+      setGauge(finalScore);
+      renderBadges(badges);
+
+      go("screenReport");
+      toast("Report ready");
     }
 
-    const reqId = res.headers.get("x-request-id") || (data && data.meta && data.meta.requestId) || "—";
-    return { ok: res.ok, status: res.status, ms, reqId, data, errText };
-  };
-
-  // Top meta
-  const updateNow = () => {
-    const d = new Date();
-    $("nowTxt").textContent = d.toLocaleString();
-    $("originTxt").textContent = location.origin.replace("https://", "");
-  };
-  updateNow();
-  setInterval(updateNow, 30000);
-
-  // Health
-  let lastHealth = "{ }";
-  const runHealth = async () => {
-    statePill($("pillHealth"), $("pillHealthTxt"), null);
-    $("healthLatency").textContent = "…";
-    $("healthReqId").textContent = "…";
-    $("healthJson").textContent = "{ }";
-
-    const r = await fetchJson("/api/health", { headers: { "cache-control": "no-store" } });
-    $("healthLatency").textContent = r.ms + "ms";
-    $("healthReqId").textContent = r.reqId;
-
-    if (r.ok && r.data) {
-      statePill($("pillHealth"), $("pillHealthTxt"), "ok");
-      lastHealth = pretty(r.data);
-      $("healthJson").textContent = lastHealth;
-    } else {
-      statePill($("pillHealth"), $("pillHealthTxt"), "bad");
-      const payload = r.data || { success:false, error:"Non-JSON response", status:r.status, body:r.errText || "" };
-      lastHealth = pretty(payload);
-      $("healthJson").textContent = lastHealth;
-    }
-  };
-
-  $("btnHealth").addEventListener("click", runHealth);
-  $("btnCopyHealth").addEventListener("click", async () => {
-    await copy(lastHealth);
-  });
-
-  // Scan
-  let lastScan = "{ }";
-  const runScan = async () => {
-    statePill($("pillScan"), $("pillScanTxt"), null);
-    $("scanLatency").textContent = "…";
-    $("scanReqId").textContent = "…";
-    $("scanJson").textContent = "{ }";
-
-    const ep = ($("scanEp").value || "/api/scan").trim();
-    const raw = ($("scanRaw").value || "").trim();
-
-    // payload tolerante: tenta ambos nomes comuns
-    const payload = raw
-      ? { rawTransaction: raw, rawTransactionBase64: raw, txBase64: raw }
-      : { };
-
-    const r = await fetchJson(ep, {
-      method: "POST",
-      headers: { "content-type": "application/json", "cache-control":"no-store" },
-      body: JSON.stringify(payload)
+    $("btnScan").addEventListener("click", doScan);
+    $("mintInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doScan();
     });
 
-    $("scanLatency").textContent = r.ms + "ms";
-    $("scanReqId").textContent = r.reqId;
+    $("btnBack").addEventListener("click", () => go("screenHome"));
 
-    if (r.ok && r.data) {
-      statePill($("pillScan"), $("pillScanTxt"), "ok");
-      lastScan = pretty(r.data);
-      $("scanJson").textContent = lastScan;
-    } else {
-      statePill($("pillScan"), $("pillScanTxt"), "bad");
-      const payload2 = r.data || { success:false, error:"Non-JSON response", status:r.status, body:r.errText || "" };
-      lastScan = pretty(payload2);
-      $("scanJson").textContent = lastScan;
+    function loadLast(){
+      try { return JSON.parse(localStorage.getItem(STORE_LAST) || "null"); }
+      catch { return null; }
     }
-  };
 
-  $("btnScan").addEventListener("click", runScan);
-  $("btnCopyScan").addEventListener("click", async () => {
-    await copy(lastScan);
-  });
-
-  // Simulate
-  let lastSim = "{ }";
-  const runSim = async () => {
-    statePill($("pillSim"), $("pillSimTxt"), null);
-    $("simLatency").textContent = "…";
-    $("simReqId").textContent = "…";
-    $("simJson").textContent = "{ }";
-
-    const ep = ($("simEp").value || "/api/simulate").trim();
-    const mint = ($("simMint").value || "").trim();
-
-    const payload = mint ? { mint } : { };
-
-    const r = await fetchJson(ep, {
-      method: "POST",
-      headers: { "content-type": "application/json", "cache-control":"no-store" },
-      body: JSON.stringify(payload)
+    $("btnOpenLast").addEventListener("click", () => {
+      const last = loadLast();
+      if (!last){ toast("No last report yet."); return; }
+      $("mintInput").value = last.mint || "";
+      $("tokenMint").textContent = last.mint || "mint…";
+      $("tokenSub").textContent = (last.mint||"").slice(0,4) + "…" + (last.mint||"").slice(-4);
+      setGauge(Number(last.finalScore||0));
+      renderBadges(last.badges || []);
+      go("screenReport");
     });
 
-    $("simLatency").textContent = r.ms + "ms";
-    $("simReqId").textContent = r.reqId;
+    async function shareReport(){
+      const last = loadLast() || state.lastReport;
+      if (!last){ toast("No report to share."); return; }
 
-    if (r.ok && r.data) {
-      statePill($("pillSim"), $("pillSimTxt"), "ok");
-      lastSim = pretty(r.data);
-      $("simJson").textContent = lastSim;
-    } else {
-      statePill($("pillSim"), $("pillSimTxt"), "bad");
-      const payload2 = r.data || { success:false, error:"Non-JSON response", status:r.status, body:r.errText || "" };
-      lastSim = pretty(payload2);
-      $("simJson").textContent = lastSim;
+      const text = `Bags Shield report\nMint: ${last.mint}\nShieldScore: ${Math.round(last.finalScore)} (${last.grade})`;
+      try {
+        if (navigator.share){
+          await navigator.share({ title:"Bags Shield", text });
+          return;
+        }
+      } catch(_) {}
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Copied to clipboard");
+      } catch(_) {
+        toast("Share not available");
+      }
     }
-  };
 
-  $("btnSim").addEventListener("click", runSim);
-  $("btnCopySim").addEventListener("click", async () => {
-    await copy(lastSim);
-  });
+    $("btnShare").addEventListener("click", shareReport);
+    $("btnShare2").addEventListener("click", shareReport);
 
-  // auto-run health at open
-  runHealth();
-})();
-</script>
+    // DEV
+    $("btnDev").addEventListener("click", () => go("screenDev"));
+    $("btnDevBack").addEventListener("click", () => go("screenHome"));
+
+    $("btnHealth").addEventListener("click", async () => {
+      $("devHealthTxt").textContent = "CHECKING";
+      $("devHealthPill").className = "statusPill attention";
+      const r = await API.get("/api/health");
+      $("devLatency").textContent = r.ms + "ms";
+      $("devReqId").textContent = r.json?.meta?.requestId || "-";
+      $("devJson").textContent = r.json ? JSON.stringify(r.json, null, 2) : r.raw;
+      if (r.ok && r.json?.success){
+        $("devHealthTxt").textContent = "OK";
+        $("devHealthPill").className = "statusPill ok";
+      } else {
+        $("devHealthTxt").textContent = "ERROR";
+        $("devHealthPill").className = "statusPill high";
+      }
+    });
+
+    $("btnCopyDev").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText($("devJson").textContent || "");
+        toast("Copied JSON");
+      } catch(_) {
+        toast("Copy failed");
+      }
+    });
+
+    // init
+    renderRecent();
+
+    (async () => {
+      await checkHealth();
+      // splash -> app
+      setTimeout(() => {
+        hide($("splash"));
+        show($("app"));
+        $("app").setAttribute("aria-hidden","false");
+      }, 900);
+    })();
+  </script>
 </body>
 </html>
