@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "node:crypto";
-import { setCors, noStore } from "../../lib/cors";
+import { setCors, noStore } from '.js';
 
 const BAGS_API_BASE =
   process.env.BAGS_API_BASE || "https://public-api-v2.bags.fm/api/v1";

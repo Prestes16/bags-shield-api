@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
-import { rateLimitMiddleware } from "../lib/rate";
+import { setCors, guardMethod, noStore, ensureRequestId } from '.js';
+import { rateLimitMiddleware } from '../lib/rate.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Tratamento CORS manual só para OPTIONS (preflight)
+  // Tratamento CORS manual sÃ³ para OPTIONS (preflight)
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
 
-  // Para os demais métodos, usamos o pipeline padrão
+  // Para os demais mÃ©todos, usamos o pipeline padrÃ£o
   setCors(res);
   noStore(res);
 

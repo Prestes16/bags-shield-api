@@ -1,5 +1,5 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, noStore } from "../../lib/cors";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { setCors, noStore } from '.js';
 import { randomUUID } from "node:crypto";
 
 const BAGS_API_BASE =

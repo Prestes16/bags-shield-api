@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "crypto";
-// import { rateLimitMiddleware } from "../lib/rate";
-// import { getScanMode } from "../lib/env";
+// import { rateLimitMiddleware } from '../lib/rate.js';
+// import { getScanMode } from '../lib/env.js';
 
 // Dynamic imports to catch module loading errors
 async function getScanModeSafe(): Promise<string> {
@@ -100,7 +100,7 @@ export default async function handler(
     return;
   }
 
-  // Stub de resposta de risco – em produção vamos plugar o engine real
+  // Stub de resposta de risco â€“ em produÃ§Ã£o vamos plugar o engine real
   const shieldScore = 80;
   const riskLevel = "B";
   const mode = await getScanModeSafe();

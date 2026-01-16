@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-// import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
+// import { setCors, guardMethod, noStore, ensureRequestId } from '.js';
 
 // Dynamic import for cors helpers
 async function getCorsHelpers() {
@@ -32,7 +32,7 @@ async function getCorsHelpers() {
     };
   }
 }
-// import { badRequest, ok } from "../lib/http";
+// import { badRequest, ok } from '../lib/http.js';
 
 // Dynamic import for http helpers
 async function badRequestSafe(
@@ -72,8 +72,8 @@ async function okSafe<T>(
     });
   }
 }
-// import { getSimMode } from "../lib/env";
-// import { rateLimitMiddleware } from "../lib/rate";
+// import { getSimMode } from '../lib/env.js';
+// import { rateLimitMiddleware } from '../lib/rate.js';
 
 // Dynamic imports to catch module loading errors
 async function getSimModeSafe(): Promise<string> {
