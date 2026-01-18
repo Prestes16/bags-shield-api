@@ -64,9 +64,36 @@ function normalizeTokens(payload: any) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Extração robusta do route param
   const routeParam = req.query.route;
-  const segs = Array.isArray(routeParam) ? routeParam : (routeParam ? [String(routeParam)] : []);
+  const rawUrl = req.url || "";
+  const rawQuery = JSON.stringify(req.query);
+
+  // Normaliza routeParam para array de strings
+  let segs: string[] = [];
+  if (Array.isArray(routeParam)) {
+    segs = routeParam.map(String).filter(Boolean);
+  } else if (routeParam) {
+    segs = [String(routeParam)].filter(Boolean);
+  } else {
+    // Fallback: tenta extrair do URL diretamente
+    const urlPath = rawUrl.split("?")[0] || "";
+    const match = urlPath.match(/\/api\/bags\/(.+)$/);
+    if (match && match[1]) {
+      segs = match[1].split("/").filter(Boolean);
+    }
+  }
   const path = segs.join("/");
+
+  // Debug log (remover depois de confirmar)
+  console.log("[bags catch-all]", {
+    rawUrl,
+    rawQuery,
+    routeParam,
+    segs,
+    path,
+    method: req.method,
+  });
 
   // Só GET por enquanto (a gente adiciona POSTs depois com segurança)
   if (req.method !== "GET") {
@@ -81,6 +108,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // --- /api/bags/ping ---
   if (path === "ping" || path === "") {
     // apenas confirma config + reachability base
+    // Se path vazio, pode ser /api/bags/ (raiz) ou problema de extração
+    if (path === "" && rawUrl.includes("/api/bags/") && !rawUrl.endsWith("/api/bags") && !rawUrl.endsWith("/api/bags/")) {
+      // Path vazio mas URL não termina em /api/bags → problema de extração, tenta fallback novamente
+      const urlPath = rawUrl.split("?")[0] || "";
+      const match = urlPath.match(/\/api\/bags\/(.+)$/);
+      if (match && match[1]) {
+        const fallbackSegs = match[1].split("/").filter(Boolean);
+        const fallbackPath = fallbackSegs.join("/");
+        console.log("[bags catch-all] Fallback extraction", { rawUrl, fallbackPath });
+        // Reprocessa com fallbackPath ao invés de path vazio
+        if (fallbackPath === "trending") {
+          // Recursão não, processa direto:
+          const candidates = [
+            `${BAGS_BASE}/trending`,
+            `${BAGS_BASE}/tokens/trending`,
+            `${BAGS_BASE}/token/trending`,
+          ];
+          let lastErr: any = null;
+          for (const url of candidates) {
+            const r = await fetchJson(url, apiKey);
+            if (r.status === 404 || r.status === 405) {
+              lastErr = { url, status: r.status, data: r.data };
+              continue;
+            }
+            if (!r.ok) {
+              lastErr = { url, status: r.status, data: r.data };
+              break;
+            }
+            const tokens = normalizeTokens(r.data);
+            if (!tokens) {
+              lastErr = { url, status: r.status, data: r.data, reason: "Unexpected shape" };
+              break;
+            }
+            return send(res, 200, { success: true, response: { tokens } });
+          }
+          return send(res, 502, {
+            success: false,
+            error: "Bags trending endpoint unavailable",
+            detail: lastErr,
+          });
+        }
+        // Se não for trending, retorna 501 com debug
+        return send(res, 501, {
+          success: false,
+          error: "Not implemented in consolidated /api/bags router yet",
+          route: fallbackPath,
+          debug: { routeParam, rawUrl, segs, extractedPath: fallbackPath },
+        });
+      }
+    }
     return send(res, 200, {
       success: true,
       response: {
