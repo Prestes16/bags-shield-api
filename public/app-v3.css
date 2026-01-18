@@ -199,7 +199,49 @@ body {
 .scoreValue{font-size:26px; font-weight:900; letter-spacing:.5px}
 .scoreGrade{font-size:12px; color: rgba(77,212,255,.9); font-weight:800}
 
-.badges{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+/* Report Hero */
+.report-hero{
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: var(--r);
+  background: linear-gradient(135deg, rgba(77,212,255,.08), rgba(47,167,255,.04));
+  border: 1px solid rgba(77,212,255,.20);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-hero .score{
+  font-size: 64px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, rgba(77,212,255,.95), rgba(47,167,255,.95));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 40px rgba(77,212,255,.3);
+}
+
+.report-hero .grade-pill{
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  border: 2px solid rgba(77,212,255,.35);
+  background: rgba(77,212,255,.12);
+  color: rgba(77,212,255,.95);
+}
+
+.badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+  width: 100%;
+}
 .chip{
   border:1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.18);
@@ -207,10 +249,96 @@ body {
   border-radius: 999px;
   font-size:12px;
   color: var(--muted);
+  font-weight: 700;
 }
-.chip.good{border-color: rgba(61,220,151,.35); color: rgba(61,220,151,.95); background: rgba(61,220,151,.08);}
-.chip.warn{border-color: rgba(243,183,63,.35); color: rgba(243,183,63,.95); background: rgba(243,183,63,.08);}
-.chip.bad{border-color: rgba(255,92,122,.35); color: rgba(255,92,122,.95); background: rgba(255,92,122,.08);}
+.chip.good{
+  border-color: rgba(61,220,151,.35);
+  color: rgba(61,220,151,.95);
+  background: rgba(61,220,151,.08);
+}
+.chip.warn{
+  border-color: rgba(243,183,63,.35);
+  color: rgba(243,183,63,.95);
+  background: rgba(243,183,63,.08);
+}
+.chip.bad{
+  border-color: rgba(255,92,122,.35);
+  color: rgba(255,92,122,.95);
+  background: rgba(255,92,122,.08);
+}
+.chip.neutral{
+  opacity: 0.7;
+}
+
+/* Report Meta */
+.report-meta{
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted2);
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.report-meta b{
+  color: var(--muted);
+  font-weight: 800;
+}
+
+/* Details/Summary para JSON */
+details{
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  overflow: hidden;
+}
+
+details summary{
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+details summary::-webkit-details-marker{
+  display: none;
+}
+
+details summary::before{
+  content: "▶";
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+details[open] summary::before{
+  transform: rotate(90deg);
+}
+
+details summary:hover{
+  color: var(--text);
+  background: rgba(255,255,255,.04);
+}
+
+.report-json{
+  padding: 12px 14px;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255,255,255,.75);
+  background: rgba(0,0,0,.25);
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}
 
 .json{
   margin-top:12px;

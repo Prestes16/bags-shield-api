@@ -47,40 +47,78 @@ function renderReport(type, payload) {
   STORE.last = { type, payload };
   const out = $("#reportOut");
   if (!out) return;
-  out.innerHTML = `
-    <div class="report-meta">Last action: <b>${escapeHtml(type)}</b></div>
-    <pre class="report-json">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
-  `;
+
+  // Verifica se tem resultado com score/grade/badges
+  const result = payload?.result;
+  const hasResult = result && (result.shieldScore !== undefined || result.score !== undefined);
+
+  if (hasResult) {
+    const score = result.shieldScore ?? result.score ?? 0;
+    const grade = result.grade || "—";
+    const badges = result.badges ?? [];
+
+    // Atualiza score/grade no header
+    if ($("#score")) {
+      $("#score").textContent = String(Math.round(score));
+    }
+    if ($("#grade")) {
+      $("#grade").textContent = `(${grade})`;
+    }
+
+    // Renderiza badges no container principal
+    const badgesWrap = $("#badges");
+    if (badgesWrap) {
+      badgesWrap.innerHTML = "";
+      if (badges.length > 0) {
+        badges.forEach(b => {
+          const div = document.createElement("div");
+          const level = (b.level || "neutral").toLowerCase();
+          let className = "chip ";
+          if (level === "low" || level === "ok" || level === "good") {
+            className += "good";
+          } else if (level === "med" || level === "warn" || level === "attention") {
+            className += "warn";
+          } else if (level === "high" || level === "bad" || level === "critical") {
+            className += "bad";
+          } else {
+            className += "neutral";
+          }
+          div.className = className;
+          div.textContent = b.id || b.label || b.name || "badge";
+          badgesWrap.appendChild(div);
+        });
+      } else {
+        badgesWrap.innerHTML = '<div class="chip neutral">No badges</div>';
+      }
+    }
+
+    // Renderiza hero com score grande
+    out.innerHTML = `
+      <div class="report-hero">
+        <div class="score">${Math.round(score)}</div>
+        <div class="grade-pill">${escapeHtml(grade)}</div>
+      </div>
+      <div class="report-meta">Last action: <b>${escapeHtml(type)}</b></div>
+      <details>
+        <summary>Raw JSON</summary>
+        <pre class="report-json">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+      </details>
+    `;
+  } else {
+    // Sem resultado: mostra apenas meta + JSON
+    out.innerHTML = `
+      <div class="report-meta">Last action: <b>${escapeHtml(type)}</b></div>
+      <details>
+        <summary>Raw JSON</summary>
+        <pre class="report-json">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+      </details>
+    `;
+  }
 
   // Atualiza também o JSON antigo (para compatibilidade)
   const jsonEl = $("#json");
   if (jsonEl) {
     jsonEl.textContent = JSON.stringify(payload, null, 2);
-  }
-
-  // Atualiza score/grade/badges se disponível
-  if (payload?.result) {
-    const score = payload.result.shieldScore ?? payload.result.score;
-    const grade = payload.result.grade;
-    const badges = payload.result.badges ?? [];
-
-    if (score !== undefined && $("#score")) {
-      $("#score").textContent = String(Math.round(score));
-    }
-    if (grade && $("#grade")) {
-      $("#grade").textContent = `(${grade})`;
-    }
-    if (badges.length > 0 && $("#badges")) {
-      const wrap = $("#badges");
-      wrap.innerHTML = "";
-      badges.forEach(b => {
-        const div = document.createElement("div");
-        const level = (b.level || "neutral").toLowerCase();
-        div.className = "chip " + (level === "low" || level === "good" ? "good" : level === "med" || level === "warn" ? "warn" : level === "high" || level === "bad" ? "bad" : "neutral");
-        div.textContent = b.id || b.label || "badge";
-        wrap.appendChild(div);
-      });
-    }
   }
 }
 
