@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Bags Shield — v3</title>
+  <link rel="stylesheet" href="/app-v3.css" />
+  <script defer src="/app-v3.js"></script>
+</head>
+<body>
+  <main class="app" id="app">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">BS</div>
+        <div class="brandText">
+          <div class="title">Bags Shield</div>
+          <div class="subtitle">Risk Badges &amp; ShieldScore</div>
+        </div>
+      </div>
+
+      <div class="topActions">
+        <button class="pill" id="btn-mode" title="Modo">LIVE</button>
+        <button class="pill" id="btn-lang" title="Idioma">PT-BR</button>
+        <button class="iconBtn" id="btn-settings" aria-label="Settings" title="Settings">
+          ☰
+        </button>
+      </div>
+    </header>
+
+    <!-- GRID -->
+    <section class="grid">
+      <!-- Wallet Agent -->
+      <article class="card">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">Wallet Agent</div>
+            <div class="cardHint">Conectar / assinar quando necessário</div>
+          </div>
+          <span class="badge ok" id="wallet-status">DISCONNECTED</span>
+        </div>
+
+        <div class="row">
+          <div class="mono small" id="wallet-addr">—</div>
+          <button class="btn" id="btn-connect">Connect</button>
+        </div>
+
+        <div class="note small">
+          (stub) Depois: Seed Vault / Mobile Wallet Adapter no Seeker.
+        </div>
+      </article>
+
+      <!-- Scan Agent -->
+      <article class="card">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">Scan Agent</div>
+            <div class="cardHint">Analisa transação crua e retorna badges + score</div>
+          </div>
+          <span class="badge neutral">/api/scan</span>
+        </div>
+
+        <label class="label">Raw Transaction (base64)</label>
+        <textarea class="input area" id="in-rawtx" placeholder="Cole aqui a rawTransaction..."></textarea>
+
+        <div class="row">
+          <select class="input select" id="in-network">
+            <option value="solana-devnet">solana-devnet</option>
+            <option value="solana-mainnet">solana-mainnet</option>
+          </select>
+          <button class="btn primary" id="btn-scan">Run Scan</button>
+        </div>
+
+        <div class="miniout" id="out-scan">Pronto para escanear.</div>
+      </article>
+
+      <!-- Simulate Agent -->
+      <article class="card">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">Simulate Agent</div>
+            <div class="cardHint">Simula swap e estima risco antes de assinar</div>
+          </div>
+          <span class="badge neutral">/api/simulate</span>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label class="label">Mint</label>
+            <input class="input" id="in-mint" placeholder="So11111111111111111111111111111111111111112" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label class="label">Quote (opcional)</label>
+            <input class="input" id="in-quote" placeholder="Ex: USDC" />
+          </div>
+          <button class="btn primary" id="btn-simulate">Simulate</button>
+        </div>
+
+        <div class="miniout" id="out-sim">Pronto para simular.</div>
+      </article>
+
+      <!-- Last Report -->
+      <article class="card wide">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">Last Report</div>
+            <div class="cardHint">Último resultado consolidado</div>
+          </div>
+          <div class="scoreBox">
+            <div class="scoreLabel">ShieldScore</div>
+            <div class="scoreValue" id="score">—</div>
+            <div class="scoreGrade" id="grade">—</div>
+          </div>
+        </div>
+
+        <div class="badges" id="badges">
+          <div class="chip neutral">No data yet</div>
+        </div>
+
+        <pre class="json" id="json">{"status":"waiting"}</pre>
+      </article>
+    </section>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom">
+      <button class="tab active" id="tab-home">Home</button>
+      <button class="tab" id="tab-scan">Scan</button>
+      <button class="tab" id="tab-sim">Simulate</button>
+      <button class="tab" id="tab-report">Report</button>
+    </nav>
+  </main>
+</body>
+</html>
