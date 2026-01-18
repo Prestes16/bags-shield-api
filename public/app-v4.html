@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Bags Shield — v4</title>
+  <link rel="stylesheet" href="/app-v4.css" />
+  <script defer src="/app-v4.js"></script>
+</head>
+<body>
+  <!-- Splash View -->
+  <div class="view view-splash" id="view-splash">
+    <button class="hotspot" data-action="nav_home" aria-label="Get Started"></button>
+  </div>
+
+  <!-- Home View -->
+  <div class="view view-home hidden" id="view-home">
+    <button class="hotspot hotspot-scan" data-action="nav_scan" aria-label="Scan"></button>
+    <button class="hotspot hotspot-simulate" data-action="nav_simulate" aria-label="Simulate"></button>
+    <button class="hotspot hotspot-settings" data-action="nav_settings" aria-label="Settings"></button>
+  </div>
+
+  <!-- Dev Log Panel -->
+  <div class="dev-log" id="devLog">
+    <details>
+      <summary>Dev Log</summary>
+      <div class="log-content" id="logContent"></div>
+    </details>
+  </div>
+</body>
+</html>

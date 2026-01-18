@@ -1,0 +1,105 @@
+:root {
+  --bg: #020617;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* Container principal */
+body {
+  max-width: 430px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* View base */
+.view {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+}
+
+.view.hidden {
+  display: none;
+}
+
+/* Splash */
+.view-splash {
+  background-image: url("/ui/v4/splash.png");
+}
+
+/* Home */
+.view-home {
+  background-image: url("/ui/v4/home.png");
+}
+
+/* Desktop: conter/centralizar */
+@media (min-width: 431px) {
+  body {
+    max-width: 430px;
+    margin: 0 auto;
+  }
+
+  .view {
+    background-size: contain;
+    background-position: center center;
+  }
+}
+
+/* Hotspots invisíveis */
+.hotspot {
+  position: absolute;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Splash: Get Started */
+.view-splash .hotspot {
+  left: 12%;
+  width: 76%;
+  height: 9%;
+  bottom: 10%;
+}
+
+/* Home: Scan */
+.hotspot-scan {
+  left: 12%;
+  width: 76%;
+  height: 9%;
+  bottom: 18%;
+}
+
+/* Home: Simulate */
+.hotspot-simulate {
+  left: 12%;
+  width: 76%;
+  height: 9%;
+  bottom: 8%;
+}
+
+/* Home: Settings */
+.hotspot-settings {
+  left: 72%;
+  width: 20%;
+  height: 10%;
+  bottom: 2%;
+}
