@@ -33,6 +33,14 @@ async function apiFetch(path, { method = "GET", body = null, timeoutMs = 12000 }
   }
 }
 
+// Helper para normalizar resposta da API
+function unwrapApi(json) {
+  if (!json) return { ok: false, error: "Resposta vazia" };
+  if (json.success === false) return { ok: false, error: json.error || "Erro" };
+  if (json.success === true && json.response) return { ok: true, data: json.response };
+  return { ok: true, data: json };
+}
+
 // RENDER
 function escapeHtml(s) {
   return String(s)
@@ -147,26 +155,37 @@ const ACTIONS = {
     const rawTx = ($("#scanRawTx")?.value || "").trim();
     if (!rawTx) return renderReport("scan_run", { ok: false, error: "Cole uma rawTransaction." });
 
-    // stub: depois vira POST /api/scan
-    renderReport("scan_run", {
-      ok: true,
-      stub: true,
-      input: { rawTxLen: rawTx.length },
-      result: { shieldScore: 80, grade: "B", badges: [{ id: "mint_authority", level: "LOW" }] }
-    });
+    const network = ($("#in-network")?.value || "solana-devnet").trim();
+    const body = { rawTransaction: rawTx, network };
+
+    try {
+      const json = await apiFetch("/api/scan", { method: "POST", body });
+      const out = unwrapApi(json);
+      renderReport("scan_run", out.ok 
+        ? { ok: true, result: out.data }
+        : { ok: false, error: out.error }
+      );
+    } catch (err) {
+      renderReport("scan_run", { ok: false, error: String(err?.message || err) });
+    }
   },
 
   simulate_run: async () => {
     const mint = ($("#simulateMint")?.value || "").trim();
     if (!mint) return renderReport("simulate_run", { ok: false, error: "Informe o mint." });
 
-    // stub: depois vira POST /api/simulate
-    renderReport("simulate_run", {
-      ok: true,
-      stub: true,
-      input: { mint },
-      result: { shieldScore: 68, grade: "C", badges: [{ id: "liquidity_lock", level: "MED" }] }
-    });
+    const body = { mint };
+
+    try {
+      const json = await apiFetch("/api/simulate", { method: "POST", body });
+      const out = unwrapApi(json);
+      renderReport("simulate_run", out.ok
+        ? { ok: true, result: out.data }
+        : { ok: false, error: out.error }
+      );
+    } catch (err) {
+      renderReport("simulate_run", { ok: false, error: String(err?.message || err) });
+    }
   },
 
   settings_toggle_lang: async () => {
