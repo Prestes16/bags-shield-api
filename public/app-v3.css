@@ -160,7 +160,8 @@ body {
   background-clip: text;
 }
 
-.result .grade {
+.result .grade,
+.result .grade-pill {
   padding: 10px 20px;
   border-radius: 999px;
   font-size: 20px;
