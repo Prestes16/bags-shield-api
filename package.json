@@ -1,40 +1,41 @@
 {
-    "name":  "bags-shield-api",
-    "version":  "1.0.0",
-    "description":  "API Gateway for Bags Shield project on Vercel",
-    "scripts":  {
-                    "start":  "echo \u0027Vercel usa a pasta /api\u0027",
-                    "build":  "echo \u0027Vercel usa o builder padrao @vercel/node\u0027",
-                    "dev-v0":  "node scripts/dev-server.cjs",
-                    "typecheck":  "tsc --noEmit",
-                    "lint":  "eslint . --ext .ts",
-                    "format":  "prettier . --write",
-                    "test:prod":  "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api.vercel.app --reporters cli",
-                    "test:local":  "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder \"Local Dev (AJV)\" --env-var baseUrlLocal=http://127.0.0.1:8888 --reporters cli",
-                    "test:all":  "npm run test:prod \u0026\u0026 npm run test:local",
-                    "smoke":  "node scripts/smoke-local.cjs",
-                    "smoke:prod":  "node -e \"process.env.SMOKE_BASE_URL=\u0027https://bags-shield-api.vercel.app\u0027; process.env.SMOKE_STRICT=\u00271\u0027; require(\u0027./scripts/smoke-runner.js\u0027)\"",
-                    "smoke:relaxed":  "node scripts/smoke-runner.js",
-                    "start:render":  "node scripts/server.cjs"
-                },
-    "engines":  {
-                    "node":  "20.x"
-                },
-    "dependencies":  {
-                         "@vercel/node":  "3.1.1",
-                         "express":  "4.21.1",
-                         "zod":  "^3.25.76"
-                     },
-    "devDependencies":  {
-                            "@types/node":  "20.14.9",
-                            "@typescript-eslint/eslint-plugin":  "^8.52.0",
-                            "@typescript-eslint/parser":  "^8.52.0",
-                            "ajv":  "^8.17.1",
-                            "eslint":  "^8.57.0",
-                            "eslint-config-prettier":  "^10.1.8",
-                            "newman":  "^6.2.1",
-                            "prettier":  "^3.7.4",
-                            "typescript":  "5.5.3"
-                        },
-    "type":  "module"
+    "name": "bags-shield-api",
+    "version": "1.0.0",
+    "description": "API Gateway for Bags Shield project on Vercel",
+    "scripts": {
+        "start": "echo 'Vercel usa a pasta /api'",
+        "build": "echo 'Vercel usa o builder padrao @vercel/node'",
+        "dev-v0": "node scripts/dev-server.cjs",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint . --ext .ts",
+        "format": "prettier . --write",
+        "test:prod": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder Production --env-var baseUrlProd=https://bags-shield-api.vercel.app --reporters cli",
+        "test:local": "newman run docs/postman/bags-shield-api-v0.postman_collection.json --folder \"Local Dev (AJV)\" --env-var baseUrlLocal=http://127.0.0.1:8888 --reporters cli",
+        "test:all": "npm run test:prod && npm run test:local",
+        "smoke": "node scripts/smoke-local.cjs",
+        "smoke:prod": "node -e \"process.env.SMOKE_BASE_URL='https://bags-shield-api.vercel.app'; process.env.SMOKE_STRICT='1'; require('./scripts/smoke-runner.js')\"",
+        "smoke:relaxed": "node scripts/smoke-runner.js",
+        "start:render": "node scripts/server.cjs"
+    },
+    "engines": {
+        "node": "20.x"
+    },
+    "dependencies": {
+        "@vercel/node": "3.1.1",
+        "express": "4.21.1",
+        "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "@bubblewrap/cli": "^1.24.1",
+        "@types/node": "20.14.9",
+        "@typescript-eslint/eslint-plugin": "^8.52.0",
+        "@typescript-eslint/parser": "^8.52.0",
+        "ajv": "^8.17.1",
+        "eslint": "^8.57.0",
+        "eslint-config-prettier": "^10.1.8",
+        "newman": "^6.2.1",
+        "prettier": "^3.7.4",
+        "typescript": "5.5.3"
+    },
+    "type": "module"
 }

@@ -103,3 +103,110 @@ body {
   height: 10%;
   bottom: 2%;
 }
+
+/* v4 — Trending overlay (real data over art) */
+.view[data-view="home"] {
+  position: relative;
+}
+
+.trend-overlay {
+  position: absolute;
+  left: 7%;
+  width: 86%;
+  /* Ajuste fino: essa faixa deve cair em cima do bloco "Trending Tokens" da arte */
+  top: 38%;
+  height: 33%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+/* cada linha */
+.trend-item {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(10, 20, 40, 0.35);
+  border: 1px solid rgba(90, 180, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  cursor: pointer;
+  user-select: none;
+}
+
+.trend-item:active {
+  transform: translateY(1px);
+}
+
+.trend-item[aria-disabled="true"] {
+  cursor: default;
+}
+
+.trend-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.trend-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.trend-sym {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.trend-sub {
+  opacity: 0.65;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.trend-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.trend-pct {
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+}
+
+.trend-pill.ok {
+  color: #7af0d6;
+  border-color: rgba(122,240,214,0.25);
+}
+
+.trend-pill.attention {
+  color: #f0c07a;
+  border-color: rgba(240,192,122,0.25);
+}
+
+.trend-pill.high {
+  color: #f0a07a;
+  border-color: rgba(240,160,122,0.25);
+}
