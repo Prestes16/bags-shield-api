@@ -8,132 +8,35 @@
   <script defer src="/app-v3.js"></script>
 </head>
 <body>
-  <div class="app-shell">
-    <main class="app" id="app">
-    <!-- Top Bar -->
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo">BS</div>
-        <div class="brandText">
-          <div class="title">Bags Shield</div>
-          <div class="subtitle">Risk Badges &amp; ShieldScore</div>
-        </div>
-      </div>
+  <header class="top">
+    <div class="brand">Bags Shield</div>
+    <div class="wallet-status" id="wallet-status">DISCONNECTED</div>
+  </header>
 
-      <div class="topActions">
-        <button class="pill" id="btn-mode" title="Modo">LIVE</button>
-        <button class="pill" id="btn-lang" title="Idioma" data-action="settings_toggle_lang">PT-BR</button>
-        <button class="iconBtn" id="btn-settings" aria-label="Settings" title="Settings" data-action="settings_open">
-          ☰
-        </button>
-      </div>
-    </header>
-
-    <!-- GRID -->
-    <section class="grid">
-      <!-- Wallet Agent -->
-      <article class="card">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">Wallet Agent</div>
-            <div class="cardHint">Conectar / assinar quando necessário</div>
-          </div>
-          <span class="badge ok" id="wallet-status">DISCONNECTED</span>
-        </div>
-
-        <div class="row">
-          <div class="mono small" id="wallet-addr">—</div>
-          <button class="btn" id="btn-connect" data-action="wallet_connect">Connect</button>
-        </div>
-
-        <div class="note small">
-          (stub) Depois: Seed Vault / Mobile Wallet Adapter no Seeker.
-        </div>
-      </article>
-
-      <!-- Scan Agent -->
-      <article class="card">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">Scan Agent</div>
-            <div class="cardHint">Analisa transação crua e retorna badges + score</div>
-          </div>
-          <span class="badge neutral">/api/scan</span>
-        </div>
-
-        <label class="label">Raw Transaction (base64)</label>
-        <textarea class="input area" id="scanRawTx" placeholder="Cole aqui a rawTransaction..."></textarea>
-
-        <div class="row">
-          <select class="input select" id="in-network">
-            <option value="solana-devnet">solana-devnet</option>
-            <option value="solana-mainnet">solana-mainnet</option>
-          </select>
-          <button class="btn primary" id="btn-scan" data-action="scan_run">Run Scan</button>
-        </div>
-
-        <div class="miniout" id="out-scan">Pronto para escanear.</div>
-      </article>
-
-      <!-- Simulate Agent -->
-      <article class="card">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">Simulate Agent</div>
-            <div class="cardHint">Simula swap e estima risco antes de assinar</div>
-          </div>
-          <span class="badge neutral">/api/simulate</span>
-        </div>
-
-        <div class="row">
-          <div class="col">
-            <label class="label">Mint</label>
-            <input class="input" id="simulateMint" placeholder="So11111111111111111111111111111111111111112" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col">
-            <label class="label">Quote (opcional)</label>
-            <input class="input" id="in-quote" placeholder="Ex: USDC" />
-          </div>
-          <button class="btn primary" id="btn-simulate" data-action="simulate_run">Simulate</button>
-        </div>
-
-        <div class="miniout" id="out-sim">Pronto para simular.</div>
-      </article>
-
-      <!-- Last Report -->
-      <article class="card wide">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">Last Report</div>
-            <div class="cardHint">Último resultado consolidado</div>
-          </div>
-          <div class="scoreBox">
-            <div class="scoreLabel">ShieldScore</div>
-            <div class="scoreValue" id="score">—</div>
-            <div class="scoreGrade" id="grade">—</div>
-          </div>
-        </div>
-
-        <div class="badges" id="badges">
-          <div class="chip neutral">No data yet</div>
-        </div>
-
-        <div id="reportOut"></div>
-        <pre class="json" id="json">{"status":"waiting"}</pre>
-      </article>
+  <main class="flow">
+    <section class="step">
+      <h2>Scan</h2>
+      <textarea id="scanRawTx" placeholder="Cole aqui a rawTransaction (base64)..."></textarea>
+      <select id="in-network">
+        <option value="solana-devnet">solana-devnet</option>
+        <option value="solana-mainnet">solana-mainnet</option>
+      </select>
+      <button data-action="scan_run">Run Scan</button>
     </section>
 
-    <!-- Bottom Nav -->
-    <nav class="bottom">
-      <button class="tab active" id="tab-home">Home</button>
-      <button class="tab" id="tab-scan">Scan</button>
-      <button class="tab" id="tab-sim">Simulate</button>
-      <button class="tab" id="tab-report">Report</button>
-    </nav>
-    </main>
-  </div>
+    <section class="step">
+      <h2>Simulate</h2>
+      <input id="simulateMint" placeholder="So11111111111111111111111111111111111111112" />
+      <button data-action="simulate_run">Simulate</button>
+    </section>
+
+    <section class="result" id="reportOut">
+      <!-- renderReport entra aqui -->
+    </section>
+  </main>
+
+  <nav class="bottom">
+    <button data-action="settings_open">Settings</button>
+  </nav>
 </body>
 </html>
