@@ -17,18 +17,34 @@
 }
 
 *{box-sizing:border-box}
-html,body{height:100%; width:100%; margin:0; overflow:hidden; background: radial-gradient(1200px 700px at 20% 10%, rgba(47,167,255,.25), transparent 55%),
-                                              radial-gradient(900px 600px at 80% 30%, rgba(77,212,255,.18), transparent 50%),
-                                              linear-gradient(180deg,var(--bg1),var(--bg0));
-  color:var(--text);
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow-x: hidden;
+  background: radial-gradient(1200px 800px at 20% 0%, rgba(79, 197, 255, .18), transparent 60%),
+              radial-gradient(900px 700px at 90% 30%, rgba(47, 167, 255, .14), transparent 55%),
+              linear-gradient(180deg, #020617 0%, #07122a 60%, #020617 100%);
+  color: #eaf2ff;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.app-shell{
+  box-sizing: border-box;
+  min-height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 16px 14px calc(90px + env(safe-area-inset-bottom));
 }
 
 .app{
   height:100%;
   display:flex;
   flex-direction:column;
-  padding: 14px 14px 10px;
+  padding: 0;
   gap: 12px;
 }
 
@@ -87,19 +103,21 @@ html,body{height:100%; width:100%; margin:0; overflow:hidden; background: radial
   padding-bottom: 70px;
 }
 
-@media (min-width: 900px){
-  .app{max-width: 1100px; margin:0 auto;}
-  .grid{grid-template-columns: 1fr 1fr;}
-  .card.wide{grid-column: 1 / -1;}
-}
-
-.card{
+/* Garanta que cards não estiquem demais */
+.card {
+  box-sizing: border-box;
+  width: 100%;
   border-radius: var(--r);
   background: rgba(255,255,255,.05);
   border: 1px solid var(--stroke);
   box-shadow: 0 18px 60px rgba(0,0,0,.35);
   padding: 14px;
   backdrop-filter: blur(10px);
+}
+
+/* Evita layout quebrado em telas MUITO largas: mantém "mobile" */
+@media (min-width: 900px){
+  body { display: block; }
 }
 
 .cardHead{
@@ -209,15 +227,17 @@ html,body{height:100%; width:100%; margin:0; overflow:hidden; background: radial
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 10px;
-  width: min(1100px, calc(100% - 28px));
+  bottom: 0;
+  width: min(430px, 100vw);
+  padding-bottom: env(safe-area-inset-bottom);
   display:flex;
   gap:10px;
   padding: 10px;
-  border-radius: 18px;
+  border-radius: 18px 18px 0 0;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.30);
   backdrop-filter: blur(12px);
+  z-index: 50;
 }
 
 .tab{
