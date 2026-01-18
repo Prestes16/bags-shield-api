@@ -4,13 +4,30 @@ html, body {
   height: 100%;
   margin: 0;
   background: #020617;
+  overflow: hidden;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
+/* SPLASH / SCREENS */
 .screen {
   position: fixed;
   inset: 0;
-  background: var(--bg) center / cover no-repeat;
+  width: 100vw;
+  height: 100vh;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #020617;
+
+  /* padrão mobile */
+  background-size: cover;
+}
+
+/* desktop / telas largas → mostra a imagem inteira */
+@media (min-aspect-ratio: 10/16) {
+  .screen {
+    background-size: contain;
+  }
 }
 
 /* botão invisível (hotspot) */
@@ -21,12 +38,12 @@ html, body {
   cursor: pointer;
 }
 
-/* Ajuste inicial do botão “Get Started” */
+/* botão Get Started */
 .hit-start {
   left: 12%;
   width: 76%;
-  top: 78%;
   height: 9%;
+  bottom: 10%;
 }
 
 /* controle de views */
