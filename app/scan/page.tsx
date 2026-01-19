@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { ScanInput } from "@/components/scan-input";
 import { useState } from "react";
 
 export default function ScanPage() {
@@ -9,6 +10,7 @@ export default function ScanPage() {
   const [rawTransaction, setRawTransaction] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<"mint" | "transaction">("mint");
 
   const handleScan = async () => {
     if (!rawTransaction.trim()) return;
@@ -40,38 +42,58 @@ export default function ScanPage() {
           ← Back
         </Button>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold mb-4 text-slate-900 dark:text-slate-100">
+        {/* Toggle entre modos */}
+        <div className="mb-6 flex gap-2">
+          <Button
+            variant={viewMode === "mint" ? "default" : "outline"}
+            onClick={() => setViewMode("mint")}
+          >
+            Scan by Mint Address
+          </Button>
+          <Button
+            variant={viewMode === "transaction" ? "default" : "outline"}
+            onClick={() => setViewMode("transaction")}
+          >
             Scan Transaction
-          </h1>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Raw Transaction (Base64)
-              </label>
-              <textarea
-                value={rawTransaction}
-                onChange={(e) => setRawTransaction(e.target.value)}
-                placeholder="Paste raw transaction (base64)..."
-                className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                rows={6}
-              />
-            </div>
-
-            <Button onClick={handleScan} disabled={loading || !rawTransaction.trim()}>
-              {loading ? "Scanning..." : "Run Scan"}
-            </Button>
-
-            {result && (
-              <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                <pre className="text-sm text-slate-900 dark:text-slate-100 overflow-auto">
-                  {JSON.stringify(result, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
+          </Button>
         </div>
+
+        {viewMode === "mint" ? (
+          <ScanInput />
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6">
+            <h1 className="text-2xl font-bold mb-4 text-slate-900 dark:text-slate-100">
+              Scan Transaction
+            </h1>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Raw Transaction (Base64)
+                </label>
+                <textarea
+                  value={rawTransaction}
+                  onChange={(e) => setRawTransaction(e.target.value)}
+                  placeholder="Paste raw transaction (base64)..."
+                  className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  rows={6}
+                />
+              </div>
+
+              <Button onClick={handleScan} disabled={loading || !rawTransaction.trim()}>
+                {loading ? "Scanning..." : "Run Scan"}
+              </Button>
+
+              {result && (
+                <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                  <pre className="text-sm text-slate-900 dark:text-slate-100 overflow-auto">
+                    {JSON.stringify(result, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
