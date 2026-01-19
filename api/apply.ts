@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors.js";
-import { rateLimitMiddleware } from "../lib/rate.js";
+import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
+import { rateLimitMiddleware } from "../lib/rate";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Tratamento CORS manual sÃ³ para OPTIONS (preflight)

@@ -1,45 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-
-// Dynamic import for cors helpers (same pattern as simulate.ts)
-async function getCorsHelpers() {
-  try {
-    return await import("../lib/cors.js");
-  } catch (error) {
-    console.error("[scan] Error importing cors module:", error);
-    // Fallback implementations
-    return {
-      setCors: (res: VercelResponse, _req?: VercelRequest) => {
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Expose-Headers", "X-Request-Id");
-      },
-      preflight: (res: VercelResponse, methods: string[], headers: string[], _req?: VercelRequest) => {
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Allow-Methods", methods.join(","));
-        res.setHeader("Access-Control-Allow-Headers", headers.join(","));
-        res.setHeader("Cache-Control", "no-store");
-        const id = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
-        res.setHeader("X-Request-Id", id);
-        res.status(204).end();
-      },
-      guardMethod: (req: VercelRequest, res: VercelResponse, allowed: string[]): boolean => {
-        const method = req.method ?? "";
-        if (!allowed.includes(method)) {
-          res.status(405).json({ success: false, error: "method_not_allowed", meta: { requestId: "unknown" } });
-          return false;
-        }
-        return true;
-      },
-      noStore: (res: VercelResponse) => {
-        res.setHeader("Cache-Control", "no-store");
-      },
-      ensureRequestId: (res: VercelResponse): string => {
-        const id = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
-        res.setHeader("X-Request-Id", id);
-        return id;
-      },
-    };
-  }
-}
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../lib/cors";
 
 function isBase64Like(s: string): boolean {
   if (!s || typeof s !== "string") return false;
@@ -67,16 +27,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   let requestId = "unknown";
   
   try {
-    const cors = await getCorsHelpers();
-    requestId = cors.ensureRequestId(res);
+    requestId = ensureRequestId(res);
     
-    cors.setCors(res, req);
+    setCors(res, req);
     if (req.method === "OPTIONS") {
-      return cors.preflight(res, ["POST"], ["Content-Type", "Authorization", "x-api-key"], req);
+      return preflight(res, ["POST"], ["Content-Type", "Authorization", "x-api-key"], req);
     }
-    if (!cors.guardMethod(req, res, ["POST"])) return;
+    if (!guardMethod(req, res, ["POST"])) return;
 
-    cors.noStore(res);
+    noStore(res);
 
     let body: any;
     try {
