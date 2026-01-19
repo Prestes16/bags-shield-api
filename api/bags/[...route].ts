@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../lib/cors.js";
+import { validatePayloadSize } from "../lib/payload-validation.js";
 
 const BAGS_BASE = process.env.BAGS_API_BASE_REAL || "https://public-api-v2.bags.fm/api/v1";
 const TIMEOUT_MS = Number(process.env.BAGS_TIMEOUT_MS || 12_000);
@@ -95,6 +97,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     method: req.method,
   });
 
+  // Handle POST requests for specific routes
+  if (req.method === "POST") {
+    const requestId = ensureRequestId(res);
+    setCors(res, req);
+    
+    if (req.method === "OPTIONS") {
+      return preflight(res, ["POST"], ["Content-Type", "Authorization", "x-api-key"], req);
+    }
+    
+    if (!validatePayloadSize(req, res, requestId)) {
+      return;
+    }
+
+    const apiKey = (process.env.BAGS_API_KEY || "").trim();
+    if (!apiKey) {
+      return send(res, 501, { 
+        success: false, 
+        error: "server_not_configured", 
+        message: "BAGS_API_KEY not set. This endpoint requires upstream API key configuration.",
+        meta: { requestId }
+      });
+    }
+
+    // Parse body
+    let body: any = {};
+    try {
+      if (typeof req.body === "string") {
+        body = JSON.parse(req.body);
+      } else if (req.body) {
+        body = req.body;
+      }
+    } catch (e) {
+      return send(res, 400, { 
+        success: false, 
+        error: "invalid json",
+        meta: { requestId }
+      });
+    }
+
+    // POST /api/bags/token-info
+    if (path === "token-info") {
+      try {
+        const url = `${BAGS_BASE}/token-info`;
+        const r = await fetchJson(url, apiKey, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        
+        if (!r.ok) {
+          return send(res, r.status >= 400 && r.status < 500 ? r.status : 502, {
+            success: false,
+            error: "token-info failed",
+            detail: r.data,
+          });
+        }
+        
+        return send(res, 200, { success: true, response: r.data, meta: { requestId } });
+      } catch (e: any) {
+        console.error("[bags/token-info] Error:", e?.message || String(e));
+        const isDev = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "development";
+        return send(res, 500, {
+          success: false,
+          error: "token-info error",
+          message: isDev ? (e?.message || String(e)) : "internal server error",
+          meta: { requestId }
+        });
+      }
+    }
+
+    // POST /api/bags/create-config
+    if (path === "create-config") {
+      try {
+        const url = `${BAGS_BASE}/create-config`;
+        const r = await fetchJson(url, apiKey, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        
+        if (!r.ok) {
+          return send(res, r.status >= 400 && r.status < 500 ? r.status : 502, {
+            success: false,
+            error: "create-config failed",
+            detail: r.data,
+            meta: { requestId }
+          });
+        }
+        
+        return send(res, 200, { success: true, response: r.data, meta: { requestId } });
+      } catch (e: any) {
+        console.error("[bags/create-config] Error:", e?.message || String(e));
+        const isDev = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "development";
+        return send(res, 500, {
+          success: false,
+          error: "create-config error",
+          message: isDev ? (e?.message || String(e)) : "internal server error",
+          meta: { requestId }
+        });
+      }
+    }
+
+    // Other POST routes not allowed
+    return send(res, 405, { success: false, error: "Method Not Allowed", route: path });
+  }
+
   // Só GET por enquanto (a gente adiciona POSTs depois com segurança)
   if (req.method !== "GET") {
     return send(res, 405, { success: false, error: "Method Not Allowed" });
@@ -102,7 +210,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const apiKey = (process.env.BAGS_API_KEY || "").trim();
   if (!apiKey) {
-    return send(res, 500, { success: false, error: "Missing BAGS_API_KEY" });
+    const requestId = ensureRequestId(res);
+    return send(res, 501, { 
+      success: false, 
+      error: "server_not_configured",
+      message: "BAGS_API_KEY not set. This endpoint requires upstream API key configuration.",
+      meta: { requestId }
+    });
   }
 
   // --- /api/bags/ping ---
