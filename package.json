@@ -1,6 +1,6 @@
 {
     "name": "bags-shield-api",
-    "version": "1.0.0",
+    "version": "0.2.0-mock",
     "description": "API Gateway for Bags Shield project on Vercel",
     "scripts": {
         "start": "echo 'Vercel usa a pasta /api'",
