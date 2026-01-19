@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bags Shield API — Status & Confiabilidade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#07172b; --bg-2:#0a1f3c; --card:#0e2748;
+      --muted:#9fb6d5; --text:#e6f1ff;
+      --blue-1:#0f68dd; --blue-2:#1ea3ff; --blue-3:#4dd4ff;
+      --primary:#0f68dd; --primary-2:#1ea3ff;
+      --danger:#ff4d6d; --warn:#ffb020; --ok:#47d16a;
+      --shadow:0 12px 36px rgba(0,0,0,.35); --radius:20px;
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1600px 600px at 80% -10%, rgba(77,212,255,.16), transparent 60%),
+        radial-gradient(1200px 500px at -10% 10%, rgba(30,163,255,.12), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg-2) 60%);
+      min-height:100%;
+      overflow-x:hidden;
+      animation:bgShift 12s ease-in-out infinite;
+    }
+    @keyframes bgShift{
+      0%{background-position:0 0,0 0,0 0}
+      50%{background-position:20px -10px,-10px 10px,0 0}
+      100%{background-position:0 0,0 0,0 0}
+    }
+    /* canvas da chuva de $ fica por trás do conteúdo */
+    #fx{
+      position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.10;
+    }
+    .wrap{position:relative; z-index:1; max-width:1200px;margin:0 auto;padding:24px}
+    a{color:var(--blue-3);text-decoration:none}
+
+    .nav{display:flex;align-items:center;gap:14px}
+    .logoApp{
+      width:54px;height:54px;border-radius:20px;position:relative;isolation:isolate;
+      background: radial-gradient(120% 120% at 30% 25%, #153863 0%, #0e2748 60%);
+      box-shadow:var(--shadow); display:grid; place-items:center; overflow:hidden; border:1px solid #123a69;
+    }
+    .brand{font-weight:800;letter-spacing:.3px}
+    .tag{font-size:12px;color:var(--muted);border:1px solid #1d3557;border-radius:999px;padding:3px 10px}
+
+    .hero{
+      margin-top:28px;border-radius:var(--radius);padding:28px;
+      background:linear-gradient(140deg, rgba(15,74,121,.65), rgba(14,39,72,.65));
+      box-shadow:var(--shadow);
+      display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
+    }
+    .heroIcon{
+      width:84px;height:84px;border-radius:28px;background:rgba(17,48,87,.55);
+      display:grid;place-items:center;border:1px solid #164170;position:relative;overflow:hidden
+    }
+    .heroIcon::after{
+      content:""; position:absolute; inset:-30%;
+      background:radial-gradient(closest-side, rgba(78,195,255,.20), transparent 60%);
+      pointer-events:none; filter:blur(12px);
+      animation:halo 6s ease-in-out infinite;
+    }
+    @keyframes halo{0%,100%{opacity:.7; transform:scale(1)}50%{opacity:.35; transform:scale(1.05)}}
+
+    .hero h1{margin:0 0 6px 0;font-size:30px}
+    .hero p{margin:0;color:var(--muted)}
+    .cta-row{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
+
+    .btn{
+      appearance:none;border:0;cursor:pointer;font-weight:700;padding:12px 18px;border-radius:14px;
+      transition:.15s transform,.15s opacity,.25s box-shadow;position:relative;overflow:hidden
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{color:#eaf4ff;background:linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
+      box-shadow:0 10px 24px rgba(30,163,255,.25), inset 0 0 0 1px rgba(255,255,255,.06);border:1px solid rgba(0,0,0,.15)}
+    .btn-ghost{background:#0a2447;color:var(--blue-3);border:1px solid #12315a}
+    .btn-outline{background:transparent;color:var(--blue-3);border:1px solid #1b3b66}
+
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:22px}
+    .card{
+      grid-column: span 12;background:linear-gradient(180deg,rgba(20,54,96,.55),rgba(8,29,55,.7));
+      border:1px solid #113057;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
+      transform-style:preserve-3d; will-change:transform, box-shadow;
+    }
+    .lift{transition:transform .25s ease, box-shadow .25s ease}
+    .lift:hover{transform:translateY(-2px) scale(1.012); box-shadow:0 18px 44px rgba(30,163,255,.18)}
+    .hero.lift:hover{transform:translateY(-2px) scale(1.006)}
+
+    .card h3{margin:0 0 8px 0;font-size:16px}
+    .pill{font-size:12px;border:1px solid #13406f;background:#0a2447;color:#cfe8ff;border-radius:999px;padding:6px 10px}
+    .badge{font-size:12px;padding:4px 8px;border-radius:999px;font-weight:700}
+    .b-ok{background:rgba(71,209,106,.12);color:#47d16a;border:1px solid rgba(71,209,106,.35)}
+    .b-warn{background:rgba(255,176,32,.12);color:#ffcc66;border:1px solid rgba(255,176,32,.35)}
+    .b-err{background:rgba(255,77,109,.12);color:#ff7e95;border:1px solid rgba(255,77,109,.35)}
+    pre{white-space:pre-wrap;word-break:break-word;background:#061427;border:1px solid #13325b;border-radius:12px;padding:10px;font-size:13px;max-height:360px;overflow:auto;margin:0}
+    input,textarea{width:100%;background:#061427;color:var(--text);border:1px solid #13325b;border-radius:12px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;outline:none}
+    input:focus,textarea:focus{box-shadow: inset 0 0 0 1px var(--primary-2)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .ghost{opacity:.9}
+    .footer{margin:26px 0 10px 0;color:#6f87a7;font-size:12px;text-align:center}
+
+    .reliability{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:center}
+    .donutwrap{display:grid;place-items:center;position:relative}
+    .donut-value{font-size:34px;font-weight:800}
+    .donut-sub{font-size:12px;color:#9fb6d5;margin-top:2px}
+    .bar{display:grid;grid-template-columns:190px 1fr 52px;gap:10px;align-items:center;margin:10px 0}
+    .bar .name{color:#cfe8ff}
+    .bar .track{height:12px;border-radius:999px;background:#0a2447;border:1px solid #14335c;overflow:hidden}
+    .bar .fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1ea3ff,#4dd4ff);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+    .bar .pct{font-variant-numeric:tabular-nums;color:#a7c6e8}
+
+    @media (max-width: 920px){ .reliability{grid-template-columns:1fr} .bar{grid-template-columns:1fr 1fr 52px} }
+    @media (max-width: 480px){ #donut{width:190px;height:190px} .hero h1{font-size:26px} }
+    @media (min-width: 860px){ .card.span-7{grid-column: span 7} .card.span-5{grid-column: span 5} }
+    @media (prefers-reduced-motion: reduce){ body{animation:none} #fx{display:none} }
+  </style>
+</head>
+<body>
+  <!-- canvas da chuva de $ -->
+  <canvas id="fx"></canvas>
+
+  <div class="wrap">
+    <div class="nav">
+      <div class="logoApp lift" aria-label="Bags Shield logo">
+        <!-- LOGO: escudo + $ central -->
+        <svg viewBox="0 0 96 96" width="36" height="36" fill="none" role="img" aria-label="Bags Shield">
+          <defs><linearGradient id="gShield" x1="0" x2="1"><stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/></linearGradient></defs>
+          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
+                fill="none" stroke="url(#gShield)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="48" y="50" text-anchor="middle" dominant-baseline="middle"
+                font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" font-size="26"
+                fill="#1EA3FF">$</text>
+        </svg>
+      </div>
+      <div class="brand">Bags Shield API</div>
+      <span class="tag">v0.2.0 • navy/blue</span>
+    </div>
+
+    <div class="hero lift">
+      <div class="heroIcon">
+        <!-- versão maior -->
+        <svg viewBox="0 0 96 96" width="56" height="56" fill="none" role="img" aria-hidden="true">
+          <defs><linearGradient id="gShield2" x1="0" x2="1"><stop stop-color="#29C1FF"/><stop offset="1" stop-color="#1EA3FF"/></linearGradient></defs>
+          <path d="M48 10l26 12v18c0 15-9.6 27.8-26 34C31.6 67.8 22 55 22 40V22l26-12z"
+                fill="none" stroke="url(#gShield2)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="48" y="50" text-anchor="middle" dominant-baseline="middle"
+                font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" font-size="30"
+                fill="#29C1FF">$</text>
+        </svg>
+      </div>
+      <div>
+        <h1>Camada de confiança do BagsApp</h1>
+        <p class="ghost">Telemetria clara, defesa em profundidade e estabilidade de integrações. Status vivo + gráfico de confiabilidade para <code>/api/scan</code>, <code>/api/simulate</code> e Token Launch (Bags).</p>
+        <div class="cta-row">
+          <button id="btnHealth" class="btn btn-primary">Atualizar Status</button>
+          <button id="btnPing" class="btn btn-ghost">Ping Bags (canário)</button>
+          <button id="btnSecurity" class="btn btn-outline">Nota de segurança</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card span-7 lift" data-tilt>
+        <h3>Painel de Confiabilidade (tempo real)</h3>
+        <div class="reliability">
+          <div class="donutwrap">
+            <svg id="donut" width="230" height="230" viewBox="0 0 230 230" aria-hidden="true">
+              <defs><linearGradient id="dg" x1="0" x2="1"><stop stop-color="#1ea3ff"/><stop offset="1" stop-color="#4dd4ff"/></linearGradient></defs>
+              <circle cx="115" cy="115" r="92" stroke="#0b2142" stroke-width="24" fill="none"/>
+              <circle id="donutArc" cx="115" cy="115" r="92" stroke="url(#dg)" stroke-width="24" fill="none" stroke-linecap="round" transform="rotate(-90 115 115)"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center">
+              <div><div class="donut-value" id="donutVal">0%</div><div class="donut-sub">Confiabilidade geral</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar"><div class="name">Core API (health)</div><div class="track"><div id="b-core" class="fill" style="width:0%"></div></div><div class="pct" id="p-core">0%</div></div>
+            <div class="bar"><div class="name">/api/scan</div><div class="track"><div id="b-scan" class="fill" style="width:0%"></div></div><div class="pct" id="p-scan">0%</div></div>
+            <div class="bar"><div class="name">/api/simulate</div><div class="track"><div id="b-sim" class="fill" style="width:0%"></div></div><div class="pct" id="p-sim">0%</div></div>
+            <div class="bar"><div class="name">Token Launch (Bags)</div><div class="track"><div id="b-bags" class="fill" style="width:0%"></div></div><div class="pct" id="p-bags">0%</div></div>
+            <div class="bar"><div class="name">Shield Score Engine</div><div class="track"><div id="b-ssl" class="fill" style="width:0%"></div></div><div class="pct" id="p-ssl">0%</div></div>
+            <div class="ghost" style="margin-top:6px">Shield Score = média da disponibilidade de <code>/scan</code> + <code>/simulate</code>.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-5 lift" data-tilt>
+        <h3>Playground Rápido</h3>
+        <div class="row">
+          <input id="mint" placeholder="mint (simulate)" />
+          <button id="btnSim" class="btn btn-primary">POST /api/simulate</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <textarea id="tx" rows="5" placeholder="rawTransaction (scan) — cole um JSON bruto ou texto"></textarea>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnScan" class="btn btn-ghost">POST /api/scan</button>
+          <button id="btnClear" class="btn btn-ghost">Limpar</button>
+        </div>
+        <div style="margin-top:12px">
+          <pre id="outSim">{ }</pre>
+          <div style="height:8px"></div>
+          <pre id="outScan">{ }</pre>
+        </div>
+      </div>
+
+      <div class="card span-7 lift" data-tilt>
+        <h3>Status da API</h3>
+        <div class="row" style="gap:12px;flex-wrap:wrap">
+          <span class="pill">/api/health: <span id="hStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/scan: <span id="sStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/simulate: <span id="mStatus" class="badge b-warn">…</span></span>
+          <span class="pill">/api/bags/ping: <span id="pStatus" class="badge b-warn">…</span></span>
+        </div>
+        <div style="margin-top:12px"><pre id="healthOut" aria-live="polite">Clique em “Atualizar Status”.</pre></div>
+      </div>
+
+      <div class="card span-5 lift" data-tilt>
+        <h3>Deploy & Metadados</h3>
+        <div style="display:grid;grid-template-columns:140px 1fr;gap:10px">
+          <div class="ghost">RequestId</div><div id="kvReq">—</div>
+          <div class="ghost">DeploymentId</div><div id="kvDep">—</div>
+          <div class="ghost">Vercel-Id</div><div id="kvVer">—</div>
+          <div class="ghost">RateLimit</div><div id="kvRl">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">© Bags Shield — navy/blue • logo escudo+$ • chuva de $ em background • hover lift + tilt</div>
+  </div>
+
+  <script>
+    const $=(q)=>document.querySelector(q);
+    const fmt=(d)=>{try{return JSON.stringify(d,null,2)}catch(e){return String(d)}};
+    async function safeJson(res){try{return await res.json()}catch{return{success:false,error:"Conteúdo não-JSON",text:await res.text()}}}
+    function badge(el,ok){el.className="badge "+(ok?"b-ok":"b-err");el.textContent=ok?"OK":"ERRO"}
+
+    // Donut
+    const R=92,CIRC=2*Math.PI*R;
+    function setDonut(pct){const arc=$("#donutArc"); arc.setAttribute("stroke-dasharray",String(CIRC)); const t=CIRC*(1-pct/100); arc.setAttribute("stroke-dashoffset",String(t)); $("#donutVal").textContent=Math.round(pct)+"%"}
+    function setBar(id,pct){$("#b-"+id).style.width=Math.max(0,Math.min(100,pct))+"%";$("#p-"+id).textContent=Math.round(pct)+"%"}
+
+    // Checagem inteligente de rotas POST: 200/204/400/405 contam como UP; timeout curto
+    async function checkAlive(url){
+      const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),2500);
+      try{
+        // 1) HEAD primeiro
+        let r=await fetch(url,{method:"HEAD",signal:ctrl.signal}).catch(()=>null);
+        if(r && (r.ok || [400,405].includes(r.status))) return true;
+        // 2) OPTIONS
+        r=await fetch(url,{method:"OPTIONS",signal:ctrl.signal}).catch(()=>null);
+        if(r && (r.ok || [204,200,400,405].includes(r.status))) return true;
+        // 3) POST com payload inválido esperando 400 rápido
+        r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal:ctrl.signal}).catch(()=>null);
+        return !!(r && (r.ok || [400,405].includes(r.status)));
+      }catch{ return false } finally{ clearTimeout(t) }
+    }
+
+    async function head(url){const r=await fetch(url,{method:"HEAD"}).catch(()=>null);return r&&r.ok}
+
+    async function pingHealth(){
+      const res=await fetch("/api/health",{headers:{"Accept":"application/json"}}).catch(()=>null);
+      if(!res){badge($("#hStatus"),false);$("#healthOut").textContent="Falha de rede";return{ok:false,headers:new Headers(),body:null}}
+      const body=await safeJson(res); badge($("#hStatus"),res.ok); $("#healthOut").textContent=fmt(body);
+      const rid=(body&&body.meta&&(body.meta.requestId||body.meta.request_id))||res.headers.get("x-request-id")||"—"; $("#kvReq").textContent=rid;
+      return{ok:res.ok,headers:res.headers,body}
+    }
+
+    async function pingBags(){
+      const el=$("#pStatus"); el.textContent="…"; el.className="badge b-warn";
+      const res=await fetch("/api/bags/ping",{headers:{"Accept":"application/json"}}).catch(()=>null);
+      if(!res){el.textContent="ERRO";el.className="badge b-err";return{ok:false,headers:new Headers(),body:null}}
+      const body=await safeJson(res); el.textContent=res.ok?"OK":"ERRO"; el.className="badge "+(res.ok?"b-ok":"b-err");
+      const m=(body&&body.meta)||{}; const rl=[m.rateLimitRemaining,m.rateLimitLimit].every(Boolean)?`${m.rateLimitRemaining}/${m.rateLimitLimit} (reset ${m.rateLimitReset||"?"})`:"—";
+      $("#kvRl").textContent=rl; return{ok:res.ok,headers:res.headers,body}
+    }
+
+    async function getDeployMeta(){
+      const r=await fetch("/",{method:"HEAD"}).catch(()=>null); if(!r) return;
+      $("#kvDep").textContent=r.headers.get("x-deployment-id")||"—";
+      $("#kvVer").textContent=r.headers.get("x-vercel-id")||r.headers.get("server")||"—";
+    }
+
+    async function checkAll(){
+      const h=await pingHealth();
+      const scanUp=await checkAlive("/api/scan");  badge($("#sStatus"),scanUp);
+      const simUp =await checkAlive("/api/simulate"); badge($("#mStatus"),simUp);
+      const bags  =await pingBags(); await getDeployMeta();
+
+      const corePct=h.ok?100:0;
+      const scanPct=scanUp?100:0;
+      const simPct =simUp ?100:0;
+      const bagsPct=bags.ok?100:0;
+      const sslPct =Math.round((scanPct + simPct)/2);
+
+      // Mostra todas as porcentagens e soma no donut (peso configurado)
+      const overall=Math.round(corePct*0.35 + scanPct*0.20 + simPct*0.20 + bagsPct*0.15 + sslPct*0.10);
+
+      setBar("core",corePct); setBar("scan",scanPct); setBar("sim",simPct); setBar("bags",bagsPct); setBar("ssl",sslPct);
+      setDonut(overall);
+    }
+
+    async function postJson(url,payload,out){
+      out.textContent="POST "+url+" …";
+      try{const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(payload)});
+          const body=await safeJson(res); out.textContent=fmt(body)}catch(e){out.textContent=fmt({success:false,error:String(e)})}
+    }
+
+    // Tilt (ressaltar sob o cursor)
+    function attachTilt(node){
+      let rect=node.getBoundingClientRect();
+      function onMove(e){
+        const x=(e.clientX-rect.left)/rect.width-.5, y=(e.clientY-rect.top)/rect.height-.5;
+        node.style.transform=`perspective(900px) rotateX(${(-y*5).toFixed(2)}deg) rotateY(${(x*7).toFixed(2)}deg) translateZ(0)`;
+      }
+      function onLeave(){ node.style.transform=""; }
+      function onResize(){ rect=node.getBoundingClientRect(); }
+      node.addEventListener("pointermove",onMove);
+      node.addEventListener("pointerleave",onLeave);
+      window.addEventListener("resize",onResize);
+    }
+    document.querySelectorAll("[data-tilt]").forEach(attachTilt);
+
+    // Chuva de $
+    (function dollarRain(){
+      const canvas=$("#fx"); if(!canvas) return;
+      const ctx=canvas.getContext("2d");
+      let W=canvas.width=window.innerWidth*devicePixelRatio, H=canvas.height=window.innerHeight*devicePixelRatio;
+      canvas.style.width=window.innerWidth+"px"; canvas.style.height=window.innerHeight+"px";
+
+      const pool=[];
+      function spawn(n){
+        for(let i=0;i<n;i++){
+          const fs = (12 + Math.random()*18)*devicePixelRatio;
+          pool.push({
+            x: Math.random()*W,
+            y: -Math.random()*H,
+            v: (20 + Math.random()*60)*devicePixelRatio/60,
+            sway: (Math.random()*0.6+0.2),
+            fs, a: 0.6*Math.random()+0.3
+          });
+        }
+      }
+      function resize(){
+        W=canvas.width=window.innerWidth*devicePixelRatio;
+        H=canvas.height=window.innerHeight*devicePixelRatio;
+        canvas.style.width=window.innerWidth+"px";
+        canvas.style.height=window.innerHeight+"px";
+        pool.length=0; spawn(Math.min(120, Math.round((W*H)/(25000*devicePixelRatio))));
+      }
+      resize(); window.addEventListener("resize",resize);
+
+      ctx.font=`bold 20px Inter, system-ui, -apple-system, Segoe UI`;
+      function color(t){ // gradiente navy/blue vibes
+        const c1=[41,193,255], c2=[30,163,255];
+        const r=Math.round(c1[0]+(c2[0]-c1[0])*t), g=Math.round(c1[1]+(c2[1]-c1[1])*t), b=Math.round(c1[2]+(c2[2]-c1[2])*t);
+        return `rgba(${r},${g},${b},`;
+      }
+      function tick(){
+        ctx.clearRect(0,0,W,H);
+        for(const p of pool){
+          p.y += p.v; p.x += Math.sin(p.y*0.01)*p.sway;
+          if(p.y>H+40*devicePixelRatio){ p.y=-20*devicePixelRatio; p.x=Math.random()*W; }
+          ctx.save();
+          ctx.font = `800 ${p.fs}px Inter, system-ui, -apple-system, Segoe UI`;
+          ctx.fillStyle = color((p.fs/ (30*devicePixelRatio)));
+          ctx.fillText("$", p.x, p.y);
+          ctx.restore();
+        }
+        requestAnimationFrame(tick);
+      }
+      spawn(Math.min(120, Math.round((W*H)/(25000*devicePixelRatio))));
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      tick();
+    })();
+
+    // Wireup
+    $("#btnHealth").addEventListener("click",checkAll);
+    $("#btnPing").addEventListener("click",pingBags);
+    $("#btnSecurity").addEventListener("click",()=>alert("Segurança: CORS restritivo, requestId em todas as respostas, rate limit + retries/backoff, webhooks HMAC, Rolling Releases e Skew Protection."));
+    $("#btnSim").addEventListener("click",()=>postJson("/api/simulate",{mint:$("#mint").value.trim()},$("#outSim")));
+    $("#btnScan").addEventListener("click",()=>postJson("/api/scan",{rawTransaction:$("#tx").value},$("#outScan")));
+    $("#btnClear").addEventListener("click",()=>{ $("#outSim").textContent="{ }"; $("#outScan").textContent="{ }"; });
+
+    checkAll(); setInterval(checkAll,10000);
+  </script>
+</body>
+</html>

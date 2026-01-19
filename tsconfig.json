@@ -54,7 +54,9 @@
     "api/**/*",
     "lib/**/*",
     "types/**/*",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "app/**/*",
+    "components/**/*"
   ],
   "exclude": [
     "node_modules",
