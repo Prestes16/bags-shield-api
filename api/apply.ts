@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, guardMethod, noStore, ensureRequestId } from '.js';
-import { rateLimitMiddleware } from '../lib/rate.js';
+import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors.js";
+import { rateLimitMiddleware } from "../lib/rate.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Tratamento CORS manual sÃ³ para OPTIONS (preflight)
@@ -12,8 +12,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
 
-  // Para os demais mÃ©todos, usamos o pipeline padrÃ£o
-  setCors(res);
+  // Para os demais métodos, usamos o pipeline padrão
+  setCors(res, req);
   noStore(res);
 
   if (!guardMethod(req, res, ["POST"])) return;
@@ -32,10 +32,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       meta: { requestId },
     });
   } catch (err: any) {
+    console.error("[apply] Error:", err?.message || String(err));
+    const isDev = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "development";
     return res.status(500).json({
       success: false,
       error: "internal_error",
-      details: String(err?.message ?? err),
+      message: isDev ? (err?.message || String(err)) : "internal server error",
       meta: { requestId },
     });
   }

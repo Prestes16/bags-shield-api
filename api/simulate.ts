@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 // Dynamic import for cors helpers
 async function getCorsHelpers() {
   try {
-    return await import("../lib/cors");
+    return await import("../lib/cors.js");
   } catch (error) {
     console.error("[simulate] Error importing cors module:", error);
     // Fallback implementations
@@ -42,7 +42,7 @@ async function badRequestSafe(
   details?: unknown
 ): Promise<void> {
   try {
-    const httpModule = await import("../lib/http");
+    const httpModule = await import("../lib/http.js");
     httpModule.badRequest(res, message, requestId, details);
   } catch (error) {
     console.error("[simulate] Error importing http module:", error);
@@ -61,7 +61,7 @@ async function okSafe<T>(
   meta?: Partial<{ requestId: string; [key: string]: unknown }>
 ): Promise<void> {
   try {
-    const httpModule = await import("../lib/http");
+    const httpModule = await import("../lib/http.js");
     httpModule.ok(res, data, requestId, meta);
   } catch (error) {
     console.error("[simulate] Error importing http module:", error);
@@ -78,7 +78,7 @@ async function okSafe<T>(
 // Dynamic imports to catch module loading errors
 async function getSimModeSafe(): Promise<string> {
   try {
-    const envModule = await import("../lib/env");
+    const envModule = await import("../lib/env.js");
     return envModule.getSimMode();
   } catch (error) {
     console.error("[simulate] Error importing env module:", error);
@@ -91,7 +91,7 @@ async function rateLimitMiddlewareSafe(
   res: VercelResponse
 ): Promise<boolean> {
   try {
-    const rateModule = await import("../lib/rate");
+    const rateModule = await import("../lib/rate.js");
     return rateModule.rateLimitMiddleware(req, res);
   } catch (error) {
     console.error("[simulate] Error importing rate module:", error);
@@ -161,12 +161,13 @@ export default async function handler(
   } catch (error) {
     const cors = await getCorsHelpers();
     const requestId = cors.ensureRequestId(res);
-    console.error("[simulate] Error:", error);
+    const isDev = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "development";
+    console.error("[simulate] Error:", error instanceof Error ? error.message : String(error));
     res.status(500).json({
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message: isDev ? (error instanceof Error ? error.message : "Internal server error") : "Internal server error",
       },
       meta: { requestId },
     });

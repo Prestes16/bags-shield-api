@@ -17,7 +17,7 @@ function getAllowedOrigin(req?: VercelRequest): string {
     }
     return "*";
   } catch (error) {
-    // Fallback seguro em caso de erro
+    // Fallback seguro em caso de erro - sempre retorna "*"
     return "*";
   }
 }

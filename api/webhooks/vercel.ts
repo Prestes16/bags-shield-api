@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createHmac } from "node:crypto";
-import { preflight, guardMethod, ensureRequestId } from '.js';
-import { unauthorized, ok } from '../../lib/http.js';
+import { preflight, guardMethod, ensureRequestId } from "../../lib/cors.js";
+import { unauthorized, ok } from "../../lib/http.js";
 
 /**
  * Validates Vercel webhook signature using HMAC-SHA1.
@@ -55,7 +55,7 @@ export default async function handler(
   res: VercelResponse
 ): Promise<void> {
   if (req.method === "OPTIONS") {
-    preflight(res, ["POST"]);
+    preflight(res, ["POST"], ["Content-Type", "Authorization", "x-api-key"], req);
     return;
   }
 
