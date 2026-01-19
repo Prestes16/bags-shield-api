@@ -1,7 +1,22 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getCorsOrigins } from "./env";
 
-export function setCors(res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// Helper to determine allowed origin based on request
+function getAllowedOrigin(req?: VercelRequest): string {
+  const corsOrigins = getCorsOrigins();
+  if (Array.isArray(corsOrigins)) {
+    const requestOrigin = req?.headers?.origin;
+    if (requestOrigin && corsOrigins.includes(requestOrigin)) {
+      return requestOrigin;
+    }
+    return corsOrigins[0] || "*";
+  }
+  return corsOrigins; // Should be "*"
+}
+
+export function setCors(res: VercelResponse, req?: VercelRequest) {
+  const allowedOrigin = req ? getAllowedOrigin(req) : "*";
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   res.setHeader("Access-Control-Expose-Headers", "X-Request-Id");
 }
 
@@ -21,9 +36,10 @@ export function ensureRequestId(res: VercelResponse): string {
 export function preflight(
   res: VercelResponse,
   methods: string[],
-  headers: string[] = ["Content-Type", "Authorization", "x-api-key"]
+  headers: string[] = ["Content-Type", "Authorization", "x-api-key"],
+  req?: VercelRequest
 ) {
-  setCors(res);
+  setCors(res, req);
   noStore(res);
   ensureRequestId(res);
   res.setHeader("Access-Control-Allow-Methods", methods.join(","));
@@ -38,7 +54,7 @@ export function guardMethod(
 ): boolean {
   const method = req.method ?? "";
   if (!allowed.includes(method)) {
-    setCors(res);
+    setCors(res, req);
     noStore(res);
     const requestId = ensureRequestId(res);
     res.setHeader("Allow", allowed.join(","));

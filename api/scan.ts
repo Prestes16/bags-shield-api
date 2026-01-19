@@ -12,7 +12,7 @@ function isBase64Like(s: string) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     setCors(res, req);
-    if (req.method === "OPTIONS") return preflight(res);
+    if (req.method === "OPTIONS") return preflight(res, ["POST"], ["Content-Type", "Authorization", "x-api-key"], req);
     if (!guardMethod(req, res, ["POST"])) return;
 
     noStore(res);
