@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../lib/cors.js";
+import { setCors, preflight, noStore, ensureRequestId } from "../lib/cors.js";
 import { validatePayloadSize } from "../lib/payload-validation.js";
 
 const BAGS_BASE = process.env.BAGS_API_BASE_REAL || "https://public-api-v2.bags.fm/api/v1";
@@ -97,14 +97,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     method: req.method,
   });
 
+  // Handle OPTIONS preflight
+  if (req.method === "OPTIONS") {
+    const requestId = ensureRequestId(res);
+    setCors(res, req);
+    return preflight(res, ["POST", "GET"], ["Content-Type", "Authorization", "x-api-key"], req);
+  }
+
   // Handle POST requests for specific routes
   if (req.method === "POST") {
     const requestId = ensureRequestId(res);
     setCors(res, req);
-    
-    if (req.method === "OPTIONS") {
-      return preflight(res, ["POST"], ["Content-Type", "Authorization", "x-api-key"], req);
-    }
     
     if (!validatePayloadSize(req, res, requestId)) {
       return;

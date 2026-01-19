@@ -8,11 +8,11 @@ async function getCorsHelpers() {
     console.error("[scan] Error importing cors module:", error);
     // Fallback implementations
     return {
-      setCors: (res: VercelResponse, req?: VercelRequest) => {
+      setCors: (res: VercelResponse, _req?: VercelRequest) => {
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Expose-Headers", "X-Request-Id");
       },
-      preflight: (res: VercelResponse, methods: string[], headers: string[], req?: VercelRequest) => {
+      preflight: (res: VercelResponse, methods: string[], headers: string[], _req?: VercelRequest) => {
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", methods.join(","));
         res.setHeader("Access-Control-Allow-Headers", headers.join(","));
@@ -82,11 +82,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     try {
       body = parseBody(req);
     } catch (e: any) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: "invalid json",
         meta: { requestId }
       });
+      return;
     }
 
     const rawTransaction = body?.rawTransaction ?? body?.raw_transaction ?? body?.tx ?? "";
@@ -95,11 +96,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const source = body?.source ? String(body.source) : undefined;
 
     if (!isBase64Like(rawTransaction)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: "invalid rawTransaction (expected base64 string)",
         meta: { requestId }
       });
+      return;
     }
 
     // MOCK v0 (pronto pra plugar scan real depois)
@@ -110,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       { id: "precheck", severity: "low", label: "Pre-check passed" }
     ];
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       response: {
         isSafe: true,
@@ -122,15 +124,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       },
       meta: { requestId }
     });
+    return;
   } catch (e: any) {
     console.error("[scan] Error:", e?.message || String(e));
     const isDev = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "development";
     const errorMessage = isDev ? (e?.message || String(e)) : "internal server error";
-    return res.status(500).json({ 
+    res.status(500).json({ 
       success: false, 
       error: "scan_failed",
       message: errorMessage,
       meta: { requestId }
     });
+    return;
   }
 }

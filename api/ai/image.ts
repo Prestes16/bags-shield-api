@@ -33,19 +33,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         body = req.body as ImageRequest;
       }
     } catch (e) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: "invalid json",
         meta: { requestId }
       });
+      return;
     }
 
     if (!body.prompt || typeof body.prompt !== "string" || body.prompt.trim().length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: "prompt is required",
         meta: { requestId }
       });
+      return;
     }
 
     const provider = process.env.AI_PROVIDER || "stub";
@@ -53,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     // Stub mode: return placeholder
     if (provider === "stub" || !apiKey) {
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         response: {
           imageUrl: "https://via.placeholder.com/800x400/020617/7af0d6?text=Bags+Shield+AI+Image",
@@ -65,24 +67,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         },
         meta: { requestId, mode: "stub" }
       });
+      return;
     }
 
     // TODO: Implement real AI providers (Gemini, OpenAI, etc.)
     // For now, return 501 if configured but not implemented
-    return res.status(501).json({
+    res.status(501).json({
       success: false,
       error: "ai_provider_not_implemented",
       message: `Provider "${provider}" is configured but not yet implemented`,
       meta: { requestId }
     });
+    return;
   } catch (e: any) {
     console.error("[ai/image] Error:", e);
     const isDev = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "development";
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: "ai_image_failed",
       message: isDev ? (e?.message || String(e)) : "internal server error",
       meta: { requestId }
     });
+    return;
   }
 }
