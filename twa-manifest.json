@@ -18,7 +18,7 @@
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "C:\\Dev\\bags-shield-api\\android.keystore",
-    "alias": "BagsShield!TWA2026#4831"
+    "alias": "bags_shield"
   },
   "appVersionName": "1",
   "appVersionCode": 1,
