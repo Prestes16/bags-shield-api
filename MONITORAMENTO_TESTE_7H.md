@@ -121,9 +121,8 @@ Get-Job | Stop-Job -Force
 $base="https://bags-shield-api.vercel.app"
 
 1..5 | ForEach-Object {
-  $code = curl.exe -sS -o NUL -w "%{http_code}" "$base/api/health?ts=$(Get-Date -Format 'yyyyMMddHHmmss')"
   $t = Measure-Command {
-    curl.exe -sS -o NUL -w "%{http_code}" "$base/api/health?ts=$(Get-Date -Format 'yyyyMMddHHmmss')" | Out-Null
+    $code = curl.exe -sS -o NUL -w "%{http_code}" "$base/api/health?ts=$(Get-Date -Format 'yyyyMMddHHmmss')"
   }
   "health: ${_}x code=$code time=$([math]::Round($t.TotalMilliseconds))ms"
   Start-Sleep -Seconds 2
