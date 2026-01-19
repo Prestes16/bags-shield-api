@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../lib/cors";
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../lib/cors.js";
 
 function isBase64Like(s: string): boolean {
   if (!s || typeof s !== "string") return false;

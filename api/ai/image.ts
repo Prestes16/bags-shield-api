@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../../lib/cors";
-import { validatePayloadSize } from "../../lib/payload-validation";
+import { setCors, preflight, guardMethod, noStore, ensureRequestId } from "../../lib/cors.js";
+import { validatePayloadSize } from "../../lib/payload-validation.js";
 
 interface ImageRequest {
   prompt: string;

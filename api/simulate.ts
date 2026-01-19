@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors";
-import { badRequest, ok } from "../lib/http";
-import { getSimMode } from "../lib/env";
-import { rateLimitMiddleware } from "../lib/rate";
+import { setCors, guardMethod, noStore, ensureRequestId } from "../lib/cors.js";
+import { badRequest, ok } from "../lib/http.js";
+import { getSimMode } from "../lib/env.js";
+import { rateLimitMiddleware } from "../lib/rate.js";
 
 interface SimulateRequestBody {
   mint?: string;

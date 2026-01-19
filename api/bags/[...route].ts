@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, preflight, noStore, ensureRequestId } from "../lib/cors";
-import { validatePayloadSize } from "../lib/payload-validation";
+import { setCors, preflight, noStore, ensureRequestId } from "../lib/cors.js";
+import { validatePayloadSize } from "../lib/payload-validation.js";
 
 const BAGS_BASE = process.env.BAGS_API_BASE_REAL || "https://public-api-v2.bags.fm/api/v1";
 const TIMEOUT_MS = Number(process.env.BAGS_TIMEOUT_MS || 12_000);

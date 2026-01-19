@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createHmac } from "node:crypto";
-import { preflight, guardMethod, ensureRequestId } from "../../lib/cors";
-import { unauthorized, ok } from "../../lib/http";
+import { preflight, guardMethod, ensureRequestId } from "../../lib/cors.js";
+import { unauthorized, ok } from "../../lib/http.js";
 
 /**
  * Validates Vercel webhook signature using HMAC-SHA1.
