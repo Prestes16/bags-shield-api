@@ -16,9 +16,9 @@
 
 ### Processo normal (recomendado: CIM, porque Get-Process não traz CommandLine)
 ```powershell
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" |
   Where-Object { $_.CommandLine -like "*test-stress-load*" } |
-  Select-Object ProcessId, CommandLine
+  Select-Object ProcessId, Name, CommandLine
 ```
 
 ### Se o teste foi iniciado como Job (Start-Job)
@@ -97,7 +97,7 @@ if ($js) {
 
 ### Se executado em background (processo normal)
 ```powershell
-$p = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
+$p = Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" |
   Where-Object { $_.CommandLine -like "*test-stress-load*" } |
   Select-Object -First 1
 
@@ -121,10 +121,11 @@ Get-Job | Stop-Job -Force
 $base="https://bags-shield-api.vercel.app"
 
 1..5 | ForEach-Object {
+  $code = curl.exe -sS -o NUL -w "%{http_code}" "$base/api/health?ts=$(Get-Date -Format 'yyyyMMddHHmmss')"
   $t = Measure-Command {
-    curl.exe -sS -o NUL -w "%{http_code}" "$base/api/health?ts=$(Get-Date -Format 'yyyyMMddHHmmss')"
+    curl.exe -sS -o NUL -w "%{http_code}" "$base/api/health?ts=$(Get-Date -Format 'yyyyMMddHHmmss')" | Out-Null
   }
-  "health: ${_}x  time=$([math]::Round($t.TotalMilliseconds))ms"
+  "health: ${_}x code=$code time=$([math]::Round($t.TotalMilliseconds))ms"
   Start-Sleep -Seconds 2
 }
 ```

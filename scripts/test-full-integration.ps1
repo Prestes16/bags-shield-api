@@ -42,8 +42,12 @@ function Invoke-ApiTest {
         [string]$Method = "GET",
         [object]$Body = $null,
         [int[]]$ExpectedStatus = @(200),
-        [switch]$Allow400 = $false
+        [switch]$Allow400 = $false,
+        [switch]$SaveRawOnError = $false
     )
+    
+    $rawResponse = $null
+    $rawError = $null
     
     try {
         $headers = @{
@@ -66,7 +70,17 @@ function Invoke-ApiTest {
         try {
             $response = Invoke-WebRequest @params -UseBasicParsing
             $statusCode = $response.StatusCode
-            $responseBody = $response.Content | ConvertFrom-Json
+            $rawResponse = $response.Content
+            
+            # Tentar parsear JSON, mas guardar raw se falhar
+            $responseBody = $null
+            try {
+                $responseBody = $rawResponse | ConvertFrom-Json
+            } catch {
+                # Se não for JSON, guardar raw
+                $rawError = $rawResponse
+                Write-Warning "[$Name] Response não é JSON válido. Raw: $($rawResponse.Substring(0, [Math]::Min(200, $rawResponse.Length)))"
+            }
             
             if ($statusCode -in $ExpectedStatus -or ($Allow400 -and $statusCode -eq 400)) {
                 $passed = $true
@@ -75,31 +89,74 @@ function Invoke-ApiTest {
                 } else {
                     $message = "Status: $statusCode"
                 }
-                Write-TestResult -TestName $Name -Passed $passed -Message $message -Data $responseBody
+                $data = if ($responseBody) { $responseBody } else { @{ raw = $rawResponse } }
+                Write-TestResult -TestName $Name -Passed $passed -Message $message -Data $data
                 return $responseBody
             } else {
-                Write-TestResult -TestName $Name -Passed $false -Message "Unexpected status: $statusCode (expected: $($ExpectedStatus -join ','))" -Data $responseBody
+                $data = if ($responseBody) { $responseBody } else { @{ raw = $rawResponse } }
+                Write-TestResult -TestName $Name -Passed $false -Message "Unexpected status: $statusCode (expected: $($ExpectedStatus -join ','))" -Data $data
+                
+                # Salvar raw se SaveRawOnError
+                if ($SaveRawOnError -and $rawResponse) {
+                    $errorFile = "logs/error-$Name-$timestamp.txt"
+                    $rawResponse | Out-File -FilePath $errorFile -Encoding UTF8
+                    Write-Host "  Erro raw salvo em: $errorFile" -ForegroundColor Yellow
+                }
+                
                 return $null
             }
         } catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
-            $stream = $_.Exception.Response.GetResponseStream()
-            $reader = New-Object System.IO.StreamReader($stream)
-            $responseBody = $reader.ReadToEnd() | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $statusCode = $null
+            $rawResponse = $null
             
-            if ($statusCode -in $ExpectedStatus -or ($Allow400 -and $statusCode -eq 400)) {
+            if ($_.Exception.Response) {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                $stream = $_.Exception.Response.GetResponseStream()
+                $reader = New-Object System.IO.StreamReader($stream)
+                $rawResponse = $reader.ReadToEnd()
+            }
+            
+            # Tentar parsear JSON, mas guardar raw se falhar
+            $responseBody = $null
+            if ($rawResponse) {
+                try {
+                    $responseBody = $rawResponse | ConvertFrom-Json -ErrorAction SilentlyContinue
+                } catch {
+                    $rawError = $rawResponse
+                }
+            }
+            
+            if ($statusCode -and ($statusCode -in $ExpectedStatus -or ($Allow400 -and $statusCode -eq 400))) {
                 $passed = $true
                 $message = "Status: $statusCode (expected)"
-                Write-TestResult -TestName $Name -Passed $passed -Message $message -Data $responseBody
+                $data = if ($responseBody) { $responseBody } else { @{ raw = $rawResponse } }
+                Write-TestResult -TestName $Name -Passed $passed -Message $message -Data $data
                 return $responseBody
             } else {
-                Write-TestResult -TestName $Name -Passed $false -Message "Error status: $statusCode" -Data $responseBody
+                $data = if ($responseBody) { $responseBody } else { @{ raw = $rawResponse; error = $_.Exception.Message } }
+                Write-TestResult -TestName $Name -Passed $false -Message "Error status: $statusCode" -Data $data
+                
+                # Salvar raw se SaveRawOnError
+                if ($SaveRawOnError -and $rawResponse) {
+                    $errorFile = "logs/error-$Name-$timestamp.txt"
+                    $rawResponse | Out-File -FilePath $errorFile -Encoding UTF8
+                    Write-Host "  Erro raw salvo em: $errorFile" -ForegroundColor Yellow
+                }
+                
                 return $null
             }
         }
     } catch {
         $errorMsg = $_.Exception.Message
-        Write-TestResult -TestName $Name -Passed $false -Message "Error: $errorMsg" -Data @{ error = $errorMsg }
+        Write-TestResult -TestName $Name -Passed $false -Message "Error: $errorMsg" -Data @{ error = $errorMsg; raw = $rawError }
+        
+        # Salvar raw se SaveRawOnError
+        if ($SaveRawOnError -and $rawError) {
+            $errorFile = "logs/error-$Name-$timestamp.txt"
+            $rawError | Out-File -FilePath $errorFile -Encoding UTF8
+            Write-Host "  Erro raw salvo em: $errorFile" -ForegroundColor Yellow
+        }
+        
         return $null
     }
 }
@@ -117,7 +174,7 @@ if ($health) {
 
 # 2. Trending Tokens
 Write-Host "`n2. Trending Tokens..." -ForegroundColor White
-$trending = Invoke-ApiTest -Name "Trending Tokens" -Url "$BaseUrl/api/bags/trending"
+$trending = Invoke-ApiTest -Name "Trending Tokens" -Url "$BaseUrl/api/bags/trending" -SaveRawOnError
 if ($trending -and $trending.response.tokens -and $trending.response.tokens.Count -gt 0) {
     $firstToken = $trending.response.tokens[0]
     if ($firstToken.mint) {
@@ -146,6 +203,7 @@ $simulateSell = Invoke-ApiTest -Name "Simulate Sell" -Url "$BaseUrl/api/simulate
 
 # 5. Scan Transaction (must be 200 or 400, never 404/500)
 Write-Host "`n5. Scan Transaction..." -ForegroundColor White
+# Base64 limpo e válido (sem caracteres fora do padrão)
 $testTx = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo="
 $scan = Invoke-ApiTest -Name "Scan Transaction (valid)" -Url "$BaseUrl/api/scan" -Method "POST" -Body @{
     rawTransaction = $testTx
