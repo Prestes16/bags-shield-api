@@ -3,15 +3,23 @@ import { getCorsOrigins } from "./env";
 
 // Helper to determine allowed origin based on request
 function getAllowedOrigin(req?: VercelRequest): string {
-  const corsOrigins = getCorsOrigins();
-  if (Array.isArray(corsOrigins)) {
-    const requestOrigin = req?.headers?.origin;
-    if (requestOrigin && corsOrigins.includes(requestOrigin)) {
-      return requestOrigin;
+  try {
+    const corsOrigins = getCorsOrigins();
+    if (Array.isArray(corsOrigins)) {
+      const requestOrigin = req?.headers?.origin;
+      if (requestOrigin && corsOrigins.includes(requestOrigin)) {
+        return requestOrigin;
+      }
+      return corsOrigins[0] || "*";
     }
-    return corsOrigins[0] || "*";
+    if (typeof corsOrigins === "string") {
+      return corsOrigins;
+    }
+    return "*";
+  } catch (error) {
+    // Fallback seguro em caso de erro
+    return "*";
   }
-  return corsOrigins; // Should be "*"
 }
 
 export function setCors(res: VercelResponse, req?: VercelRequest) {
