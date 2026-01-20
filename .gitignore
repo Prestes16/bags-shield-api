@@ -1,53 +1,27 @@
-# Node / Package managers
-node_modules/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-lock.yaml
-# Note: package-lock.json SHOULD be committed for reproducible builds
+.pnpm-debug.log*
 
-# Build / IDE
-dist/
-out/
-*.log
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+# env files
+.env*
 
-# Vercel
-.vercel/
-.vercel/cache/
+# vercel
 .vercel
 
-# Env & secrets (nunca comitar chaves)
-.env
-.env.*
-!.env.example
-.env.local
-
-# Dados locais / temporários
-logs/
-logs/_archive/
-tmp/
-*.tmp
-.rate-store.json
-
-# Artefatos de smoke/tests
-logs/smoke-*.txt
-
-# Backups e arquivos antigos
-backups-*/
-.backups/
-*.bak
-*.bak-*
-
-# SO
-desktop.ini
-
-# Android signing (não commitar)
-android/signing/*
-*.keystore
-*.jks
-*.p12
-.env*.local
+# typescript
+*.tsbuildinfo
+next-env.d.ts
