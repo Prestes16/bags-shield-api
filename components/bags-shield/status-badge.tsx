@@ -48,13 +48,13 @@ export function StatusBadge({
   const config = getStatusConfig(status);
 
   return (
-    <div className="bg-[#0f2744] rounded-xl p-4">
-      <p className="text-white text-sm font-medium leading-tight mb-3">
+    <div className="bg-bg-card border border-border-subtle rounded-xl p-3">
+      <p className="text-text-primary text-xs font-medium leading-tight mb-2 line-clamp-2 min-h-[2rem]">
         {label}
       </p>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-1">
         <span
-          className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold text-white ${config.bgColor}`}
+          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold text-white ${config.bgColor}`}
         >
           {config.label}
         </span>
@@ -62,9 +62,9 @@ export function StatusBadge({
           <button
             type="button"
             onClick={onDetailsClick}
-            className="text-slate-500 text-xs hover:text-cyan-400 transition-colors"
+            className="text-text-muted text-[10px] hover:text-cyan-400 transition-colors flex-shrink-0"
           >
-            Details
+            {details}
           </button>
         )}
       </div>

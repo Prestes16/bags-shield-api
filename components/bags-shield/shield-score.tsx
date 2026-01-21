@@ -6,20 +6,25 @@ interface ShieldScoreProps {
   score: number;
   grade: string;
   maxScore?: number;
+  size?: "sm" | "md" | "lg";
 }
+
+const sizeConfig = {
+  sm: { container: 140, radius: 56, stroke: 4, score: "text-3xl", label: "text-[10px]", grade: "text-sm" },
+  md: { container: 180, radius: 72, stroke: 5, score: "text-4xl", label: "text-xs", grade: "text-base" },
+  lg: { container: 200, radius: 80, stroke: 6, score: "text-5xl", label: "text-xs", grade: "text-lg" },
+};
 
 export function ShieldScore({
   score,
   grade,
   maxScore = 100,
+  size = "md",
 }: ShieldScoreProps) {
   const [animatedScore, setAnimatedScore] = useState(0);
+  const config = sizeConfig[size];
 
-  const radius = 80;
-  const strokeWidth = 6;
-  const circumference = 2 * Math.PI * radius;
-  
-  // Calculate arc - only fills ~270 degrees (3/4 of circle)
+  const circumference = 2 * Math.PI * config.radius;
   const arcLength = circumference * 0.75;
   const progress = (animatedScore / maxScore) * arcLength;
 
@@ -44,32 +49,35 @@ export function ShieldScore({
   }, [score]);
 
   return (
-    <div className="relative flex items-center justify-center w-[200px] h-[200px]">
+    <div 
+      className="relative flex items-center justify-center"
+      style={{ width: config.container, height: config.container }}
+    >
       <svg
-        width="200"
-        height="200"
-        viewBox="0 0 200 200"
+        width={config.container}
+        height={config.container}
+        viewBox={`0 0 ${config.container} ${config.container}`}
         className="transform rotate-[135deg]"
       >
         {/* Background arc */}
         <circle
-          cx="100"
-          cy="100"
-          r={radius}
+          cx={config.container / 2}
+          cy={config.container / 2}
+          r={config.radius}
           fill="none"
           stroke="#1e3a5f"
-          strokeWidth={strokeWidth}
+          strokeWidth={config.stroke}
           strokeLinecap="round"
           strokeDasharray={`${arcLength} ${circumference}`}
         />
         {/* Progress arc */}
         <circle
-          cx="100"
-          cy="100"
-          r={radius}
+          cx={config.container / 2}
+          cy={config.container / 2}
+          r={config.radius}
           fill="none"
           stroke="url(#scoreGradient)"
-          strokeWidth={strokeWidth}
+          strokeWidth={config.stroke}
           strokeLinecap="round"
           strokeDasharray={`${progress} ${circumference}`}
           className="transition-all duration-1000 ease-out"
@@ -87,13 +95,13 @@ export function ShieldScore({
 
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-slate-400 text-xs tracking-wider mb-1">
+        <span className={`text-slate-400 ${config.label} tracking-wider mb-0.5`}>
           ShieldScore
         </span>
-        <span className="text-5xl font-bold text-white">
+        <span className={`${config.score} font-bold text-white`}>
           {animatedScore}
         </span>
-        <span className="text-slate-400 text-lg">
+        <span className={`text-slate-400 ${config.grade}`}>
           ({grade})
         </span>
       </div>
