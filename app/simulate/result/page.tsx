@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { SkeletonResult } from "@/components/states/SkeletonResult";
 
 interface SimulationResult {
@@ -18,7 +18,7 @@ interface SimulationResult {
   [key: string]: any;
 }
 
-export default function SimulateResultPage() {
+function SimulateResultPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
@@ -277,5 +277,13 @@ export default function SimulateResultPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SimulateResultPage(props: any) {
+  return (
+    <Suspense fallback={null}>
+      <SimulateResultPageInner {...props} />
+    </Suspense>
   );
 }

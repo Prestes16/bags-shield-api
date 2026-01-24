@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { LoadingOverlay } from "@/components/states/LoadingOverlay";
 import { SkeletonFees } from "@/components/states/SkeletonFees";
 
@@ -14,7 +14,7 @@ interface TransactionDetails {
 
 type RiskLevel = "LOW" | "HIGH";
 
-export default function ApplyPage() {
+function ApplyPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [transactionDetails, setTransactionDetails] = useState<TransactionDetails | null>(null);
@@ -213,5 +213,13 @@ export default function ApplyPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ApplyPage(props: any) {
+  return (
+    <Suspense fallback={null}>
+      <ApplyPageInner {...props} />
+    </Suspense>
   );
 }

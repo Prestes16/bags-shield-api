@@ -1,9 +1,10 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import { ScanLoadingRadar } from "@/components/scan/ScanLoadingRadar";
 
-export default function ScanLoadingPage() {
+function ScanLoadingPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const mint = searchParams.get("mint");
@@ -15,4 +16,12 @@ export default function ScanLoadingPage() {
   }
 
   return <ScanLoadingRadar mintAddress={mint} />;
+}
+
+export default function ScanLoadingPage(props: any) {
+  return (
+    <Suspense fallback={null}>
+      <ScanLoadingPageInner {...props} />
+    </Suspense>
+  );
 }
