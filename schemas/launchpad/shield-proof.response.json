@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "launchpad.shield-proof.response",
+  "title": "Launchpad - Shield Proof Manifest Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mint",
+    "shieldScore",
+    "grade",
+    "isSafe",
+    "badges",
+    "summary",
+    "evaluatedAt",
+    "requestId"
+  ],
+  "properties": {
+    "mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Mint address do token (após criação)"
+    },
+    "shieldScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Shield Score (0-100)"
+    },
+    "grade": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D", "E"],
+      "description": "Grade de risco (A-E)"
+    },
+    "isSafe": {
+      "type": "boolean",
+      "description": "Se o token é considerado seguro"
+    },
+    "badges": {
+      "type": "array",
+      "description": "Badges de segurança aplicados",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "title", "severity", "impact", "tags"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Chave única do badge"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Título do badge"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"],
+            "description": "Severidade"
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["negative", "neutral", "positive"],
+            "description": "Impacto"
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags para categorização",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            },
+            "maxItems": 16
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Resumo textual da avaliação"
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp da avaliação (ISO 8601)"
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Request ID para rastreamento"
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "launchpad.launch-config.request",
+  "title": "Launchpad - Launch Config Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["launchWallet", "token"],
+  "properties": {
+    "launchWallet": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Wallet Solana que fará o lançamento (pubkey válido base58)"
+    },
+    "tipWallet": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Wallet para receber tip (opcional, pubkey válido base58)"
+    },
+    "tipLamports": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Valor do tip em lamports (opcional, requerido se tipWallet fornecido)"
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "symbol", "decimals"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Nome do token (1-32 caracteres)"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10,
+          "description": "Símbolo do token (1-10 caracteres)"
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18,
+          "description": "Número de decimais (0-18)"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Descrição do token (opcional, máx 500 caracteres)"
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://",
+          "description": "URL da imagem do token (HTTP/HTTPS válido, anti-SSRF)"
+        },
+        "websiteUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://",
+          "description": "Website do projeto (HTTP/HTTPS válido)"
+        },
+        "twitterHandle": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_]{1,15}$",
+          "description": "Twitter/X handle (sem @)"
+        },
+        "telegramHandle": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_]{5,32}$",
+          "description": "Telegram handle"
+        }
+      },
+      "description": "Configurações do token"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Metadados adicionais (opcional)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "tipWallet": { "type": "string" }
+        },
+        "required": ["tipWallet"]
+      },
+      "then": {
+        "properties": {
+          "tipLamports": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "tipLamports é obrigatório e deve ser > 0 quando tipWallet é fornecido"
+          }
+        },
+        "required": ["tipLamports"]
+      }
+    }
+  ]
+}

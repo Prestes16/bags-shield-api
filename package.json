@@ -1,7 +1,7 @@
 {
-  "name": "bags-shield-api",
+  "name": "bags-shield-app",
   "version": "1.0.0",
-  "description": "API Gateway for Bags Shield project on Vercel",
+  "description": "Frontend App for Bags Shield project on Vercel",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -16,6 +16,8 @@
     "smoke": "node scripts/smoke-local.cjs",
     "smoke:prod": "node -e \"process.env.SMOKE_BASE_URL='https://bags-shield-api.vercel.app'; process.env.SMOKE_STRICT='1'; require('./scripts/smoke-runner.js')\"",
     "smoke:relaxed": "node scripts/smoke-runner.js",
+    "test:launchpad": "node scripts/test-launchpad-all.js",
+    "smoke:launchpad": "powershell -ExecutionPolicy Bypass -File scripts/smoke-launchpad.ps1",
     "start:render": "node scripts/server.cjs",
     "lint:fix": "eslint 'src/**/*.{ts,js}' --fix",
     "check:secrets": "bash scripts/check-secrets.sh",
@@ -26,6 +28,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
     "@vercel/analytics": "^1.6.1",
     "@vercel/node": "3.1.1",
     "class-variance-authority": "^0.7.1",

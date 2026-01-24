@@ -85,6 +85,46 @@ const EnvSchema = z.object({
         return null;
       }
     }),
+
+  // Launchpad Feature Flags
+  LAUNCHPAD_ENABLED: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val) return false;
+      const s = val.toLowerCase().trim();
+      return s === "1" || s === "true" || s === "yes" || s === "on";
+    }),
+  LAUNCHPAD_MODE: z
+    .enum(["stub", "real"])
+    .optional()
+    .default("stub"),
+  ALLOWED_IMAGE_DOMAINS: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val || val.trim() === "") return null;
+      return val
+        .split(",")
+        .map((d) => d.trim().toLowerCase())
+        .filter(Boolean);
+    }),
+
+  // Bags Shield API Backend (for proxy routes)
+  BAGS_SHIELD_API_BASE: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val) return null;
+      const trimmed = val.trim();
+      if (!trimmed) return null;
+      try {
+        const url = new URL(trimmed);
+        return url.toString().replace(/\/+$/, "");
+      } catch {
+        return null;
+      }
+    }),
 });
 
 type EnvConfig = z.infer<typeof EnvSchema>;
@@ -115,6 +155,10 @@ export function getEnv(): EnvConfig {
       NODE_ENV: ENV.NODE_ENV,
       BAGS_BEARER: ENV.BAGS_BEARER,
       SOLANA_RPC_URL: ENV.SOLANA_RPC_URL,
+      LAUNCHPAD_ENABLED: ENV.LAUNCHPAD_ENABLED,
+      LAUNCHPAD_MODE: ENV.LAUNCHPAD_MODE,
+      ALLOWED_IMAGE_DOMAINS: ENV.ALLOWED_IMAGE_DOMAINS,
+      BAGS_SHIELD_API_BASE: ENV.BAGS_SHIELD_API_BASE,
     };
 
     const result = EnvSchema.safeParse(raw);
@@ -133,6 +177,10 @@ export function getEnv(): EnvConfig {
       NODE_ENV: undefined,
       BAGS_BEARER: undefined,
       SOLANA_RPC_URL: null,
+      LAUNCHPAD_ENABLED: false,
+      LAUNCHPAD_MODE: "stub",
+      ALLOWED_IMAGE_DOMAINS: null,
+      BAGS_SHIELD_API_BASE: null,
     };
     return cachedEnv;
   }
@@ -154,6 +202,10 @@ export function getEnv(): EnvConfig {
       NODE_ENV: undefined,
       BAGS_BEARER: undefined,
       SOLANA_RPC_URL: null,
+      LAUNCHPAD_ENABLED: false,
+      LAUNCHPAD_MODE: "stub",
+      ALLOWED_IMAGE_DOMAINS: null,
+      BAGS_SHIELD_API_BASE: null,
     };
     return cachedEnv;
   }
@@ -216,4 +268,32 @@ export function getSimMode(): "mock" | "prod" | "preview" | "dev" {
 export function isProduction(): boolean {
   const env = getEnv();
   return env.VERCEL_ENV === "production" || env.NODE_ENV === "production";
+}
+
+/**
+ * Helper: verifica se Launchpad está habilitado.
+ */
+export function isLaunchpadEnabled(): boolean {
+  return getEnv().LAUNCHPAD_ENABLED === true;
+}
+
+/**
+ * Helper: retorna modo da Launchpad (stub|real).
+ */
+export function getLaunchpadMode(): "stub" | "real" {
+  return getEnv().LAUNCHPAD_MODE;
+}
+
+/**
+ * Helper: retorna allowlist de domínios para imageUrl (null se não configurado).
+ */
+export function getAllowedImageDomains(): string[] | null {
+  return getEnv().ALLOWED_IMAGE_DOMAINS;
+}
+
+/**
+ * Helper: retorna BAGS_SHIELD_API_BASE (null se não configurado).
+ */
+export function getBagsShieldApiBase(): string | null {
+  return getEnv().BAGS_SHIELD_API_BASE;
 }

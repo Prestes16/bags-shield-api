@@ -50,19 +50,20 @@ export function ScanLoadingRadar({ mintAddress }: ScanLoadingRadarProps) {
             
             {/* Ícone central */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                {/* Fallback emoji enquanto não tem imagem */}
-                <span className="text-4xl">🛡️</span>
-                {/* Quando tiver /images/bags-shield-icon.png, descomente:
+              <div className="relative w-24 h-24">
                 <Image
                   src="/images/bags-shield-icon.png"
                   alt="Bags Shield"
-                  width={96}
-                  height={96}
+                  fill
                   className="rounded-full object-contain"
-                  priority
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    if (target.parentElement) {
+                      target.parentElement.innerHTML = '<span class="text-4xl">🛡️</span>';
+                    }
+                  }}
                 />
-                */}
               </div>
             </div>
           </div>

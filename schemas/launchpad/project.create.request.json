@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "launchpad.project.create.request",
+  "title": "Launchpad - Create Project Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["launchWallet", "token"],
+  "properties": {
+    "launchWallet": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Wallet Solana que fará o lançamento (pubkey válido base58)"
+    },
+    "tipWallet": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Wallet para receber tip (opcional, pubkey válido base58)"
+    },
+    "tipLamports": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Valor do tip em lamports (opcional, requerido se tipWallet fornecido)"
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "symbol", "decimals"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "websiteUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "twitterHandle": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_]{1,15}$"
+        },
+        "telegramHandle": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_]{5,32}$"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "tipWallet": { "type": "string" }
+        },
+        "required": ["tipWallet"]
+      },
+      "then": {
+        "properties": {
+          "tipLamports": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": ["tipLamports"]
+      }
+    }
+  ]
+}

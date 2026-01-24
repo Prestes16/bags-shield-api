@@ -67,3 +67,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Skeleton glass effect para fundos escuros */
+  .skeleton-glass {
+    @apply bg-white/5 dark:bg-white/10 animate-pulse rounded-md;
+  }
+}
+
+/* Confetti animation */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti linear forwards;
+}

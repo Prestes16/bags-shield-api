@@ -18,7 +18,7 @@ interface ScoreData {
   badges: BadgeStatus[];
 }
 
-export function Dashboard() {
+export function DashboardScreen() {
   const router = useRouter();
   
   // Estado do Score com dados mockados
@@ -39,6 +39,10 @@ export function Dashboard() {
 
   const handleSimulate = () => {
     router.push("/simulate");
+  };
+
+  const handleLaunchpad = () => {
+    router.push("/launchpad");
   };
 
   const getGradeColor = (grade: string) => {
@@ -77,20 +81,22 @@ export function Dashboard() {
         {/* Header */}
         <header className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            {/* Logo - usando ícone existente ou fallback emoji */}
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-              🛡️
+            {/* Logo */}
+            <div className="relative w-12 h-12">
+              <Image
+                src="/images/bags-shield-icon.png"
+                alt="Bags Shield Logo"
+                fill
+                className="rounded-lg object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  if (target.parentElement) {
+                    target.parentElement.innerHTML = "🛡️";
+                  }
+                }}
+              />
             </div>
-            {/* Quando tiver /images/bags-shield-icon.png, descomente:
-            <Image
-              src="/images/bags-shield-icon.png"
-              alt="Bags Shield Logo"
-              width={48}
-              height={48}
-              className="rounded-lg"
-              priority
-            />
-            */}
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                 Bags Shield
@@ -106,6 +112,9 @@ export function Dashboard() {
             </Button>
             <Button onClick={handleSimulate} variant="outline">
               Simulate
+            </Button>
+            <Button onClick={handleLaunchpad} variant="outline">
+              Launchpad
             </Button>
           </div>
         </header>

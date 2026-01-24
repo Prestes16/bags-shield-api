@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors, preflight, noStore, ensureRequestId } from "../lib/cors.js";
-import { validatePayloadSize } from "../lib/payload-validation.js";
+import { setCors, preflight, noStore, ensureRequestId } from "../lib/cors";
+import { validatePayloadSize } from "../lib/payload-validation";
 
 const BAGS_BASE = process.env.BAGS_API_BASE_REAL || "https://public-api-v2.bags.fm/api/v1";
 const TIMEOUT_MS = Number(process.env.BAGS_TIMEOUT_MS || 12_000);
@@ -66,7 +66,7 @@ function normalizeTokens(payload: any) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Extração robusta do route param
+  // ExtraÃƒÂ§ÃƒÂ£o robusta do route param
   const routeParam = req.query.route;
   const rawUrl = req.url || "";
   const rawQuery = JSON.stringify(req.query);
@@ -206,7 +206,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return send(res, 405, { success: false, error: "Method Not Allowed", route: path });
   }
 
-  // Só GET por enquanto (a gente adiciona POSTs depois com segurança)
+  // SÃƒÂ³ GET por enquanto (a gente adiciona POSTs depois com seguranÃƒÂ§a)
   if (req.method !== "GET") {
     return send(res, 405, { success: false, error: "Method Not Allowed" });
   }
@@ -225,18 +225,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // --- /api/bags/ping ---
   if (path === "ping" || path === "") {
     // apenas confirma config + reachability base
-    // Se path vazio, pode ser /api/bags/ (raiz) ou problema de extração
+    // Se path vazio, pode ser /api/bags/ (raiz) ou problema de extraÃƒÂ§ÃƒÂ£o
     if (path === "" && rawUrl.includes("/api/bags/") && !rawUrl.endsWith("/api/bags") && !rawUrl.endsWith("/api/bags/")) {
-      // Path vazio mas URL não termina em /api/bags → problema de extração, tenta fallback novamente
+      // Path vazio mas URL nÃƒÂ£o termina em /api/bags Ã¢â€ â€™ problema de extraÃƒÂ§ÃƒÂ£o, tenta fallback novamente
       const urlPath = rawUrl.split("?")[0] || "";
       const match = urlPath.match(/\/api\/bags\/(.+)$/);
       if (match && match[1]) {
         const fallbackSegs = match[1].split("/").filter(Boolean);
         const fallbackPath = fallbackSegs.join("/");
         console.log("[bags catch-all] Fallback extraction", { rawUrl, fallbackPath });
-        // Reprocessa com fallbackPath ao invés de path vazio
+        // Reprocessa com fallbackPath ao invÃƒÂ©s de path vazio
         if (fallbackPath === "trending") {
-          // Recursão não, processa direto:
+          // RecursÃƒÂ£o nÃƒÂ£o, processa direto:
           const candidates = [
             `${BAGS_BASE}/trending`,
             `${BAGS_BASE}/tokens/trending`,
@@ -266,7 +266,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             detail: lastErr,
           });
         }
-        // Se não for trending, retorna 501 com debug
+        // Se nÃƒÂ£o for trending, retorna 501 com debug
         return send(res, 501, {
           success: false,
           error: "Not implemented in consolidated /api/bags router yet",
@@ -325,7 +325,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // Default: rota ainda não portada
+  // Default: rota ainda nÃƒÂ£o portada
   return send(res, 501, {
     success: false,
     error: "Not implemented in consolidated /api/bags router yet",

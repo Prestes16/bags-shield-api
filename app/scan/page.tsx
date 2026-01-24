@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ScanInput } from "@/components/scan-input";
+import { ScanInput } from "@/components/scan/ScanInput";
 import { useState } from "react";
 
 export default function ScanPage() {

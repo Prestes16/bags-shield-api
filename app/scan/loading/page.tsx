@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { ScanLoadingRadar } from "@/components/scan-loading-radar";
+import { ScanLoadingRadar } from "@/components/scan/ScanLoadingRadar";
 
 export default function ScanLoadingPage() {
   const searchParams = useSearchParams();

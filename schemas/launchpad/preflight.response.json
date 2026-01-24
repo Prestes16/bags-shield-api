@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "launchpad.preflight.response",
+  "title": "Launchpad - Preflight Validation Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["isValid", "issues", "warnings", "validatedAt", "requestId"],
+  "properties": {
+    "isValid": {
+      "type": "boolean",
+      "description": "Se todas as validações passaram"
+    },
+    "issues": {
+      "type": "array",
+      "description": "Lista de issues encontradas (vazia se isValid = true)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "message", "severity"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caminho do campo com problema (ex: 'token.name', 'imageUrl')"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mensagem de erro descritiva"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["error", "warning", "info"],
+            "description": "Severidade do problema"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "description": "Warnings não bloqueantes",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "message"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caminho do campo"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mensagem de warning"
+          }
+        }
+      }
+    },
+    "validatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp da validação (ISO 8601)"
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Request ID para rastreamento"
+    }
+  }
+}

@@ -1,70 +1,26 @@
 {
   "compilerOptions": {
-    /* Language and Environment */
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["dom", "dom.iterable", "ES2022"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
+    "jsx": "preserve",
     "noEmit": true,
-    
-    /* Emit */
-    "outDir": "./dist",
-    "rootDir": "./",
-    "declaration": false,
-    "declarationMap": false,
-    "sourceMap": false,
-    "removeComments": false,
-    
-    /* Interop Constraints */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    
-    /* Type Checking */
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": false,
-    
-    /* Completeness */
+    "strict": false,
     "skipLibCheck": true,
-    
-    /* Paths */
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*", "./*"],
+      "@/components/*": ["./src/components/*", "./components/*"]
     },
-    
-    /* Node */
-    "types": ["node"],
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": false
+    "plugins": [{ "name": "next" }]
   },
-  "include": [
-    "api/**/*",
-    "lib/**/*",
-    "types/**/*",
-    "scripts/**/*.ts",
-    "app/**/*",
-    "components/**/*"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": [
-    "node_modules",
-    "dist",
-    "backups-*",
-    ".backups",
-    "logs",
-    "**/*.bak",
-    "**/*.bak-*"
-  ]
+    "deprecated/**","node_modules", "api/**", "dist", "logs", "backups-*", ".backups"]
 }
