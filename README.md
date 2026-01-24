@@ -186,6 +186,38 @@ All JSON responses follow the same shape:
 
 ---
 
+## Security posture (transparency-first)
+
+Bags Shield is built with a **fail-closed** mindset: if data cannot be trusted, we degrade clearly instead of guessing.
+
+### Trust model
+- **Client is untrusted.** The app UI never "decides" risk.
+- **Server computes risk outputs.** Scores/badges are generated server-side.
+- **Integrity markers** are attached to scan results to reduce forgery and replay risk.
+- If upstream sources fail, we return **explicitly degraded** results.
+
+### Anti-abuse & hardening
+- Strict request validation (schema-based, unknown keys rejected)
+- Request size limits + content-type enforcement
+- Rate-limiting by IP (and optional keys when enabled)
+- No-store responses + requestId correlation for debugging
+- Logs are sanitized (secrets never logged)
+
+### Known limitations (honesty)
+> We do not claim "anti-scam guarantee".
+> Bags Shield is a risk intelligence layer: it helps users decide faster with better signals.
+> Safety is probabilistic; we continuously harden defenses and publish changes.
+
+### Responsible disclosure
+See [SECURITY.md](./SECURITY.md).
+
+**Additional documentation:**
+- [docs/security.md](docs/security.md)
+- [docs/threat-model.md](docs/threat-model.md)
+- [CHANGELOG.md](CHANGELOG.md)
+
+---
+
 ## Why this repo exists
 
 This repository exists for two main reasons:
