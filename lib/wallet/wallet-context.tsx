@@ -6,8 +6,10 @@ interface WalletContextType {
   connected: boolean;
   connecting: boolean;
   publicKey: string | null;
-  connect: () => Promise<void>;
+  connectionError: string | null;
+  connect: () => Promise<boolean>;
   disconnect: () => void;
+  clearError: () => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -16,6 +18,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Check for existing connection on mount (client-side only)
   useEffect(() => {
@@ -28,10 +31,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const connect = async () => {
-    if (typeof window === "undefined") return;
+  const connect = async (): Promise<boolean> => {
+    if (typeof window === "undefined") return false;
 
     setConnecting(true);
+    setConnectionError(null);
+    
     try {
       // Check if Phantom wallet is available
       const { solana } = window as any;
@@ -43,13 +48,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setPublicKey(pubKey);
         setConnected(true);
         localStorage.setItem("wallet_public_key", pubKey);
+        setConnectionError(null);
+        return true;
       } else {
-        // Fallback: open Phantom website
+        const errorMsg = "Phantom wallet not installed. Opening Phantom website...";
+        setConnectionError(errorMsg);
+        // Open Phantom website to install
         window.open("https://phantom.app/", "_blank");
-        throw new Error("Phantom wallet not found");
+        return false;
       }
-    } catch (error) {
-      console.error("Wallet connection failed:", error);
+    } catch (error: any) {
+      const errorMsg = error?.message === "User rejected the request." 
+        ? "Wallet connection cancelled. Please try again."
+        : `Connection failed: ${error?.message || "Unknown error"}`;
+      
+      setConnectionError(errorMsg);
+      console.error("[v0] Wallet connection error:", error);
+      return false;
     } finally {
       setConnecting(false);
     }
@@ -58,9 +73,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const disconnect = () => {
     setPublicKey(null);
     setConnected(false);
+    setConnectionError(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem("wallet_public_key");
     }
+  };
+
+  const clearError = () => {
+    setConnectionError(null);
   };
 
   return (
@@ -69,8 +89,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connected,
         connecting,
         publicKey,
+        connectionError,
         connect,
         disconnect,
+        clearError,
       }}
     >
       {children}
