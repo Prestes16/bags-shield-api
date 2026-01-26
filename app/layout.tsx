@@ -4,6 +4,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { LanguageProvider } from "@/lib/i18n/language-context";
 import { ThemeProvider } from "@/lib/theme/theme-context";
+import { WalletProvider } from "@/lib/wallet/wallet-context";
 import "./globals.css";
 
 const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -48,10 +49,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Suppress wallet extension errors - must run first */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `!function(){window.addEventListener("unhandledrejection",function(e){try{var t=e.reason;if(t&&t.message){var n=String(t.message).toLowerCase();if(n.includes("metamask")||n.includes("wallet")||n.includes("ethereum")||n.includes("connect")||n.includes("provider"))return e.preventDefault(),void(e.stopImmediatePropagation&&e.stopImmediatePropagation())}}catch(e){}},!0)}();`,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased bg-bg-page min-h-screen transition-colors duration-300">
         <ThemeProvider>
           <LanguageProvider>
-            {children}
+            <WalletProvider>
+              {children}
+            </WalletProvider>
           </LanguageProvider>
         </ThemeProvider>
         <Analytics />
