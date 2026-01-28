@@ -29,6 +29,7 @@ const mockScanResults: Record<string, any> = {
       fromCache: false,
       stale: false,
       source: "live",
+      dataSources: ["on-chain", "social"],
       timestamp: Date.now(),
     },
   },
@@ -59,10 +60,41 @@ const mockScanResults: Record<string, any> = {
       fromCache: true,
       stale: false,
       source: "cache",
+      dataSources: ["cache", "on-chain"],
       timestamp: Date.now() - 3600000,
     },
   },
 };
+
+// Rate limiting map (per IP, simple in-memory)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX = 30; // requests per window
+
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0] ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const limit = rateLimitMap.get(ip);
+
+  if (!limit || now > limit.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (limit.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+
+  limit.count++;
+  return true;
+}
 
 // Pro Scan payment validation (mock)
 const PRO_SCAN_PRICE_LAMPORTS = 500000000; // 0.5 SOL
@@ -70,13 +102,49 @@ const OPS_WALLET = "BatchmoonMoonbatchMoonBatchMoonbatch11111111";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const clientIp = getClientIp(request);
+
+    // Check rate limit
+    if (!checkRateLimit(clientIp)) {
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded. Please try again later.",
+          code: "RATE_LIMITED",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const contentType = request.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      return NextResponse.json(
+        { error: "Content-Type must be application/json" },
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const { mint, pro = false, proSignature = null } = body;
 
-    if (!mint) {
+    if (!mint || typeof mint !== "string") {
       return NextResponse.json(
-        { error: "Missing mint address in request body" },
-        { status: 400 }
+        { error: "Missing or invalid mint address in request body" },
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -89,7 +157,10 @@ export async function POST(request: NextRequest) {
           requiredLamports: PRO_SCAN_PRICE_LAMPORTS,
           destination: OPS_WALLET,
         },
-        { status: 402 }
+        {
+          status: 402,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -112,11 +183,17 @@ export async function POST(request: NextRequest) {
             fromCache: false,
             stale: false,
             source: "live",
+            dataSources: ["on-chain", "social", "pro-analysis"],
             timestamp: Date.now(),
           },
         };
       }
-      return NextResponse.json(mockData);
+      return NextResponse.json(mockData, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      });
     }
 
     // For unknown mints, generate a random result
@@ -126,112 +203,176 @@ export async function POST(request: NextRequest) {
     const status =
       randomScore >= 70 ? "safe" : randomScore >= 50 ? "warning" : "danger";
 
-    return NextResponse.json({
-      name: "Unknown Token",
-      symbol: mint.slice(0, 4).toUpperCase(),
-      mint,
-      logoUrl: null,
-      score: randomScore,
-      grade,
-      status,
-      findings: [
-        {
-          id: "1",
-          title: pro ? "Pro Scan Analysis" : "Unverified Token",
-          description: pro
-            ? "Detailed analysis completed with premium features"
-            : "This token has not been verified on major platforms",
-          severity: status === "danger" ? "high" : "medium",
-        },
-        {
-          id: "2",
-          title: "Limited Data",
-          description: "Limited historical data available for this token",
-          severity: "low",
-        },
-      ],
-      meta: {
-        fromCache: false,
-        stale: false,
-        source: pro ? "pro-scan" : "live",
-        timestamp: Date.now(),
-      },
-    });
-  } catch {
     return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
+      {
+        name: "Unknown Token",
+        symbol: mint.slice(0, 4).toUpperCase(),
+        mint,
+        logoUrl: null,
+        score: randomScore,
+        grade,
+        status,
+        findings: [
+          {
+            id: "1",
+            title: pro ? "Pro Scan Analysis" : "Unverified Token",
+            description: pro
+              ? "Detailed analysis completed with premium features"
+              : "This token has not been verified on major platforms",
+            severity: status === "danger" ? "high" : "medium",
+          },
+          {
+            id: "2",
+            title: "Limited Data",
+            description: "Limited historical data available for this token",
+            severity: "low",
+          },
+        ],
+        meta: {
+          fromCache: false,
+          stale: false,
+          source: pro ? "pro-scan" : "live",
+          dataSources: pro ? ["pro-analysis"] : ["on-chain"],
+          timestamp: Date.now(),
+        },
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("[v0] /api/scan error:", error);
+    return NextResponse.json(
+      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      }
     );
   }
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const mint = searchParams.get("mint");
-  const pro = searchParams.get("pro") === "true";
+  try {
+    const clientIp = getClientIp(request);
 
-  if (!mint) {
+    // Check rate limit
+    if (!checkRateLimit(clientIp)) {
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded. Please try again later.",
+          code: "RATE_LIMITED",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const mint = searchParams.get("mint");
+    const pro = searchParams.get("pro") === "true";
+
+    if (!mint || typeof mint !== "string") {
+      return NextResponse.json(
+        { error: "Missing or invalid mint address parameter" },
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Simulate scan delay
+    await new Promise((resolve) => setTimeout(resolve, pro ? 1500 : 800));
+
+    // Check if we have mock data for this mint
+    let mockData = mockScanResults[mint];
+
+    if (mockData) {
+      if (pro) {
+        mockData = {
+          ...mockData,
+          meta: {
+            fromCache: false,
+            stale: false,
+            source: "live",
+            dataSources: ["on-chain", "social", "pro-analysis"],
+            timestamp: Date.now(),
+          },
+        };
+      }
+      return NextResponse.json(mockData, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      });
+    }
+
+    // For unknown mints, generate a random result
+    const randomScore = Math.floor(Math.random() * 60) + 30;
+    const grade =
+      randomScore >= 80 ? "A" : randomScore >= 60 ? "B" : randomScore >= 40 ? "C" : "D";
+    const status =
+      randomScore >= 70 ? "safe" : randomScore >= 50 ? "warning" : "danger";
+
     return NextResponse.json(
-      { error: "Missing mint address parameter" },
-      { status: 400 }
-    );
-  }
-
-  // Simulate scan delay
-  await new Promise((resolve) => setTimeout(resolve, pro ? 1500 : 800));
-
-  // Check if we have mock data for this mint
-  let mockData = mockScanResults[mint];
-
-  if (mockData) {
-    if (pro) {
-      mockData = {
-        ...mockData,
+      {
+        name: "Unknown Token",
+        symbol: mint.slice(0, 4).toUpperCase(),
+        mint,
+        logoUrl: null,
+        score: randomScore,
+        grade,
+        status,
+        findings: [
+          {
+            id: "1",
+            title: "Unverified Token",
+            description: "This token has not been verified on major platforms",
+            severity: status === "danger" ? "high" : "medium",
+          },
+          {
+            id: "2",
+            title: "Limited Data",
+            description: "Limited historical data available for this token",
+            severity: "low",
+          },
+        ],
         meta: {
           fromCache: false,
           stale: false,
           source: "live",
+          dataSources: ["on-chain"],
           timestamp: Date.now(),
         },
-      };
-    }
-    return NextResponse.json(mockData);
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("[v0] /api/scan GET error:", error);
+    return NextResponse.json(
+      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      }
+    );
   }
-
-  // For unknown mints, generate a random result
-  const randomScore = Math.floor(Math.random() * 60) + 30;
-  const grade =
-    randomScore >= 80 ? "A" : randomScore >= 60 ? "B" : randomScore >= 40 ? "C" : "D";
-  const status =
-    randomScore >= 70 ? "safe" : randomScore >= 50 ? "warning" : "danger";
-
-  return NextResponse.json({
-    name: "Unknown Token",
-    symbol: mint.slice(0, 4).toUpperCase(),
-    mint,
-    logoUrl: null,
-    score: randomScore,
-    grade,
-    status,
-    findings: [
-      {
-        id: "1",
-        title: "Unverified Token",
-        description: "This token has not been verified on major platforms",
-        severity: status === "danger" ? "high" : "medium",
-      },
-      {
-        id: "2",
-        title: "Limited Data",
-        description: "Limited historical data available for this token",
-        severity: "low",
-      },
-    ],
-    meta: {
-      fromCache: false,
-      stale: false,
-      source: "live",
-      timestamp: Date.now(),
-    },
-  });
 }

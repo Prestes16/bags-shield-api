@@ -11,14 +11,21 @@ export interface ScanResult {
   score: number;
   grade: string;
   status: "safe" | "warning" | "danger";
-  scannedAt: string;
+  scannedAt?: string;
   findings: Array<{
     id: string;
-    category: string;
+    category?: string;
     severity: "critical" | "high" | "medium" | "low" | "info";
     title: string;
     description: string;
   }>;
+  meta?: {
+    fromCache?: boolean;
+    stale?: boolean;
+    source?: "live" | "cache" | "pro-scan";
+    dataSources?: string[];
+    timestamp?: number;
+  };
 }
 
 export interface SimulationResult {
@@ -48,24 +55,79 @@ export interface WalletBalance {
   }>;
 }
 
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code: string,
+  ) {
+    super(message);
+    this.name = "APIError";
+  }
+}
+
 class BackendClient {
   private baseUrl = "/api";
+
+  private async handleResponse(response: Response, endpoint: string) {
+    if (!response.ok) {
+      // Check for specific error codes in response
+      let errorData: any;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: response.statusText, code: "UNKNOWN_ERROR" };
+      }
+
+      const message = errorData.error || response.statusText;
+      const code = errorData.code || `HTTP_${response.status}`;
+
+      throw new APIError(message, response.status, code);
+    }
+
+    // Validate content type
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      throw new APIError(
+        "Backend returned non-JSON response",
+        response.status,
+        "INVALID_RESPONSE",
+      );
+    }
+
+    try {
+      return await response.json();
+    } catch {
+      throw new APIError(
+        "Failed to parse JSON response",
+        response.status,
+        "JSON_PARSE_ERROR",
+      );
+    }
+  }
 
   /**
    * Scan a token by mint address
    */
   async scan(mint: string): Promise<ScanResult> {
-    const response = await fetch(`${this.baseUrl}/scan`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mint }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mint }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Scan failed: ${response.statusText}`);
+      return await this.handleResponse(response, "scan");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
-
-    return response.json();
   }
 
   /**
@@ -76,17 +138,24 @@ class BackendClient {
     toToken: string;
     amount: number;
   }): Promise<SimulationResult> {
-    const response = await fetch(`${this.baseUrl}/simulate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/simulate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Simulation failed: ${response.statusText}`);
+      return await this.handleResponse(response, "simulate");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
-
-    return response.json();
   }
 
   /**
@@ -96,32 +165,46 @@ class BackendClient {
     transactionData: string;
     signature?: string;
   }): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    const response = await fetch(`${this.baseUrl}/apply`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Apply failed: ${response.statusText}`);
+      return await this.handleResponse(response, "apply");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
-
-    return response.json();
   }
 
   /**
    * Get wallet balance
    */
   async getWalletBalance(address: string): Promise<WalletBalance> {
-    const response = await fetch(
-      `${this.baseUrl}/wallet/balance?address=${encodeURIComponent(address)}`
-    );
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/wallet/balance?address=${encodeURIComponent(address)}`,
+      );
 
-    if (!response.ok) {
-      throw new Error(`Balance fetch failed: ${response.statusText}`);
+      return await this.handleResponse(response, "wallet/balance");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
-
-    return response.json();
   }
 
   /**
@@ -129,44 +212,67 @@ class BackendClient {
    */
   async getScanHistory(
     limit = 20,
-    offset = 0
+    offset = 0,
   ): Promise<{ items: ScanResult[]; total: number }> {
-    const response = await fetch(
-      `${this.baseUrl}/history?limit=${limit}&offset=${offset}`
-    );
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/history?limit=${limit}&offset=${offset}`,
+      );
 
-    if (!response.ok) {
-      throw new Error(`History fetch failed: ${response.statusText}`);
+      return await this.handleResponse(response, "history");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
-
-    return response.json();
   }
 
   /**
    * Get watchlist
    */
   async getWatchlist(): Promise<ScanResult[]> {
-    const response = await fetch(`${this.baseUrl}/watchlist`);
+    try {
+      const response = await fetch(`${this.baseUrl}/watchlist`);
 
-    if (!response.ok) {
-      throw new Error(`Watchlist fetch failed: ${response.statusText}`);
+      return await this.handleResponse(response, "watchlist");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
-
-    return response.json();
   }
 
   /**
    * Add to watchlist
    */
   async addToWatchlist(mint: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/watchlist`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mint }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/watchlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mint }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Add to watchlist failed: ${response.statusText}`);
+      await this.handleResponse(response, "watchlist");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
   }
 
@@ -174,14 +280,23 @@ class BackendClient {
    * Remove from watchlist
    */
   async removeFromWatchlist(mint: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/watchlist`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mint }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/watchlist`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mint }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Remove from watchlist failed: ${response.statusText}`);
+      await this.handleResponse(response, "watchlist");
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(
+        error instanceof Error ? error.message : "Unknown error",
+        0,
+        "NETWORK_ERROR",
+      );
     }
   }
 }

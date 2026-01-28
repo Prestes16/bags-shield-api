@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronLeft, Home, AlertCircle, Loader2 } from "lucide-react";
@@ -23,55 +23,104 @@ const ScanResultPage = () => {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const mint = searchParams.get("mint") || searchParams.get("address");
-  
+
   const [viewState, setViewState] = useState<ViewState>("idle");
   const [scanData, setScanData] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string>("");
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [showTradeModal, setShowTradeModal] = useState(false);
 
-  // Fetch scan data on mount or when mint changes
+  // Use refs to track in-flight requests and prevent duplicates
+  const inFlightRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Fetch scan data on mount or when mint changes (with dedup protection)
   useEffect(() => {
     if (!mint) {
       setViewState("idle");
       return;
     }
 
+    // Skip if same mint is already in-flight
+    if (inFlightRef.current === mint) {
+      return;
+    }
+
+    // Abort previous request if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Mark this request as in-flight
+    inFlightRef.current = mint;
+    abortControllerRef.current = new AbortController();
+
     const fetchScan = async () => {
       setViewState("loading");
       setError("");
-      
+
       try {
         const result = await backendClient.scan(mint);
-        setScanData(result);
-        setViewState("success");
-      } catch (err) {
-        // Scan failed - error handled below
-        setError(err instanceof Error ? err.message : "Scan failed");
-        setViewState("error");
+        // Only update state if this is still the current mint (not stale request)
+        if (inFlightRef.current === mint) {
+          setScanData(result);
+          setViewState("success");
+        }
+      } catch (err: any) {
+        // Only update state if this is still the current mint
+        if (inFlightRef.current === mint) {
+          const errorMsg = err?.message || "Scan failed";
+          // Check for rate limit error
+          if (err?.code === "RATE_LIMITED" || err?.status === 429) {
+            setError("Rate limited. Please wait before trying again.");
+          } else {
+            setError(errorMsg);
+          }
+          setViewState("error");
+        }
+      } finally {
+        // Clear in-flight marker if still current
+        if (inFlightRef.current === mint) {
+          inFlightRef.current = null;
+        }
       }
     };
 
     fetchScan();
+
+    // Cleanup: abort request on unmount or mint change
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [mint]);
 
   const handleRetry = () => {
     if (mint) {
+      // Force a new fetch by clearing the in-flight marker
+      inFlightRef.current = null;
+      setViewState("loading");
+      setError("");
+
       const fetchScan = async () => {
-        setViewState("loading");
-        setError("");
-        
         try {
           const result = await backendClient.scan(mint);
-          setScanData(result);
-          setViewState("success");
-        } catch (err) {
-          // Retry failed - error handled below
-          setError(err instanceof Error ? err.message : "Scan failed");
+          if (inFlightRef.current === null) {
+            setScanData(result);
+            setViewState("success");
+          }
+        } catch (err: any) {
+          const errorMsg = err?.message || "Scan failed";
+          if (err?.code === "RATE_LIMITED" || err?.status === 429) {
+            setError("Rate limited. Please wait before trying again.");
+          } else {
+            setError(errorMsg);
+          }
           setViewState("error");
         }
       };
-      
+
       fetchScan();
     }
   };
@@ -111,7 +160,7 @@ const ScanResultPage = () => {
     return (
       <div className="min-h-screen bg-bg-page flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
-          <Loader2 className="w-12 h-12 mx-auto mb-4 text-cyan-400 animate-spin" />
+          <Loader2 className="w-12 h-12 mx-auto mb-4 text-[var(--cyan-primary)] animate-spin" />
           <h2 className="text-xl font-semibold text-text-primary mb-2">
             Scanning Token...
           </h2>
