@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { inputMint, outputMint, amount, isSafe } = body;
+    const { inputMint, outputMint, amount, isSafe, userAcceptedRisk = false } = body;
 
-    // Safety check
-    if (!isSafe) {
+    // Safety check - but allow if user explicitly accepted risk
+    if (!isSafe && !userAcceptedRisk) {
       return NextResponse.json(
         {
           error: "Token failed safety checks",

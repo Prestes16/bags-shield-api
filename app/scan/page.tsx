@@ -218,7 +218,7 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
 
   const handleRiskConfirm = async () => {
     setShowRiskModal(false);
-    await executeSwap(pendingSwapAmount);
+    await executeSwap(pendingSwapAmount, true); // Pass userAcceptedRisk = true
     setPendingSwapAmount("");
   };
 
@@ -228,7 +228,11 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
   };
 
   // Build swap transaction (without sending)
-  const buildSwapTransactionOnly = async (outputMint: string, swapAmount: string) => {
+  const buildSwapTransactionOnly = async (
+    outputMint: string, 
+    swapAmount: string, 
+    userAcceptedRisk: boolean = false
+  ) => {
     const response = await fetch("/api/swap", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -238,6 +242,7 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
         amount: parseFloat(swapAmount) * 1e9, // Convert to lamports
         platformFeeBps: 50, // 0.5% platform fee
         isSafe: scanData?.security.isSafe || false,
+        userAcceptedRisk, // Pass user risk acceptance flag
       }),
     });
 
@@ -251,7 +256,7 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
   };
 
   // Execute swap with proper wallet adapter flow
-  const executeSwap = async (swapAmount: string) => {
+  const executeSwap = async (swapAmount: string, userAcceptedRisk: boolean = false) => {
     if (!swapAmount || !scanData) return;
 
     setIsSwapping(true);
@@ -263,7 +268,8 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
       // 1. Build transaction (does not send yet)
       const transaction = await buildSwapTransactionOnly(
         scanData.tokenInfo.mint,
-        swapAmount
+        swapAmount,
+        userAcceptedRisk
       );
 
       console.log("[v0] Transaction built successfully");
