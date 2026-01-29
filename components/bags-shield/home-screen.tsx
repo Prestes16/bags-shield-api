@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { 
@@ -12,9 +13,12 @@ import {
   Eye, 
   Bell, 
   Activity,
-  Shield
+  Shield,
+  Plus
 } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/language-context"
+import { useWallet } from "@/lib/wallet/wallet-context"
+import { QuickScanModal } from "./quick-scan-modal"
 
 // Configuration for money rain particles
 const moneyParticles = [
@@ -33,9 +37,27 @@ const moneyParticles = [
 export function HomeScreen() {
   const router = useRouter()
   const { t } = useLanguage()
+  const { connected, connecting, publicKey, connect, disconnect } = useWallet()
+  const [showScanModal, setShowScanModal] = useState(false)
+
+  const handleQuickScan = (mint: string) => {
+    router.push(`/scan?mint=${encodeURIComponent(mint)}`)
+  }
+
+  const handleWalletAction = () => {
+    if (connected) {
+      disconnect()
+    } else {
+      connect()
+    }
+  }
+
+  const truncateAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`
+  }
 
   const quickActions = [
-    { icon: Eye, label: t.nav.watchlist, route: "/watchlist", color: "text-cyan-400" },
+    { icon: Eye, label: t.nav.watchlist, route: "/watchlist", color: "text-[var(--cyan-primary)]" },
     { icon: Bell, label: t.nav.alerts, route: "/alerts", color: "text-amber-400" },
     { icon: Activity, label: t.nav.network, route: "/network", color: "text-emerald-400" },
   ]
@@ -99,23 +121,41 @@ export function HomeScreen() {
         {/* Main Action Card */}
         <div className="w-full max-w-sm bg-bg-card backdrop-blur-xl border border-border-subtle rounded-2xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
           <div className="space-y-3">
-            {/* Connect Wallet Button */}
+            {/* Connect Wallet Button - Functional wallet connection */}
             <button 
               type="button"
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] text-sm"
+              onClick={handleWalletAction}
+              disabled={connecting}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] hover:opacity-90 text-white font-semibold rounded-xl transition-all duration-300 shadow-[0_0_20px_var(--cyan-glow)] hover:shadow-[0_0_30px_var(--cyan-glow)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Wallet className="w-4 h-4" />
-              <span>{t.home.connectWallet}</span>
+              <span>
+                {connecting 
+                  ? "Connecting..." 
+                  : connected && publicKey 
+                    ? truncateAddress(publicKey)
+                    : t.home.connectWallet}
+              </span>
             </button>
 
-            {/* Quick Scan Button */}
+            {/* Quick Scan Button - Opens modal */}
             <button 
               type="button"
-              onClick={() => router.push("/scan")}
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-transparent border-2 border-cyan-500/50 hover:border-cyan-400 text-cyan-400 hover:text-cyan-300 font-semibold rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(34,211,238,0.15)] hover:shadow-[0_0_25px_rgba(34,211,238,0.3)] text-sm"
+              onClick={() => setShowScanModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-transparent border-2 border-[var(--cyan-primary)]/50 hover:border-[var(--cyan-primary)] text-[var(--cyan-primary)] hover:opacity-90 font-semibold rounded-xl transition-all duration-300 shadow-[0_0_15px_var(--cyan-glow)] hover:shadow-[0_0_25px_var(--cyan-glow)] text-sm"
             >
               <Scan className="w-4 h-4" />
               <span>{t.home.quickScan}</span>
+            </button>
+
+            {/* Create Token Button */}
+            <button 
+              type="button"
+              onClick={() => router.push("/create-token")}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-transparent border-2 border-emerald-500/50 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 font-semibold rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(52,211,153,0.15)] hover:shadow-[0_0_25px_rgba(52,211,153,0.3)] text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t.home.createToken}</span>
             </button>
           </div>
         </div>
@@ -146,16 +186,16 @@ export function HomeScreen() {
             <p className="text-xs font-semibold text-emerald-400">{t.home.online}</p>
           </div>
 
-          {/* Last Scan */}
+          {/* Last Scan - Shows real data or dash */}
           <div className="bg-bg-card backdrop-blur-md border border-border-subtle rounded-xl p-3 text-center">
             <span className="text-[10px] text-text-muted block mb-1">{t.home.lastScan}</span>
-            <p className="text-xs font-semibold text-text-primary">5m ago</p>
+            <p className="text-xs font-semibold text-text-muted">—</p>
           </div>
 
-          {/* Daily Alerts */}
+          {/* Daily Alerts - Shows real data or dash */}
           <div className="bg-bg-card backdrop-blur-md border border-border-subtle rounded-xl p-3 text-center">
             <span className="text-[10px] text-text-muted block mb-1">{t.home.dailyAlerts}</span>
-            <p className="text-xs font-semibold text-text-muted">0</p>
+            <p className="text-xs font-semibold text-text-muted">—</p>
           </div>
         </div>
 
@@ -166,7 +206,7 @@ export function HomeScreen() {
             <button 
               type="button"
               onClick={() => router.push("/history")}
-              className="text-xs text-cyan-400 hover:text-cyan-300"
+              className="text-xs text-[var(--cyan-primary)] hover:opacity-80"
             >
               {t.common.details}
             </button>
@@ -181,16 +221,20 @@ export function HomeScreen() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-bg-page/95 backdrop-blur-lg border-t border-border-subtle safe-area-inset-bottom">
-        <div className="flex items-center justify-around py-2 px-2 max-w-md mx-auto">
-          <button type="button" className="flex flex-col items-center gap-0.5 py-1 px-3 text-cyan-400">
+      <nav className="fixed bottom-0 left-0 right-0 bg-bg-page/95 backdrop-blur-lg border-t border-border-subtle z-40 pb-safe">
+        <div className="flex items-center justify-around py-3 px-2 max-w-md mx-auto">
+          <button 
+            type="button" 
+            onClick={() => router.push("/")}
+            className="flex flex-col items-center gap-0.5 py-2 px-4 text-[var(--cyan-primary)] active:scale-95 transition-transform"
+          >
             <Home className="w-5 h-5" />
             <span className="text-[10px] font-medium">{t.nav.home}</span>
           </button>
           <button 
             type="button" 
-            onClick={() => router.push("/scan")}
-            className="flex flex-col items-center gap-0.5 py-1 px-3 text-text-muted hover:text-text-secondary transition-colors"
+            onClick={() => setShowScanModal(true)}
+            className="flex flex-col items-center gap-0.5 py-2 px-4 text-text-muted hover:text-text-secondary active:scale-95 transition-all"
           >
             <Search className="w-5 h-5" />
             <span className="text-[10px] font-medium">{t.nav.search}</span>
@@ -198,7 +242,7 @@ export function HomeScreen() {
           <button 
             type="button" 
             onClick={() => router.push("/history")}
-            className="flex flex-col items-center gap-0.5 py-1 px-3 text-text-muted hover:text-text-secondary transition-colors"
+            className="flex flex-col items-center gap-0.5 py-2 px-4 text-text-muted hover:text-text-secondary active:scale-95 transition-all"
           >
             <History className="w-5 h-5" />
             <span className="text-[10px] font-medium">{t.nav.history}</span>
@@ -206,13 +250,20 @@ export function HomeScreen() {
           <button 
             type="button" 
             onClick={() => router.push("/settings")}
-            className="flex flex-col items-center gap-0.5 py-1 px-3 text-text-muted hover:text-text-secondary transition-colors"
+            className="flex flex-col items-center gap-0.5 py-2 px-4 text-text-muted hover:text-text-secondary active:scale-95 transition-all"
           >
             <Settings className="w-5 h-5" />
             <span className="text-[10px] font-medium">{t.nav.settings}</span>
           </button>
         </div>
       </nav>
+
+      {/* Quick Scan Modal */}
+      <QuickScanModal
+        isOpen={showScanModal}
+        onClose={() => setShowScanModal(false)}
+        onScan={handleQuickScan}
+      />
     </div>
   )
 }

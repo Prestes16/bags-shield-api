@@ -61,37 +61,37 @@
 
 /* Light Theme */
 .light {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #fafafa;
+  --foreground: #09090b;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #09090b;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #09090b;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #e2e8f0;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --secondary: #e4e4e7;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
   --accent: #0891b2;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  --border: #d4d4d8;
+  --input: #e4e4e7;
   --ring: #2563eb;
   --chart-1: #0891b2;
   --chart-2: #2563eb;
   --chart-3: #0e7490;
   --chart-4: #0369a1;
   --chart-5: #075985;
-  --sidebar: #f1f5f9;
-  --sidebar-foreground: #0f172a;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #09090b;
   --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e2e8f0;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
   --sidebar-ring: #2563eb;
   
   /* Bags Shield Custom Colors - Light variants */
@@ -103,14 +103,68 @@
   --danger: #dc2626;
   
   /* Theme-specific backgrounds */
-  --bg-page: #f8fafc;
-  --bg-card: rgba(0, 0, 0, 0.02);
-  --bg-card-hover: rgba(0, 0, 0, 0.05);
-  --bg-input: rgba(0, 0, 0, 0.02);
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --bg-page: #fafafa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f4f4f5;
+  --bg-input: #ffffff;
+  --border-subtle: #d4d4d8;
+  --text-primary: #09090b;
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a;
+}
+
+/* Neon Theme (Black + Neon Green) */
+.neon {
+  --background: #000000;
+  --foreground: #e5ffe5;
+  --card: #0a0a0a;
+  --card-foreground: #e5ffe5;
+  --popover: #0a0a0a;
+  --popover-foreground: #e5ffe5;
+  --primary: #00ff00;
+  --primary-foreground: #000000;
+  --secondary: #1a2e1a;
+  --secondary-foreground: #e5ffe5;
+  --muted: #0f1e0f;
+  --muted-foreground: #71ff71;
+  --accent: #39ff14;
+  --accent-foreground: #000000;
+  --destructive: #ff3333;
+  --destructive-foreground: #ffffff;
+  --border: #1a3d1a;
+  --input: #1a3d1a;
+  --ring: #00ff00;
+  --chart-1: #39ff14;
+  --chart-2: #00ff00;
+  --chart-3: #7cfc00;
+  --chart-4: #32cd32;
+  --chart-5: #228b22;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #e5ffe5;
+  --sidebar-primary: #00ff00;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1a2e1a;
+  --sidebar-accent-foreground: #e5ffe5;
+  --sidebar-border: #1a3d1a;
+  --sidebar-ring: #00ff00;
+  
+  /* Bags Shield Custom Colors - Neon variants */
+  --cyan-primary: #39ff14;
+  --cyan-secondary: #00ff00;
+  --cyan-glow: rgba(57, 255, 20, 0.4);
+  --success: #00ff00;
+  --warning: #ffff00;
+  --danger: #ff3333;
+  
+  /* Theme-specific backgrounds */
+  --bg-page: #000000;
+  --bg-card: rgba(0, 255, 0, 0.05);
+  --bg-card-hover: rgba(0, 255, 0, 0.1);
+  --bg-input: rgba(0, 255, 0, 0.05);
+  --border-subtle: rgba(0, 255, 0, 0.15);
+  --text-primary: #e5ffe5;
+  --text-secondary: #b3ffb3;
+  --text-muted: #71ff71;
 }
 
 @theme inline {

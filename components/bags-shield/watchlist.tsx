@@ -6,31 +6,35 @@ import Image from "next/image";
 import {
   Plus,
   Bell,
-  BellRing,
-  Eye,
-  EyeOff,
-  RotateCw,
-  Trash2,
+  BellOff,
   Search,
-  ChevronRight,
+  ChevronLeft,
   TrendingUp,
   TrendingDown,
+  Trash2,
+  Home,
+  ShieldAlert,
+  ShieldCheck,
+  Scan,
+  FileText,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/language-context";
 
-// Types
+// Types - Ready for API integration
 interface WatchlistToken {
   id: string;
-  name: string;
   symbol: string;
-  logoUrl: string;
-  price: number;
-  priceChange24h: number;
-  shieldScore: number;
-  previousScore?: number;
-  hasAlert: boolean;
-  sparklineData: number[];
+  name: string;
+  logoUrl?: string;
+  mintAddress: string;
+  price?: number;
+  priceChange24h?: number;
+  scanned: boolean;
+  score?: number;
+  riskLabel?: "low" | "medium" | "high" | "critical";
+  hasAlerts: boolean;
+  isScamHistory?: boolean; // Frozen scam record from known scam database
 }
 
 interface WatchlistProps {
@@ -39,297 +43,268 @@ interface WatchlistProps {
   onAddToken?: () => void;
   onScanToken?: (tokenId: string) => void;
   onRemoveToken?: (tokenId: string) => void;
-  onTokenClick?: (tokenId: string) => void;
+  onViewReport?: (tokenId: string) => void;
+  onToggleAlerts?: (tokenId: string) => void;
 }
 
-// Mini Sparkline Component
-function Sparkline({
-  data,
-  isPositive,
-}: {
-  data: number[];
-  isPositive: boolean;
-}) {
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
+// Mini Score Ring for scanned tokens
+function MiniScoreRing({ score }: { score: number }) {
+  const radius = 16;
+  const stroke = 3;
+  const normalizedRadius = radius - stroke / 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const progress = (score / 100) * circumference;
 
-  const points = data
-    .map((value, index) => {
-      const x = (index / (data.length - 1)) * 60;
-      const y = 20 - ((value - min) / range) * 16;
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const getColor = (s: number) => {
+    if (s >= 80) return { stroke: "#22c55e", glow: "shadow-emerald-500/40" };
+    if (s >= 60) return { stroke: "#eab308", glow: "shadow-yellow-500/40" };
+    if (s >= 40) return { stroke: "#f97316", glow: "shadow-orange-500/40" };
+    return { stroke: "#ef4444", glow: "shadow-red-500/40" };
+  };
+
+  const colors = getColor(score);
 
   return (
-    <svg width="60" height="24" className="flex-shrink-0">
-      <defs>
-        <linearGradient
-          id={`sparkline-${isPositive ? "green" : "red"}`}
-          x1="0%"
-          y1="0%"
-          x2="100%"
-          y2="0%"
-        >
-          <stop
-            offset="0%"
-            stopColor={isPositive ? "#22c55e" : "#ef4444"}
-            stopOpacity="0.5"
-          />
-          <stop
-            offset="100%"
-            stopColor={isPositive ? "#22c55e" : "#ef4444"}
-            stopOpacity="1"
-          />
-        </linearGradient>
-      </defs>
-      <polyline
-        points={points}
-        fill="none"
-        stroke={`url(#sparkline-${isPositive ? "green" : "red"})`}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div className={cn("relative w-10 h-10 flex items-center justify-center")}>
+      <svg width={radius * 2} height={radius * 2} className="rotate-[-90deg]">
+        {/* Background circle */}
+        <circle
+          cx={radius}
+          cy={radius}
+          r={normalizedRadius}
+          fill="transparent"
+          stroke="rgba(255,255,255,0.1)"
+          strokeWidth={stroke}
+        />
+        {/* Progress circle */}
+        <circle
+          cx={radius}
+          cy={radius}
+          r={normalizedRadius}
+          fill="transparent"
+          stroke={colors.stroke}
+          strokeWidth={stroke}
+          strokeDasharray={`${progress} ${circumference - progress}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-[11px] font-bold text-white">{score}</span>
+    </div>
   );
 }
 
-// Mini Shield Score Circle
-function MiniShieldScore({
-  score,
-  hasChanged,
-}: {
-  score: number;
-  hasChanged: boolean;
-}) {
-  const getScoreColor = (s: number) => {
-    if (s >= 80) return "from-emerald-400 to-cyan-400";
-    if (s >= 60) return "from-yellow-400 to-orange-400";
-    return "from-red-400 to-rose-500";
+// Risk Badge
+function RiskBadge({ risk }: { risk: "low" | "medium" | "high" | "critical" }) {
+  const config = {
+    low: { label: "Low", bg: "bg-emerald-500/20", text: "text-emerald-400" },
+    medium: { label: "Med", bg: "bg-yellow-500/20", text: "text-yellow-400" },
+    high: { label: "High", bg: "bg-orange-500/20", text: "text-orange-400" },
+    critical: { label: "Crit", bg: "bg-red-500/20", text: "text-red-400" },
   };
 
-  const getGlowColor = (s: number) => {
-    if (s >= 80) return "shadow-emerald-500/40";
-    if (s >= 60) return "shadow-yellow-500/40";
-    return "shadow-red-500/40";
-  };
+  const c = config[risk];
 
   return (
-    <div
-      className={cn(
-        "relative w-10 h-10 rounded-full flex items-center justify-center",
-        "bg-gradient-to-br",
-        getScoreColor(score),
-        "shadow-lg",
-        getGlowColor(score),
-        hasChanged && "animate-pulse"
-      )}
-    >
-      <div className="absolute inset-0.5 rounded-full bg-bg-page flex items-center justify-center">
-        <span className="text-xs font-bold text-white">{score}</span>
-      </div>
-    </div>
+    <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", c.bg, c.text)}>
+      {c.label}
+    </span>
   );
 }
 
 // Token Card Component
 function TokenCard({
   token,
+  t,
   onScan,
+  onViewReport,
   onRemove,
-  onClick,
+  onToggleAlerts,
 }: {
   token: WatchlistToken;
+  t: ReturnType<typeof useLanguage>["t"];
   onScan: () => void;
+  onViewReport: () => void;
   onRemove: () => void;
-  onClick: () => void;
+  onToggleAlerts: () => void;
 }) {
-  const [showActions, setShowActions] = useState(false);
-  const isPositive = token.priceChange24h >= 0;
-  const hasScoreChanged =
-    token.previousScore !== undefined &&
-    token.previousScore !== token.shieldScore;
+  const isPositive = (token.priceChange24h ?? 0) >= 0;
+  const showScore = token.scanned && token.score !== undefined;
+  const isScamHistory = token.isScamHistory && token.scanned;
 
   return (
-    <div
-      className={cn(
-        "relative group",
-        "bg-white/5 backdrop-blur-xl",
-        "border border-white/10 rounded-2xl",
-        "p-4 transition-all duration-300",
-        "hover:bg-white/8 hover:border-white/20",
-        "cursor-pointer"
-      )}
-      onClick={() => !showActions && onClick()}
-      onKeyDown={(e) => e.key === "Enter" && !showActions && onClick()}
-    >
-      <div className="flex items-center gap-3">
+    <div className="bg-bg-card border border-border-subtle rounded-xl overflow-hidden">
+      {/* Main Row */}
+      <div className="flex items-center gap-3 p-3">
         {/* Token Avatar */}
-        <div className="relative flex-shrink-0">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10">
-            <Image
-              src={token.logoUrl || "/placeholder.svg"}
-              alt={token.name}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover"
-            />
-          </div>
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0">
+          <Image
+            src={token.logoUrl || "/images/bags-token-icon.jpg"}
+            alt={token.symbol}
+            width={40}
+            height={40}
+            className="w-full h-full object-cover"
+          />
         </div>
 
         {/* Token Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-white font-semibold truncate">{token.name}</h3>
-            <span className="text-slate-500 text-sm">{token.symbol}</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-text-primary font-semibold text-sm truncate">{token.symbol}</span>
+            {token.hasAlerts && (
+              <Bell className="w-3 h-3 text-[var(--cyan-primary)] flex-shrink-0" />
+            )}
+            {isScamHistory && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap flex-shrink-0">
+                SCAM HISTORY
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-white text-sm font-medium">
-              ${token.price.toFixed(6)}
-            </span>
-            <span
-              className={cn(
-                "text-xs flex items-center gap-0.5",
-                isPositive ? "text-emerald-400" : "text-red-400"
+          {token.price !== undefined ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-muted text-xs">
+                ${token.price < 0.01 ? token.price.toFixed(6) : token.price.toFixed(2)}
+              </span>
+              {token.priceChange24h !== undefined && (
+                <span
+                  className={cn(
+                    "text-[10px] flex items-center gap-0.5",
+                    isPositive ? "text-emerald-400" : "text-red-400"
+                  )}
+                >
+                  {isPositive ? (
+                    <TrendingUp className="w-2.5 h-2.5" />
+                  ) : (
+                    <TrendingDown className="w-2.5 h-2.5" />
+                  )}
+                  {Math.abs(token.priceChange24h).toFixed(1)}%
+                </span>
               )}
-            >
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : (
-                <TrendingDown className="w-3 h-3" />
-              )}
-              {Math.abs(token.priceChange24h).toFixed(2)}%
-            </span>
-          </div>
-        </div>
-
-        {/* Sparkline */}
-        <div className="hidden sm:block">
-          <Sparkline data={token.sparklineData} isPositive={isPositive} />
-        </div>
-
-        {/* Shield Score */}
-        <MiniShieldScore score={token.shieldScore} hasChanged={hasScoreChanged} />
-
-        {/* Alert Bell */}
-        <div className="flex-shrink-0">
-          {token.hasAlert ? (
-            <BellRing className="w-5 h-5 text-orange-400 animate-wiggle" />
+            </div>
           ) : (
-            <Bell className="w-5 h-5 text-slate-500" />
+            <span className="text-text-muted text-xs truncate">{token.name}</span>
           )}
         </div>
 
-        {/* Actions Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0 h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowActions(!showActions);
-          }}
-        >
-          <ChevronRight
-            className={cn(
-              "w-4 h-4 transition-transform",
-              showActions && "rotate-90"
-            )}
-          />
-        </Button>
-      </div>
-
-      {/* Quick Actions */}
-      {showActions && (
-        <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 bg-transparent border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/50"
-            onClick={(e) => {
-              e.stopPropagation();
-              onScan();
-            }}
-          >
-            <RotateCw className="w-4 h-4 mr-2" />
-            Scan Now
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 bg-transparent border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Remove
-          </Button>
+        {/* Score/Status Section - ONLY show if scanned */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {showScore ? (
+            <>
+              <MiniScoreRing score={token.score!} />
+              {token.riskLabel && <RiskBadge risk={token.riskLabel} />}
+            </>
+          ) : (
+            <span className="px-2 py-1 rounded-md bg-muted text-text-muted text-[10px] font-medium whitespace-nowrap">
+              Not scanned
+            </span>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-// Empty State Component
-function EmptyState({ onExplore }: { onExplore: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="relative mb-6">
-        <div className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full" />
-        <EyeOff className="w-20 h-20 text-slate-600 relative" />
       </div>
-      <h3 className="text-xl font-semibold text-white mb-2">
-        Sua lista esta vazia
-      </h3>
-      <p className="text-slate-400 text-center mb-6 max-w-sm">
-        Comece a monitorar tokens suspeitos e receba alertas quando o risco
-        mudar.
-      </p>
-      <Button
-        className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-400 hover:to-blue-400"
-        onClick={onExplore}
-      >
-        <Eye className="w-4 h-4 mr-2" />
-        Explorar Tokens
-      </Button>
+
+      {/* Action Row */}
+      <div className="flex border-t border-border-subtle">
+        {token.scanned ? (
+          // Scanned: View Report button
+          <button
+            type="button"
+            onClick={onViewReport}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[var(--cyan-primary)] text-xs font-medium hover:bg-bg-card-hover transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            View Report
+          </button>
+        ) : (
+          // Not scanned: Scan Now button (primary CTA)
+          <button
+            type="button"
+            onClick={onScan}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white text-xs font-semibold hover:shadow-[0_0_12px_var(--cyan-glow)] transition-all"
+          >
+            <Scan className="w-3.5 h-3.5" />
+            Scan now
+          </button>
+        )}
+        
+        {/* Divider */}
+        <div className="w-px bg-border-subtle" />
+        
+        {/* Alert Toggle */}
+        <button
+          type="button"
+          onClick={onToggleAlerts}
+          className={cn(
+            "w-11 flex items-center justify-center transition-colors",
+            token.hasAlerts
+              ? "text-[var(--cyan-primary)] hover:bg-[var(--cyan-primary)]/10"
+              : "text-text-muted hover:bg-bg-card-hover"
+          )}
+          title={token.hasAlerts ? "Alerts enabled" : "Enable alerts"}
+        >
+          {token.hasAlerts ? (
+            <Bell className="w-4 h-4" />
+          ) : (
+            <BellOff className="w-4 h-4" />
+          )}
+        </button>
+        
+        {/* Divider */}
+        <div className="w-px bg-border-subtle" />
+        
+        {/* Remove */}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="w-11 flex items-center justify-center text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          title="Remove token"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 }
 
-// Skeleton Loading Component
+// Empty State
+function EmptyState({ t, onExplore }: { t: ReturnType<typeof useLanguage>["t"]; onExplore: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-6">
+      <div className="relative mb-6">
+        <div className="absolute inset-0 bg-[var(--cyan-primary)]/20 blur-3xl rounded-full" />
+        <ShieldAlert className="w-16 h-16 text-slate-600 relative" />
+      </div>
+      <h3 className="text-lg font-semibold text-white mb-2 text-center">
+        {t.watchlist.emptyTitle}
+      </h3>
+      <p className="text-slate-400 text-sm text-center mb-6 max-w-xs leading-relaxed">
+        {t.watchlist.emptyDescription}
+      </p>
+      <button
+        type="button"
+        onClick={onExplore}
+        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--cyan-glow)]"
+      >
+        <ShieldCheck className="w-4 h-4" />
+        {t.watchlist.exploreTokens}
+      </button>
+    </div>
+  );
+}
+
+// Loading Skeleton
 function WatchlistSkeleton() {
   return (
     <div className="space-y-3">
-      {[1, 2, 3, 4, 5].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4"
+          className="bg-[#0c1a2e]/80 border border-white/[0.06] rounded-xl p-3 animate-pulse"
         >
-          <div className="flex items-center gap-3 animate-pulse">
-            {/* Avatar Skeleton */}
-            <div className="w-12 h-12 rounded-full bg-white/10" />
-
-            {/* Info Skeleton */}
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-white/10 rounded w-24" />
-              <div className="h-3 bg-white/10 rounded w-16" />
-            </div>
-
-            {/* Sparkline Skeleton */}
-            <div className="hidden sm:block w-[60px] h-6 bg-white/10 rounded" />
-
-            {/* Score Skeleton */}
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/10" />
-
-            {/* Bell Skeleton */}
-            <div className="w-5 h-5 rounded bg-white/10" />
-
-            {/* Chevron Skeleton */}
-            <div className="w-8 h-8 rounded bg-white/10" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-white/10 rounded w-16" />
+              <div className="h-3 bg-white/10 rounded w-24" />
+            </div>
+            <div className="w-10 h-10 rounded-full bg-white/10" />
           </div>
         </div>
       ))}
@@ -344,75 +319,74 @@ export function Watchlist({
   onAddToken,
   onScanToken,
   onRemoveToken,
-  onTokenClick,
+  onViewReport,
+  onToggleAlerts,
 }: WatchlistProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTokens = tokens.filter(
     (token) =>
-      token.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      token.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+      token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      token.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddToken = () => {
-    if (onAddToken) {
-      onAddToken();
-    } else {
-      router.push("/");
-    }
+    onAddToken?.() ?? router.push("/");
   };
 
   const handleScanToken = (tokenId: string) => {
-    if (onScanToken) {
-      onScanToken(tokenId);
+    const token = filteredTokens.find((t) => t.id === tokenId);
+    if (token) {
+      onScanToken?.(tokenId) ?? router.push(`/scan?address=${token.mintAddress}`);
     }
+  };
+
+  const handleViewReport = (tokenId: string) => {
+    onViewReport?.(tokenId) ?? router.push(`/finding/${tokenId}`);
   };
 
   const handleRemoveToken = (tokenId: string) => {
-    if (onRemoveToken) {
-      onRemoveToken(tokenId);
-    }
+    onRemoveToken?.(tokenId);
   };
 
-  const handleTokenClick = (tokenId: string) => {
-    if (onTokenClick) {
-      onTokenClick(tokenId);
-    } else {
-      router.push(`/finding/${tokenId}`);
-    }
-  };
-
-  const handleExplore = () => {
-    router.push("/");
+  const handleToggleAlerts = (tokenId: string) => {
+    onToggleAlerts?.(tokenId);
   };
 
   return (
     <div className="min-h-screen bg-bg-page">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-bg-page/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+      <header className="sticky top-0 z-50 bg-bg-page/95 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="px-4 py-3">
+          {/* Top Row */}
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-white">Watchlist</h1>
-              {tokens.length > 0 && (
-                <span className="px-2.5 py-1 text-xs font-medium bg-cyan-500/20 text-cyan-400 rounded-full">
-                  {tokens.length} Tokens
-                </span>
-              )}
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                title={t.watchlist.backToHome}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-white">{t.watchlist.title}</h1>
+                {tokens.length > 0 && (
+                  <p className="text-xs text-slate-500">
+                    {tokens.length} {t.watchlist.tokens}
+                  </p>
+                )}
+              </div>
             </div>
-            <Button
-              size="icon"
-              className={cn(
-                "h-10 w-10 rounded-full",
-                "bg-gradient-to-r from-cyan-500 to-blue-500",
-                "hover:from-cyan-400 hover:to-blue-400",
-                "shadow-lg shadow-cyan-500/30"
-              )}
+            <button
+              type="button"
               onClick={handleAddToken}
+              className="w-9 h-9 rounded-full bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] flex items-center justify-center shadow-lg shadow-[var(--cyan-glow)] hover:opacity-90 transition-all"
             >
               <Plus className="w-5 h-5 text-white" />
-            </Button>
+            </button>
           </div>
 
           {/* Search Bar */}
@@ -421,17 +395,10 @@ export function Watchlist({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
-                placeholder="Buscar token..."
+                placeholder={t.watchlist.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={cn(
-                  "w-full pl-10 pr-4 py-2.5",
-                  "bg-white/5 backdrop-blur-xl",
-                  "border border-white/10 rounded-xl",
-                  "text-white placeholder:text-slate-500",
-                  "focus:outline-none focus:border-cyan-500/50",
-                  "transition-colors"
-                )}
+                className="w-full pl-10 pr-4 py-2.5 bg-bg-input border border-border-subtle rounded-xl text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-[var(--cyan-primary)]/50 transition-colors"
               />
             </div>
           )}
@@ -439,16 +406,16 @@ export function Watchlist({
       </header>
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto px-4 py-6">
+      <main className="px-4 py-4 pb-24">
         {isLoading ? (
           <WatchlistSkeleton />
         ) : tokens.length === 0 ? (
-          <EmptyState onExplore={handleExplore} />
+          <EmptyState t={t} onExplore={() => router.push("/")} />
         ) : filteredTokens.length === 0 ? (
           <div className="text-center py-12">
-            <Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">
-              Nenhum token encontrado para "{searchQuery}"
+            <Search className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-400 text-sm">
+              {t.watchlist.noResults} "{searchQuery}"
             </p>
           </div>
         ) : (
@@ -457,99 +424,126 @@ export function Watchlist({
               <TokenCard
                 key={token.id}
                 token={token}
+                t={t}
                 onScan={() => handleScanToken(token.id)}
+                onViewReport={() => handleViewReport(token.id)}
                 onRemove={() => handleRemoveToken(token.id)}
-                onClick={() => handleTokenClick(token.id)}
+                onToggleAlerts={() => handleToggleAlerts(token.id)}
               />
             ))}
           </div>
         )}
       </main>
+
+      {/* Bottom Nav - Back to Home */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-xl border-t border-white/[0.06] px-6 py-3 safe-area-pb">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-300 text-sm font-medium hover:bg-white/10 hover:text-white transition-all"
+        >
+          <Home className="w-4 h-4" />
+          {t.watchlist.backToHome}
+        </button>
+      </nav>
     </div>
   );
 }
 
-// Default export with mock data for demo
+// Demo with mock data
 export default function WatchlistDemo() {
   const [tokens, setTokens] = useState<WatchlistToken[]>([
     {
       id: "bonk",
-      name: "Bonk",
       symbol: "BONK",
+      name: "Bonk",
       logoUrl: "/images/bags-token-icon.jpg",
+      mintAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
       price: 0.00002341,
       priceChange24h: 12.5,
-      shieldScore: 88,
-      previousScore: 85,
-      hasAlert: true,
-      sparklineData: [20, 22, 21, 25, 28, 26, 30, 32, 35, 33],
+      scanned: true,
+      score: 88,
+      riskLabel: "low",
+      hasAlerts: true,
     },
     {
       id: "wif",
-      name: "dogwifhat",
       symbol: "WIF",
+      name: "dogwifhat",
       logoUrl: "/images/bags-token-icon.jpg",
+      mintAddress: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
       price: 2.45,
       priceChange24h: -3.2,
-      shieldScore: 72,
-      hasAlert: false,
-      sparklineData: [40, 38, 35, 36, 32, 30, 28, 25, 27, 26],
+      scanned: false,
+      hasAlerts: false,
     },
     {
       id: "jup",
-      name: "Jupiter",
       symbol: "JUP",
+      name: "Jupiter",
       logoUrl: "/images/bags-token-icon.jpg",
+      mintAddress: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
       price: 1.23,
       priceChange24h: 5.8,
-      shieldScore: 94,
-      hasAlert: false,
-      sparklineData: [50, 52, 55, 58, 56, 60, 62, 65, 68, 70],
+      scanned: true,
+      score: 94,
+      riskLabel: "low",
+      hasAlerts: false,
+    },
+    {
+      id: "scamcoin",
+      symbol: "SCAM",
+      name: "ScamCoin",
+      logoUrl: "/images/bags-token-icon.jpg",
+      mintAddress: "ScamXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      price: 0.00000001,
+      priceChange24h: -99.5,
+      scanned: true,
+      score: 12,
+      riskLabel: "critical",
+      hasAlerts: false,
+      isScamHistory: true, // Frozen scam record
     },
     {
       id: "ray",
-      name: "Raydium",
       symbol: "RAY",
+      name: "Raydium",
       logoUrl: "/images/bags-token-icon.jpg",
+      mintAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
       price: 4.67,
       priceChange24h: -1.5,
-      shieldScore: 45,
-      previousScore: 65,
-      hasAlert: true,
-      sparklineData: [80, 75, 70, 68, 65, 60, 55, 50, 48, 45],
+      scanned: true,
+      score: 45,
+      riskLabel: "high",
+      hasAlerts: true,
     },
     {
-      id: "orca",
-      name: "Orca",
-      symbol: "ORCA",
-      logoUrl: "/images/bags-token-icon.jpg",
-      price: 3.89,
-      priceChange24h: 8.2,
-      shieldScore: 82,
-      hasAlert: false,
-      sparklineData: [30, 32, 35, 38, 40, 42, 45, 48, 50, 52],
+      id: "unknown",
+      symbol: "???",
+      name: "Unknown Token",
+      mintAddress: "UnknownXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      scanned: false,
+      hasAlerts: false,
     },
   ]);
-
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleRemoveToken = (tokenId: string) => {
     setTokens((prev) => prev.filter((t) => t.id !== tokenId));
   };
 
-  const handleScanToken = (tokenId: string) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+  const handleToggleAlerts = (tokenId: string) => {
+    setTokens((prev) =>
+      prev.map((t) =>
+        t.id === tokenId ? { ...t, hasAlerts: !t.hasAlerts } : t
+      )
+    );
   };
 
   return (
     <Watchlist
       tokens={tokens}
-      isLoading={isLoading}
       onRemoveToken={handleRemoveToken}
-      onScanToken={handleScanToken}
+      onToggleAlerts={handleToggleAlerts}
     />
   );
 }

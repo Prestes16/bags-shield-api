@@ -8,8 +8,8 @@ import {
   type ReactNode,
 } from "react";
 
-export type Theme = "light" | "dark" | "system";
-export type ResolvedTheme = "light" | "dark";
+export type Theme = "light" | "dark" | "neon" | "system";
+export type ResolvedTheme = "light" | "dark" | "neon";
 
 interface ThemeContextType {
   theme: Theme;
@@ -42,23 +42,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Apply theme to document
   const applyTheme = (resolved: ResolvedTheme) => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
+    root.classList.remove("light", "dark", "neon");
     root.classList.add(resolved);
     
     // Update meta theme-color
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        "content",
-        resolved === "dark" ? "#020617" : "#f8fafc"
-      );
+      const colors = {
+        dark: "#020617",
+        light: "#ffffff",
+        neon: "#000000",
+      };
+      metaThemeColor.setAttribute("content", colors[resolved]);
     }
   };
 
   // Initialize theme from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("bags-shield-theme") as Theme | null;
-    if (stored && ["light", "dark", "system"].includes(stored)) {
+    if (stored && ["light", "dark", "neon", "system"].includes(stored)) {
       setThemeState(stored);
       const resolved = resolveTheme(stored);
       setResolvedTheme(resolved);

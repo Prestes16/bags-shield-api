@@ -82,13 +82,13 @@ export function ShieldScore({
           strokeDasharray={`${progress} ${circumference}`}
           className="transition-all duration-1000 ease-out"
           style={{
-            filter: "drop-shadow(0 0 8px rgba(34, 211, 238, 0.5))",
+            filter: "drop-shadow(0 0 8px var(--cyan-glow))",
           }}
         />
         <defs>
           <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#3b82f6" />
+            <stop offset="0%" stopColor="var(--cyan-primary)" />
+            <stop offset="100%" stopColor="var(--cyan-secondary)" />
           </linearGradient>
         </defs>
       </svg>
