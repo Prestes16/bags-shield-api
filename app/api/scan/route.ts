@@ -4,25 +4,34 @@ import { NextRequest, NextResponse } from "next/server";
 const mockScanResults: Record<string, any> = {
   // Example safe token (BONK)
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {
-    name: "Bonk",
-    symbol: "BONK",
-    mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-    logoUrl: "/images/bags-token-icon.jpg",
-    score: 88,
-    grade: "A",
-    status: "safe",
+    tokenInfo: {
+      name: "Bonk",
+      symbol: "BONK",
+      imageUrl: "/images/bags-token-icon.jpg",
+      mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      supply: 100000000000,
+    },
+    security: {
+      score: 88,
+      grade: "A",
+      isSafe: true,
+      mintAuthority: false,
+      freezeAuthority: false,
+      lpLocked: true,
+    },
+    integrity: {
+      isVerified: true,
+    },
     findings: [
       {
-        id: "1",
-        title: "Verified Token",
+        severity: "LOW",
+        label: "Verified Token",
         description: "Token is verified on major platforms",
-        severity: "info",
       },
       {
-        id: "2",
-        title: "High Liquidity",
+        severity: "LOW",
+        label: "High Liquidity",
         description: "Token has sufficient liquidity depth",
-        severity: "info",
       },
     ],
     meta: {
@@ -35,25 +44,39 @@ const mockScanResults: Record<string, any> = {
   },
   // Example warning token
   EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: {
-    name: "dogwifhat",
-    symbol: "WIF",
-    mint: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
-    logoUrl: "/images/bags-token-icon.jpg",
-    score: 65,
-    grade: "C",
-    status: "warning",
+    tokenInfo: {
+      name: "dogwifhat",
+      symbol: "WIF",
+      imageUrl: "/images/bags-token-icon.jpg",
+      mint: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+      supply: 998926393,
+    },
+    security: {
+      score: 65,
+      grade: "C",
+      isSafe: false,
+      mintAuthority: true,
+      freezeAuthority: false,
+      lpLocked: false,
+    },
+    integrity: {
+      isVerified: false,
+    },
     findings: [
       {
-        id: "1",
-        title: "Concentrated Holdings",
+        severity: "MEDIUM",
+        label: "Concentrated Holdings",
         description: "Top 10 wallets hold more than 50% of supply",
-        severity: "medium",
       },
       {
-        id: "2",
-        title: "Recent Token",
+        severity: "HIGH",
+        label: "Mint Authority Active",
+        description: "Token has active mint authority - supply can be inflated",
+      },
+      {
+        severity: "LOW",
+        label: "Recent Token",
         description: "Token was created less than 30 days ago",
-        severity: "low",
       },
     ],
     meta: {
@@ -200,32 +223,40 @@ export async function POST(request: NextRequest) {
     const randomScore = Math.floor(Math.random() * 60) + 30; // 30-90
     const grade =
       randomScore >= 80 ? "A" : randomScore >= 60 ? "B" : randomScore >= 40 ? "C" : "D";
-    const status =
-      randomScore >= 70 ? "safe" : randomScore >= 50 ? "warning" : "danger";
+    const isSafe = randomScore >= 70;
 
     return NextResponse.json(
       {
-        name: "Unknown Token",
-        symbol: mint.slice(0, 4).toUpperCase(),
-        mint,
-        logoUrl: null,
-        score: randomScore,
-        grade,
-        status,
+        tokenInfo: {
+          name: "Unknown Token",
+          symbol: mint.slice(0, 4).toUpperCase(),
+          imageUrl: null,
+          mint,
+          supply: 0,
+        },
+        security: {
+          score: randomScore,
+          grade,
+          isSafe,
+          mintAuthority: !isSafe,
+          freezeAuthority: false,
+          lpLocked: isSafe,
+        },
+        integrity: {
+          isVerified: false,
+        },
         findings: [
           {
-            id: "1",
-            title: pro ? "Pro Scan Analysis" : "Unverified Token",
+            severity: isSafe ? "LOW" : "HIGH",
+            label: pro ? "Pro Scan Analysis" : "Unverified Token",
             description: pro
               ? "Detailed analysis completed with premium features"
               : "This token has not been verified on major platforms",
-            severity: status === "danger" ? "high" : "medium",
           },
           {
-            id: "2",
-            title: "Limited Data",
+            severity: "LOW",
+            label: "Limited Data",
             description: "Limited historical data available for this token",
-            severity: "low",
           },
         ],
         meta: {
@@ -321,30 +352,38 @@ export async function GET(request: NextRequest) {
     const randomScore = Math.floor(Math.random() * 60) + 30;
     const grade =
       randomScore >= 80 ? "A" : randomScore >= 60 ? "B" : randomScore >= 40 ? "C" : "D";
-    const status =
-      randomScore >= 70 ? "safe" : randomScore >= 50 ? "warning" : "danger";
+    const isSafe = randomScore >= 70;
 
     return NextResponse.json(
       {
-        name: "Unknown Token",
-        symbol: mint.slice(0, 4).toUpperCase(),
-        mint,
-        logoUrl: null,
-        score: randomScore,
-        grade,
-        status,
+        tokenInfo: {
+          name: "Unknown Token",
+          symbol: mint.slice(0, 4).toUpperCase(),
+          imageUrl: null,
+          mint,
+          supply: 0,
+        },
+        security: {
+          score: randomScore,
+          grade,
+          isSafe,
+          mintAuthority: !isSafe,
+          freezeAuthority: false,
+          lpLocked: isSafe,
+        },
+        integrity: {
+          isVerified: false,
+        },
         findings: [
           {
-            id: "1",
-            title: "Unverified Token",
+            severity: isSafe ? "LOW" : "MEDIUM",
+            label: "Unverified Token",
             description: "This token has not been verified on major platforms",
-            severity: status === "danger" ? "high" : "medium",
           },
           {
-            id: "2",
-            title: "Limited Data",
+            severity: "LOW",
+            label: "Limited Data",
             description: "Limited historical data available for this token",
-            severity: "low",
           },
         ],
         meta: {

@@ -4,19 +4,27 @@
  */
 
 export interface ScanResult {
-  mint: string;
-  name: string;
-  symbol: string;
-  logoUrl?: string;
-  score: number;
-  grade: string;
-  status: "safe" | "warning" | "danger";
-  scannedAt?: string;
+  tokenInfo: {
+    name: string;
+    symbol: string;
+    imageUrl?: string;
+    mint: string;
+    supply?: number;
+  };
+  security: {
+    score: number;
+    grade: "A" | "B" | "C" | "D" | "E";
+    isSafe: boolean;
+    mintAuthority: boolean;
+    freezeAuthority: boolean;
+    lpLocked: boolean;
+  };
+  integrity: {
+    isVerified: boolean;
+  };
   findings: Array<{
-    id: string;
-    category?: string;
-    severity: "critical" | "high" | "medium" | "low" | "info";
-    title: string;
+    severity: "HIGH" | "MEDIUM" | "LOW";
+    label: string;
     description: string;
   }>;
   meta?: {
@@ -26,6 +34,14 @@ export interface ScanResult {
     dataSources?: string[];
     timestamp?: number;
   };
+  // Legacy fields for backwards compatibility
+  mint?: string;
+  name?: string;
+  symbol?: string;
+  logoUrl?: string;
+  score?: number;
+  grade?: string;
+  status?: "safe" | "warning" | "danger";
 }
 
 export interface SimulationResult {
