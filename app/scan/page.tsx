@@ -205,8 +205,8 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
       }
     }
 
-    // 3. RISK LOGIC: Show modal if score < 50
-    if (scanData && scanData.security.score < 50) {
+    // 3. RISK LOGIC: Show modal if token is unsafe (based on isSafe field, not score threshold)
+    if (scanData && !scanData.security.isSafe) {
       setPendingSwapAmount(amount);
       setShowRiskModal(true);
       return;
@@ -263,8 +263,6 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
     setErrorMessage("");
 
     try {
-      console.log("[v0] Building swap transaction...");
-      
       // 1. Build transaction (does not send yet)
       const transaction = await buildSwapTransactionOnly(
         scanData.tokenInfo.mint,
@@ -272,12 +270,8 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
         userAcceptedRisk
       );
 
-      console.log("[v0] Transaction built successfully");
-
       // 2. Send via Wallet Adapter (Standard Solana Flow)
       if (wallet.connected && transaction) {
-        console.log("[v0] Preparing to sign with connected wallet...");
-        
         // TODO: Implement actual Solana transaction sending
         // Once @solana/wallet-adapter-react is fully integrated:
         // const tx = Transaction.from(Buffer.from(transaction, 'base64'));
@@ -295,7 +289,6 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
         throw new Error(t[lang].walletRequired);
       }
     } catch (error: any) {
-      console.error("[v0] Swap execution failed:", error);
       setErrorMessage(error.message || `${t[lang].swap} ${lang === "pt" ? "falhou" : "failed"}`);
     } finally {
       setIsSwapping(false);
