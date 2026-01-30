@@ -8,6 +8,7 @@ import { backendClient, type ScanResult } from "@/lib/backend-client";
 import { InlineScanInput } from "@/components/bags-shield/quick-scan-modal";
 import { ShareSheet, type ShareData } from "@/components/bags-shield/share-sheet";
 import { useWallet } from "@/lib/wallet/wallet-context";
+import { addScanToHistory } from "@/lib/scan-history";
 import Loading from "./loading";
 
 type ViewState = "idle" | "loading" | "success" | "error";
@@ -134,6 +135,16 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
         if (inFlightRef.current === mint) {
           setScanData(result);
           setViewState("success");
+          
+          // Add to scan history
+          addScanToHistory({
+            mint: result.tokenInfo.mint,
+            tokenName: result.tokenInfo.name || "Unknown Token",
+            tokenSymbol: result.tokenInfo.symbol || "???",
+            score: result.security.score,
+            grade: result.security.grade,
+            isSafe: result.security.isSafe,
+          });
         }
       } catch (err: any) {
         if (inFlightRef.current === mint) {
