@@ -122,6 +122,7 @@ function TokenCard({
   onViewReport,
   onRemove,
   onToggleAlerts,
+  onScanAndTrade,
 }: {
   token: WatchlistToken;
   t: ReturnType<typeof useLanguage>["t"];
@@ -129,138 +130,141 @@ function TokenCard({
   onViewReport: () => void;
   onRemove: () => void;
   onToggleAlerts: () => void;
+  onScanAndTrade: () => void;
 }) {
   const isPositive = (token.priceChange24h ?? 0) >= 0;
   const showScore = token.scanned && token.score !== undefined;
   const isScamHistory = token.isScamHistory && token.scanned;
 
   return (
-    <div className="bg-bg-card border border-border-subtle rounded-xl overflow-hidden">
-      {/* Main Row */}
-      <div className="flex items-center gap-3 p-3">
+    <div className="bg-bg-card border border-border-subtle rounded-2xl overflow-hidden">
+      {/* Main Info Row */}
+      <div className="flex items-start gap-3 p-4">
         {/* Token Avatar */}
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0">
+        <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
           <Image
             src={token.logoUrl || "/images/bags-token-icon.jpg"}
             alt={token.symbol}
-            width={40}
-            height={40}
+            width={48}
+            height={48}
             className="w-full h-full object-cover"
           />
         </div>
 
-        {/* Token Info */}
+        {/* Token Info & Price */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="text-text-primary font-semibold text-sm truncate">{token.symbol}</span>
+          {/* Top Row: Symbol + Badges */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-text-primary font-bold text-base">{token.symbol}</span>
             {token.hasAlerts && (
-              <Bell className="w-3 h-3 text-[var(--cyan-primary)] flex-shrink-0" />
+              <Bell className="w-3.5 h-3.5 text-[var(--cyan-primary)] flex-shrink-0" />
             )}
             {isScamHistory && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap flex-shrink-0">
+              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
                 SCAM HISTORY
               </span>
             )}
           </div>
+
+          {/* Bottom Row: Price + Change */}
           {token.price !== undefined ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-muted text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-text-secondary text-sm font-medium">
                 ${token.price < 0.01 ? token.price.toFixed(6) : token.price.toFixed(2)}
               </span>
               {token.priceChange24h !== undefined && (
                 <span
                   className={cn(
-                    "text-[10px] flex items-center gap-0.5",
+                    "text-xs font-semibold flex items-center gap-0.5",
                     isPositive ? "text-emerald-400" : "text-red-400"
                   )}
                 >
-                  {isPositive ? (
-                    <TrendingUp className="w-2.5 h-2.5" />
-                  ) : (
-                    <TrendingDown className="w-2.5 h-2.5" />
-                  )}
+                  {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {Math.abs(token.priceChange24h).toFixed(1)}%
                 </span>
               )}
             </div>
           ) : (
-            <span className="text-text-muted text-xs truncate">{token.name}</span>
+            <span className="text-text-muted text-sm">{token.name}</span>
           )}
         </div>
 
-        {/* Score/Status Section - ONLY show if scanned */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Right: Score/Status */}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {showScore ? (
             <>
               <MiniScoreRing score={token.score!} />
               {token.riskLabel && <RiskBadge risk={token.riskLabel} />}
             </>
           ) : (
-            <span className="px-2 py-1 rounded-md bg-muted text-text-muted text-[10px] font-medium whitespace-nowrap">
+            <span className="px-2.5 py-1 rounded-lg bg-slate-800/50 text-text-muted text-[11px] font-medium border border-border-subtle">
               Not scanned
             </span>
           )}
         </div>
       </div>
 
-      {/* Action Row */}
-      <div className="flex border-t border-border-subtle">
+      {/* Action Buttons Row */}
+      <div className="grid grid-cols-3 border-t border-border-subtle">
+        {/* Scan & Trade Button (Always visible) */}
+        <button
+          type="button"
+          onClick={onScanAndTrade}
+          className="col-span-1 flex items-center justify-center gap-1.5 py-3 text-[var(--cyan-primary)] text-xs font-semibold hover:bg-[var(--cyan-primary)]/10 transition-colors border-r border-border-subtle"
+        >
+          <Scan className="w-4 h-4" />
+          <span className="hidden sm:inline">Scan & Trade</span>
+          <span className="sm:hidden">Trade</span>
+        </button>
+
+        {/* View Report / Scan Now (Conditional) */}
         {token.scanned ? (
-          // Scanned: View Report button
           <button
             type="button"
             onClick={onViewReport}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[var(--cyan-primary)] text-xs font-medium hover:bg-bg-card-hover transition-colors"
+            className="col-span-1 flex items-center justify-center gap-1.5 py-3 text-text-secondary text-xs font-medium hover:bg-bg-card-hover transition-colors border-r border-border-subtle"
           >
-            <FileText className="w-3.5 h-3.5" />
-            View Report
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Report</span>
+            <span className="sm:hidden">Info</span>
           </button>
         ) : (
-          // Not scanned: Scan Now button (primary CTA)
           <button
             type="button"
             onClick={onScan}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white text-xs font-semibold hover:shadow-[0_0_12px_var(--cyan-glow)] transition-all"
+            className="col-span-1 flex items-center justify-center gap-1.5 py-3 bg-[var(--cyan-primary)]/20 text-[var(--cyan-primary)] text-xs font-semibold hover:bg-[var(--cyan-primary)]/30 transition-colors border-r border-border-subtle"
           >
-            <Scan className="w-3.5 h-3.5" />
-            Scan now
+            <Scan className="w-4 h-4" />
+            <span className="hidden sm:inline">Scan</span>
+            <span className="sm:hidden">Scan</span>
           </button>
         )}
-        
-        {/* Divider */}
-        <div className="w-px bg-border-subtle" />
-        
-        {/* Alert Toggle */}
-        <button
-          type="button"
-          onClick={onToggleAlerts}
-          className={cn(
-            "w-11 flex items-center justify-center transition-colors",
-            token.hasAlerts
-              ? "text-[var(--cyan-primary)] hover:bg-[var(--cyan-primary)]/10"
-              : "text-text-muted hover:bg-bg-card-hover"
-          )}
-          title={token.hasAlerts ? "Alerts enabled" : "Enable alerts"}
-        >
-          {token.hasAlerts ? (
-            <Bell className="w-4 h-4" />
-          ) : (
-            <BellOff className="w-4 h-4" />
-          )}
-        </button>
-        
-        {/* Divider */}
-        <div className="w-px bg-border-subtle" />
-        
-        {/* Remove */}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="w-11 flex items-center justify-center text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          title="Remove token"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+
+        {/* Alert + Remove (Combined) */}
+        <div className="col-span-1 flex items-center">
+          <button
+            type="button"
+            onClick={onToggleAlerts}
+            className={cn(
+              "flex-1 h-full flex items-center justify-center transition-colors border-r border-border-subtle",
+              token.hasAlerts
+                ? "text-[var(--cyan-primary)] hover:bg-[var(--cyan-primary)]/10"
+                : "text-text-muted hover:bg-bg-card-hover"
+            )}
+            title={token.hasAlerts ? "Alerts ON" : "Alerts OFF"}
+          >
+            {token.hasAlerts ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+          </button>
+          
+          <button
+            type="button"
+            onClick={onRemove}
+            className="flex-1 h-full flex items-center justify-center text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            title="Remove"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -358,6 +362,14 @@ export function Watchlist({
     onToggleAlerts?.(tokenId);
   };
 
+  const handleScanAndTrade = (tokenId: string) => {
+    const token = filteredTokens.find((t) => t.id === tokenId);
+    if (token) {
+      // Go to scan page with trade intent
+      router.push(`/scan?address=${token.mintAddress}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-bg-page">
       {/* Header */}
@@ -432,6 +444,7 @@ export function Watchlist({
                 onViewReport={() => handleViewReport(token.id)}
                 onRemove={() => handleRemoveToken(token.id)}
                 onToggleAlerts={() => handleToggleAlerts(token.id)}
+                onScanAndTrade={() => handleScanAndTrade(token.id)}
               />
             ))}
           </div>
