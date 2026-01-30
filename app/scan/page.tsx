@@ -26,7 +26,6 @@ const t = {
     shieldScore: "Nível de Blindagem",
     grade: "Nota",
     verified: "Verificado (Bags)",
-    newScan: "Novo Scan",
     securityWarnings: "Avisos de Segurança",
     mintAuthority: "Autoridade de Mint Ativa - Supply pode ser inflado",
     freezeAuthority: "Autoridade de Congelamento - Contas podem ser congeladas",
@@ -46,6 +45,7 @@ const t = {
     proceedRisk: "Entendo o Risco, Prosseguir",
     walletRequired: "Conecte sua carteira para trocar",
     rateLimited: "Limite de requisições atingido. Aguarde antes de tentar novamente.",
+    newScan: "Novo Scan",
   },
   en: {
     scan: "Scan",
@@ -58,7 +58,6 @@ const t = {
     shieldScore: "Shield Score",
     grade: "Grade",
     verified: "Verified (Bags)",
-    newScan: "New Scan",
     securityWarnings: "Security Warnings",
     mintAuthority: "Mint Authority Active - Supply can be inflated",
     freezeAuthority: "Freeze Authority - Accounts can be frozen",
@@ -78,6 +77,7 @@ const t = {
     proceedRisk: "I Understand the Risk, Proceed",
     walletRequired: "Connect your wallet to swap",
     rateLimited: "Rate limit exceeded. Please try again later.",
+    newScan: "New Scan",
   },
 };
 
@@ -401,25 +401,27 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push("/")}
               className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all border"
               style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <Home className="w-5 h-5" />
             </button>
             <span className="text-sm font-semibold text-white">{t[lang].securityReport}</span>
             <button
               type="button"
-              onClick={handleNewScan}
-              className="h-10 px-4 rounded-xl flex items-center justify-center gap-2 text-white font-semibold transition-all border-2 hover:shadow-lg active:scale-95"
-              style={{ 
-                background: "linear-gradient(135deg, var(--cyan-primary), var(--cyan-secondary))",
-                borderColor: "var(--cyan-primary)",
-                boxShadow: "0 0 20px rgba(0, 255, 255, 0.3)"
+              onClick={() => {
+                router.push("/scan");
+                setScanData(null);
+                setViewState("idle");
+                setError("");
+                setAmount("");
+                setErrorMessage("");
               }}
+              className="px-4 h-10 rounded-lg flex items-center justify-center gap-2 text-cyan-400 hover:text-cyan-300 transition-all border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 font-medium text-sm"
             >
               <Shield className="w-4 h-4" />
-              <span className="text-sm">{t[lang].newScan}</span>
+              {t[lang].newScan}
             </button>
           </div>
         </div>
