@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react"
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -19,6 +21,8 @@ import {
   Info,
   Check,
   X,
+  Upload,
+  ImageIcon,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { AuthorityToggle, AdvancedModeToggle } from "./authority-toggle";
@@ -136,6 +140,9 @@ export function CreateToken() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showLaunchModal, setShowLaunchModal] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Form state
   const [tokenBasics, setTokenBasics] = useState<TokenBasics>({
@@ -191,12 +198,66 @@ export function CreateToken() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
+  const handleImageUpload = (file: File) => {
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size must be less than 5MB");
+      return;
+    }
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      setTokenBasics({ ...tokenBasics, imageUrl: result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const removeImage = () => {
+    setImagePreview("");
+    setTokenBasics({ ...tokenBasics, imageUrl: "" });
+  };
+
   // Step 1: Token Basics
   const renderStep1 = () => (
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-6">
-<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--cyan-primary)]/20 to-[var(--cyan-secondary)]/20 flex items-center justify-center border border-[var(--cyan-primary)]/30">
-<Coins className="w-5 h-5 text-[var(--cyan-primary)]" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--cyan-primary)]/20 to-[var(--cyan-secondary)]/20 flex items-center justify-center border border-[var(--cyan-primary)]/30">
+          <Coins className="w-5 h-5 text-[var(--cyan-primary)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-text-primary">
@@ -256,19 +317,70 @@ export function CreateToken() {
           />
         </div>
 
+        {/* Image Upload */}
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
             {t.createToken.tokenImage}
           </label>
-          <input
-            type="url"
-            value={tokenBasics.imageUrl}
-            onChange={(e) =>
-              setTokenBasics({ ...tokenBasics, imageUrl: e.target.value })
-            }
-            placeholder={t.createToken.tokenImagePlaceholder}
-            className="w-full h-12 px-4 rounded-xl bg-bg-input border border-border-subtle text-text-primary placeholder:text-text-muted focus:outline-none focus:border-[var(--cyan-primary)]/50 focus:ring-1 focus:ring-[var(--cyan-primary)]/20 transition-all"
-          />
+          
+          {imagePreview ? (
+            // Image Preview
+            <div className="relative w-full h-40 rounded-xl overflow-hidden bg-bg-card border-2 border-[var(--cyan-primary)]/30">
+              <Image
+                src={imagePreview || "/placeholder.svg"}
+                alt="Token preview"
+                fill
+                className="object-contain"
+              />
+              <button
+                type="button"
+                onClick={removeImage}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center text-white transition-colors"
+                title="Remove image"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            // Upload Area
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`relative w-full h-40 rounded-xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.98] ${
+                isDragging
+                  ? "border-[var(--cyan-primary)] bg-[var(--cyan-primary)]/10"
+                  : "border-border-subtle bg-bg-input hover:border-[var(--cyan-primary)]/50 hover:bg-[var(--cyan-primary)]/5"
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-[var(--cyan-primary)]/10 flex items-center justify-center">
+                  {isDragging ? (
+                    <Upload className="w-6 h-6 text-[var(--cyan-primary)] animate-bounce" />
+                  ) : (
+                    <ImageIcon className="w-6 h-6 text-[var(--cyan-primary)]" />
+                  )}
+                </div>
+                <div className="text-center px-4">
+                  <p className="text-sm font-medium text-text-primary">
+                    {isDragging ? "Drop image here" : "Tap to upload"}
+                  </p>
+                  <p className="text-xs text-text-muted mt-1">
+                    Choose from gallery or take photo
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -694,8 +806,8 @@ export function CreateToken() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-bg-card rounded-2xl border border-border-subtle p-6 shadow-2xl">
             <div className="flex flex-col items-center text-center">
-<div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--cyan-primary)]/20 to-[var(--cyan-secondary)]/20 flex items-center justify-center mb-4 border border-[var(--cyan-primary)]/30">
-<Sparkles className="w-8 h-8 text-[var(--cyan-primary)]" />
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--cyan-primary)]/20 to-[var(--cyan-secondary)]/20 flex items-center justify-center mb-4 border border-[var(--cyan-primary)]/30">
+                <Sparkles className="w-8 h-8 text-[var(--cyan-primary)]" />
               </div>
               <h2 className="text-lg font-semibold text-text-primary mb-2">
                 {t.createToken.comingSoon}

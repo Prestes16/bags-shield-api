@@ -8,6 +8,7 @@ import { backendClient, type ScanResult } from "@/lib/backend-client";
 import { InlineScanInput } from "@/components/bags-shield/quick-scan-modal";
 import { ShareSheet, type ShareData } from "@/components/bags-shield/share-sheet";
 import { useWallet } from "@/lib/wallet/wallet-context";
+import { addScanToHistory } from "@/lib/scan-history";
 import Loading from "./loading";
 
 type ViewState = "idle" | "loading" | "success" | "error";
@@ -45,6 +46,7 @@ const t = {
     proceedRisk: "Entendo o Risco, Prosseguir",
     walletRequired: "Conecte sua carteira para trocar",
     rateLimited: "Limite de requisições atingido. Aguarde antes de tentar novamente.",
+    newScan: "Novo Scan",
   },
   en: {
     scan: "Scan",
@@ -76,6 +78,7 @@ const t = {
     proceedRisk: "I Understand the Risk, Proceed",
     walletRequired: "Connect your wallet to swap",
     rateLimited: "Rate limit exceeded. Please try again later.",
+    newScan: "New Scan",
   },
 };
 
@@ -132,6 +135,16 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
         if (inFlightRef.current === mint) {
           setScanData(result);
           setViewState("success");
+          
+          // Add to scan history
+          addScanToHistory({
+            mint: result.tokenInfo.mint,
+            tokenName: result.tokenInfo.name || "Unknown Token",
+            tokenSymbol: result.tokenInfo.symbol || "???",
+            score: result.security.score,
+            grade: result.security.grade,
+            isSafe: result.security.isSafe,
+          });
         }
       } catch (err: any) {
         if (inFlightRef.current === mint) {
@@ -205,8 +218,8 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
       }
     }
 
-    // 3. RISK LOGIC: Show modal if score < 50
-    if (scanData && scanData.security.score < 50) {
+    // 3. RISK LOGIC: Show modal if token is unsafe (based on isSafe field, not score threshold)
+    if (scanData && !scanData.security.isSafe) {
       setPendingSwapAmount(amount);
       setShowRiskModal(true);
       return;
@@ -227,76 +240,78 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
     setPendingSwapAmount("");
   };
 
-  // Build swap transaction (without sending)
-  const buildSwapTransactionOnly = async (
-    outputMint: string, 
-    swapAmount: string, 
-    userAcceptedRisk: boolean = false
-  ) => {
-    const response = await fetch("/api/swap", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        inputMint: "So11111111111111111111111111111111111111112", // SOL
-        outputMint,
-        amount: parseFloat(swapAmount) * 1e9, // Convert to lamports
-        platformFeeBps: 50, // 0.5% platform fee
-        isSafe: scanData?.security.isSafe || false,
-        userAcceptedRisk, // Pass user risk acceptance flag
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to build transaction");
-    }
-
-    const { swapTransaction } = await response.json();
-    return swapTransaction;
-  };
-
-  // Execute swap with proper wallet adapter flow
+  // Execute swap with Jupiter Ultra API and Phantom wallet
   const executeSwap = async (swapAmount: string, userAcceptedRisk: boolean = false) => {
-    if (!swapAmount || !scanData) return;
+    if (!swapAmount || !scanData || !wallet.publicKey) return;
 
     setIsSwapping(true);
     setErrorMessage("");
 
     try {
-      console.log("[v0] Building swap transaction...");
-      
-      // 1. Build transaction (does not send yet)
-      const transaction = await buildSwapTransactionOnly(
-        scanData.tokenInfo.mint,
-        swapAmount,
-        userAcceptedRisk
+      console.log("[v0] Starting swap for", swapAmount, "SOL");
+
+      // Step 1: Create order with Jupiter Ultra API
+      const response = await fetch("/api/swap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inputMint: "So11111111111111111111111111111111111111112", // SOL
+          outputMint: scanData.tokenInfo.mint,
+          amount: Math.floor(parseFloat(swapAmount) * 1e9), // Convert to lamports
+          userPublicKey: wallet.publicKey,
+          isSafe: scanData.security.isSafe || false,
+          userAcceptedRisk,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("[v0] API error:", errorData);
+        throw new Error(errorData.error || "Failed to create order");
+      }
+
+      const { transaction, quote, orderId } = await response.json();
+      console.log("[v0] Order created:", orderId);
+      console.log("[v0] Quote:", quote);
+
+      setErrorMessage(`${t[lang].processing} (${lang === "pt" ? "Assine na carteira" : "Sign in wallet"})`);
+
+      // Step 2: Deserialize versioned transaction and send via Phantom wallet
+      const transactionBuffer = Buffer.from(transaction, "base64");
+      const { VersionedTransaction } = await import("@solana/web3.js");
+      const tx = VersionedTransaction.deserialize(transactionBuffer);
+
+      console.log("[v0] Versioned transaction prepared, requesting signature...");
+
+      // Sign and send via wallet context
+      const signature = await wallet.signAndSendTransaction(tx);
+
+      console.log("[v0] Transaction signed and sent:", signature);
+
+      // Show success with signature
+      setErrorMessage(
+        lang === "pt" 
+          ? `✓ Transação enviada! ${signature.slice(0, 8)}...` 
+          : `✓ Transaction sent! ${signature.slice(0, 8)}...`
       );
 
-      console.log("[v0] Transaction built successfully");
+      // Clear amount after successful swap
+      setTimeout(() => {
+        setAmount("");
+        setErrorMessage("");
+      }, 3000);
 
-      // 2. Send via Wallet Adapter (Standard Solana Flow)
-      if (wallet.connected && transaction) {
-        console.log("[v0] Preparing to sign with connected wallet...");
-        
-        // TODO: Implement actual Solana transaction sending
-        // Once @solana/wallet-adapter-react is fully integrated:
-        // const tx = Transaction.from(Buffer.from(transaction, 'base64'));
-        // const signature = await wallet.sendTransaction(tx, connection);
-        // console.log("[v0] Transaction sent:", signature);
-        
-        // For now, show success message
-        setErrorMessage(`${t[lang].processing} (${lang === "pt" ? "Assine na carteira" : "Sign in wallet"})`);
-        
-        // Simulate success after 2 seconds
-        setTimeout(() => {
-          setErrorMessage(lang === "pt" ? "✓ Transação enviada com sucesso!" : "✓ Transaction sent successfully!");
-        }, 2000);
-      } else {
-        throw new Error(t[lang].walletRequired);
-      }
     } catch (error: any) {
-      console.error("[v0] Swap execution failed:", error);
-      setErrorMessage(error.message || `${t[lang].swap} ${lang === "pt" ? "falhou" : "failed"}`);
+      console.error("[v0] Swap error:", error);
+      
+      // Handle specific errors
+      if (error.message?.includes("User rejected") || error.message?.includes("rejected")) {
+        setErrorMessage(lang === "pt" ? "Transação cancelada" : "Transaction cancelled");
+      } else if (error.code === 4001) {
+        setErrorMessage(lang === "pt" ? "Transação rejeitada" : "Transaction rejected");
+      } else {
+        setErrorMessage(error.message || `${t[lang].swap} ${lang === "pt" ? "falhou" : "failed"}`);
+      }
     } finally {
       setIsSwapping(false);
     }
@@ -393,24 +408,34 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
     return (
       <div className="min-h-screen flex flex-col pb-24" style={{ background: "#020617" }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{ background: "rgba(2,6,23,0.95)", borderColor: "rgba(255,255,255,0.1)" }}>
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
+        <div className="sticky top-0 z-10 backdrop-blur-xl border-b" style={{ background: "rgba(2,6,23,0.95)", borderColor: "rgba(255,255,255,0.1)" }}>
+          <div className="flex items-center justify-between gap-3 px-4 py-3 max-w-2xl mx-auto">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all border"
-              style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <span className="text-sm font-semibold text-white">{t[lang].securityReport}</span>
-            <button
-              type="button"
-              onClick={handleNewScan}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-all border"
+              onClick={() => router.push("/")}
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all border"
               style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
             >
               <Home className="w-5 h-5" />
+            </button>
+            <span className="flex-1 text-center text-sm font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis">
+              {t[lang].securityReport}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                router.push("/scan");
+                setScanData(null);
+                setViewState("idle");
+                setError("");
+                setAmount("");
+                setErrorMessage("");
+              }}
+              className="flex-shrink-0 px-3 h-10 rounded-lg flex items-center justify-center gap-2 text-cyan-400 hover:text-cyan-300 transition-all border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 font-medium text-xs sm:text-sm whitespace-nowrap"
+            >
+              <Shield className="w-4 h-4" />
+              <span className="hidden xs:inline">{t[lang].newScan}</span>
+              <span className="xs:hidden">Scan</span>
             </button>
           </div>
         </div>

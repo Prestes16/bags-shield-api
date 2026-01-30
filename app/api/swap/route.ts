@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Helius/Jupiter integration (mock for now)
+// Jupiter Metis API v1 Configuration
+const JUPITER_API_KEY = "99bf316b-8d0f-4b09-8b0e-9eab5cc6c162";
+const JUPITER_API = "https://api.jup.ag/swap/v1";
+
+// Jupiter Metis API integration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { inputMint, outputMint, amount, isSafe, userAcceptedRisk = false } = body;
+    const { inputMint, outputMint, amount, userPublicKey, isSafe, userAcceptedRisk = false } = body;
+
+    console.log("[v0] Swap request:", { inputMint, outputMint, amount, userPublicKey });
 
     // Safety check - but allow if user explicitly accepted risk
     if (!isSafe && !userAcceptedRisk) {
@@ -17,29 +23,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock Jupiter API response with platform fee
-    // In production: Forward to Helius RPC or Jupiter API with platformFeeBps: 50
-    const mockSwapTransaction = {
-      transaction: "base64_encoded_transaction_placeholder",
-      inputAmount: amount,
-      outputAmount: Math.floor(amount * 0.95), // Mock 5% slippage
-      platformFee: Math.floor(amount * 0.005), // 50 bps = 0.5%
-      estimatedGas: 5000,
+    // Step 1: Get quote from Jupiter Metis API
+    const quoteParams = new URLSearchParams({
+      inputMint,
+      outputMint,
+      amount: amount.toString(),
+      slippageBps: "50",
+      restrictIntermediateTokens: "true",
+    });
+
+    const quoteUrl = `${JUPITER_API}/quote?${quoteParams}`;
+    console.log("[v0] Fetching quote from:", quoteUrl);
+
+    const quoteResponse = await fetch(quoteUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "x-api-key": JUPITER_API_KEY,
+      },
+    });
+
+    if (!quoteResponse.ok) {
+      const errorText = await quoteResponse.text();
+      console.error("[v0] Jupiter quote failed:", quoteResponse.status, errorText);
+      return NextResponse.json(
+        { error: `Failed to get quote: ${errorText}`, code: "QUOTE_FAILED", details: errorText },
+        { status: 400 }
+      );
+    }
+
+    const quoteData = await quoteResponse.json();
+    console.log("[v0] Quote received:", { inAmount: quoteData.inAmount, outAmount: quoteData.outAmount });
+
+    // Step 2: Get swap transaction from Jupiter Metis API
+    const swapPayload = {
+      quoteResponse: quoteData,
+      userPublicKey,
+      wrapAndUnwrapSol: true,
+      dynamicComputeUnitLimit: true,
+      prioritizationFeeLamports: "auto",
     };
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const swapUrl = `${JUPITER_API}/swap`;
+    console.log("[v0] Fetching swap transaction...");
 
+    const swapResponse = await fetch(swapUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-api-key": JUPITER_API_KEY,
+      },
+      body: JSON.stringify(swapPayload),
+    });
+
+    if (!swapResponse.ok) {
+      const errorText = await swapResponse.text();
+      console.error("[v0] Jupiter swap failed:", swapResponse.status, errorText);
+      return NextResponse.json(
+        { error: `Failed to create swap: ${errorText}`, code: "SWAP_FAILED", details: errorText },
+        { status: 400 }
+      );
+    }
+
+    const swapData = await swapResponse.json();
+    console.log("[v0] Swap transaction created");
+
+    // Return transaction and quote
     return NextResponse.json(
       {
-        swapTransaction: mockSwapTransaction,
+        transaction: swapData.swapTransaction,
         quote: {
           inputMint,
           outputMint,
-          inAmount: amount,
-          outAmount: mockSwapTransaction.outputAmount,
-          priceImpact: 0.5,
-          platformFee: mockSwapTransaction.platformFee,
+          inAmount: quoteData.inAmount,
+          outAmount: quoteData.outAmount,
+          priceImpact: quoteData.priceImpactPct,
         },
       },
       {

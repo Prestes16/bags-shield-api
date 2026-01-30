@@ -24,10 +24,15 @@ import {
   X,
   Languages,
   Zap,
+  Home,
+  Search,
+  History,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-context";
 import type { Language } from "@/lib/i18n/translations";
 import { useTheme, type Theme } from "@/lib/theme/theme-context";
+import { BottomNav } from "@/components/ui/bottom-nav";
 
 // Custom Toggle Switch Component
 function ToggleSwitch({
@@ -606,27 +611,35 @@ export function SettingsPage() {
           </div>
         </div>
 
-        {/* Save Button - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[var(--bg-page)] via-[var(--bg-page)] to-transparent md:relative md:p-0 md:bg-none z-10">
-          <div className="max-w-2xl mx-auto">
-            <button
-              type="button"
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white text-sm font-semibold shadow-[0_0_16px_var(--cyan-glow)] hover:shadow-[0_0_24px_var(--cyan-glow)] hover:opacity-95 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                "Save"
-              )}
-            </button>
-          </div>
+        {/* Save Button (inline, not fixed) */}
+        <div className="mt-6 mb-2">
+          <button
+            type="button"
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white text-sm font-semibold shadow-[0_0_16px_var(--cyan-glow)] hover:shadow-[0_0_24px_var(--cyan-glow)] hover:opacity-95 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              "Save"
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Bottom Navigation */}
+      <BottomNav 
+        items={[
+          { icon: Home, label: t.nav.home, href: "/" },
+          { icon: Search, label: t.nav.search, href: "/search" },
+          { icon: History, label: t.nav.history, href: "/history" },
+          { icon: SettingsIcon, label: t.nav.settings, href: "/settings" },
+        ]}
+      />
     </div>
   );
 }

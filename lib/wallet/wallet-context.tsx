@@ -10,6 +10,7 @@ interface WalletContextType {
   connect: () => Promise<boolean>;
   disconnect: () => void;
   clearError: () => void;
+  signAndSendTransaction: (transaction: any) => Promise<string>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -83,6 +84,53 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setConnectionError(null);
   };
 
+  const signAndSendTransaction = async (transaction: any): Promise<string> => {
+    if (typeof window === "undefined") {
+      throw new Error("Window not available");
+    }
+
+    const { solana } = window as any;
+    
+    if (!solana?.isPhantom) {
+      throw new Error("Phantom wallet not found");
+    }
+
+    if (!connected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      console.log("[v0] Sending transaction via Phantom...");
+      
+      // Convert serialized transaction to base64 string for Phantom
+      const serializedTransaction = transaction.serialize();
+      const base64Transaction = Buffer.from(serializedTransaction).toString("base64");
+      
+      console.log("[v0] Transaction serialized, requesting signature...");
+      
+      // Use Phantom's request API with base64-encoded transaction
+      const { signature } = await solana.request({
+        method: "signAndSendTransaction",
+        params: {
+          message: base64Transaction,
+        },
+      });
+      
+      console.log("[v0] Transaction sent:", signature);
+      
+      // Wait for confirmation
+      const { Connection } = await import("@solana/web3.js");
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      await connection.confirmTransaction(signature, "confirmed");
+      
+      console.log("[v0] Transaction confirmed");
+      return signature;
+    } catch (error: any) {
+      console.error("[v0] Transaction error:", error);
+      throw error;
+    }
+  };
+
   return (
     <WalletContext.Provider
       value={{
@@ -93,6 +141,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connect,
         disconnect,
         clearError,
+        signAndSendTransaction,
       }}
     >
       {children}

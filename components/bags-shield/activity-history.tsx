@@ -15,9 +15,12 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   ShieldAlert,
+  Home,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { BottomNav } from "@/components/ui/bottom-nav";
 
 // Types
 type ActivityType = "scan" | "simulation" | "transaction";
@@ -551,6 +554,16 @@ export function ActivityHistory({
           </div>
         )}
       </div>
+
+      {/* Bottom Navigation */}
+      <BottomNav 
+        items={[
+          { icon: Home, label: t.nav.home, href: "/" },
+          { icon: Search, label: t.nav.search, href: "/search" },
+          { icon: History, label: t.nav.history, href: "/history" },
+          { icon: Settings, label: t.nav.settings, href: "/settings" },
+        ]}
+      />
     </div>
   );
 }
