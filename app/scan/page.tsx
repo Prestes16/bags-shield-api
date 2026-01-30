@@ -227,7 +227,7 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
     setPendingSwapAmount("");
   };
 
-  // Execute swap with real Jupiter API and Phantom wallet
+  // Execute swap with Jupiter Ultra API and Phantom wallet
   const executeSwap = async (swapAmount: string, userAcceptedRisk: boolean = false) => {
     if (!swapAmount || !scanData || !wallet.publicKey) return;
 
@@ -235,14 +235,16 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
     setErrorMessage("");
 
     try {
-      // Step 1: Get swap transaction from Jupiter via our API
+      console.log("[v0] Starting swap for", swapAmount, "SOL");
+
+      // Step 1: Create order with Jupiter Ultra API
       const response = await fetch("/api/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           inputMint: "So11111111111111111111111111111111111111112", // SOL
           outputMint: scanData.tokenInfo.mint,
-          amount: parseFloat(swapAmount) * 1e9, // Convert to lamports
+          amount: Math.floor(parseFloat(swapAmount) * 1e9), // Convert to lamports
           userPublicKey: wallet.publicKey,
           isSafe: scanData.security.isSafe || false,
           userAcceptedRisk,
@@ -251,37 +253,47 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to build transaction");
+        console.error("[v0] API error:", errorData);
+        throw new Error(errorData.error || "Failed to create order");
       }
 
-      const { swapTransaction, quote } = await response.json();
+      const { transaction, quote, orderId } = await response.json();
+      console.log("[v0] Order created:", orderId);
+      console.log("[v0] Quote:", quote);
 
       setErrorMessage(`${t[lang].processing} (${lang === "pt" ? "Assine na carteira" : "Sign in wallet"})`);
 
       // Step 2: Deserialize and send transaction via Phantom wallet
-      const transactionBuffer = Buffer.from(swapTransaction, "base64");
+      const transactionBuffer = Buffer.from(transaction, "base64");
       const { Transaction } = await import("@solana/web3.js");
-      const transaction = Transaction.from(transactionBuffer);
+      const tx = Transaction.from(transactionBuffer);
+
+      console.log("[v0] Transaction prepared, requesting signature...");
 
       // Sign and send via wallet context
-      const signature = await wallet.signAndSendTransaction(transaction);
+      const signature = await wallet.signAndSendTransaction(tx);
+
+      console.log("[v0] Transaction signed and sent:", signature);
 
       // Show success with signature
       setErrorMessage(
         lang === "pt" 
-          ? `✓ Transação enviada com sucesso! ${signature.slice(0, 8)}...` 
-          : `✓ Transaction sent successfully! ${signature.slice(0, 8)}...`
+          ? `✓ Transação enviada! ${signature.slice(0, 8)}...` 
+          : `✓ Transaction sent! ${signature.slice(0, 8)}...`
       );
 
-      console.log("[v0] Swap completed:", signature);
-      console.log("[v0] Quote:", quote);
+      // Clear amount after successful swap
+      setTimeout(() => {
+        setAmount("");
+        setErrorMessage("");
+      }, 3000);
 
     } catch (error: any) {
       console.error("[v0] Swap error:", error);
       
       // Handle specific errors
-      if (error.message?.includes("User rejected")) {
-        setErrorMessage(lang === "pt" ? "Transação cancelada pelo usuário" : "Transaction cancelled by user");
+      if (error.message?.includes("User rejected") || error.message?.includes("rejected")) {
+        setErrorMessage(lang === "pt" ? "Transação cancelada" : "Transaction cancelled");
       } else if (error.code === 4001) {
         setErrorMessage(lang === "pt" ? "Transação rejeitada" : "Transaction rejected");
       } else {
