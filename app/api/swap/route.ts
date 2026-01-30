@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Jupiter Ultra API Configuration
-const JUPITER_API_KEY = "99bf316b-8d0f-4b09-8b0e-9eab5cc6c162";
-const JUPITER_ULTRA_API = "https://api.jup.ag/ultra";
+// Jupiter API v6 Configuration (Public endpoints)
+const JUPITER_API = "https://quote-api.jup.ag/v6";
 
-// Real Jupiter Ultra API integration
+// Jupiter API v6 integration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -23,60 +22,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Get order from Jupiter Ultra API (GET request with query params)
-    const orderParams = new URLSearchParams({
+    // Step 1: Get quote from Jupiter v6
+    const quoteParams = new URLSearchParams({
       inputMint,
       outputMint,
       amount: amount.toString(),
-      taker: userPublicKey,
       slippageBps: "50",
     });
 
-    const orderUrl = `${JUPITER_ULTRA_API}/v1/order?${orderParams}`;
-    console.log("[v0] Fetching order from:", orderUrl);
+    const quoteUrl = `${JUPITER_API}/quote?${quoteParams}`;
+    console.log("[v0] Fetching quote from:", quoteUrl);
 
-    const orderResponse = await fetch(orderUrl, {
+    const quoteResponse = await fetch(quoteUrl, {
       method: "GET",
       headers: {
         "Accept": "application/json",
-        "x-api-key": JUPITER_API_KEY,
       },
     });
 
-    if (!orderResponse.ok) {
-      const errorText = await orderResponse.text();
-      console.error("[v0] Jupiter order failed:", orderResponse.status, errorText);
+    if (!quoteResponse.ok) {
+      const errorText = await quoteResponse.text();
+      console.error("[v0] Jupiter quote failed:", quoteResponse.status, errorText);
       return NextResponse.json(
-        { error: `Failed to get order: ${errorText}`, code: "ORDER_FAILED", details: errorText },
+        { error: `Failed to get quote: ${errorText}`, code: "QUOTE_FAILED", details: errorText },
         { status: 400 }
       );
     }
 
-    const orderData = await orderResponse.json();
-    console.log("[v0] Order received:", { requestId: orderData.requestId, hasTransaction: !!orderData.transaction });
+    const quoteData = await quoteResponse.json();
+    console.log("[v0] Quote received:", { inAmount: quoteData.inAmount, outAmount: quoteData.outAmount });
 
-    // Check if transaction was returned
-    if (!orderData.transaction) {
-      const errorMsg = orderData.errorMessage || "No transaction returned";
-      console.error("[v0] No transaction in order:", orderData.errorCode, errorMsg);
+    // Step 2: Get swap transaction from Jupiter v6
+    const swapPayload = {
+      quoteResponse: quoteData,
+      userPublicKey,
+      wrapAndUnwrapSol: true,
+      computeUnitPriceMicroLamports: "auto",
+    };
+
+    const swapUrl = `${JUPITER_API}/swap`;
+    console.log("[v0] Fetching swap transaction...");
+
+    const swapResponse = await fetch(swapUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(swapPayload),
+    });
+
+    if (!swapResponse.ok) {
+      const errorText = await swapResponse.text();
+      console.error("[v0] Jupiter swap failed:", swapResponse.status, errorText);
       return NextResponse.json(
-        { error: errorMsg, code: "NO_TRANSACTION", details: orderData },
+        { error: `Failed to create swap: ${errorText}`, code: "SWAP_FAILED", details: errorText },
         { status: 400 }
       );
     }
 
-    // Ultra API returns the order with transaction details
+    const swapData = await swapResponse.json();
+    console.log("[v0] Swap transaction created");
+
+    // Return transaction and quote
     return NextResponse.json(
       {
-        requestId: orderData.requestId,
-        transaction: orderData.transaction,
+        transaction: swapData.swapTransaction,
         quote: {
-          inputMint: orderData.inputMint,
-          outputMint: orderData.outputMint,
-          inAmount: orderData.inAmount,
-          outAmount: orderData.outAmount,
-          priceImpact: orderData.priceImpact,
-          slippageBps: orderData.slippageBps,
+          inputMint,
+          outputMint,
+          inAmount: quoteData.inAmount,
+          outAmount: quoteData.outAmount,
+          priceImpact: quoteData.priceImpactPct,
         },
       },
       {
