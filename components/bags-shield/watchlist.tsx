@@ -80,7 +80,7 @@ function MiniScoreRing({ score }: { score: number }) {
           strokeWidth={stroke}
         />
         {/* Progress circle */}
-        <circle
+        <circle className="text-right"
           cx={radius}
           cy={radius}
           r={normalizedRadius}
