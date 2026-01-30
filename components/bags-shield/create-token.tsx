@@ -142,6 +142,7 @@ export function CreateToken() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Form state
   const [tokenBasics, setTokenBasics] = useState<TokenBasics>({
@@ -343,22 +344,25 @@ export function CreateToken() {
           ) : (
             // Upload Area
             <div
+              onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
-              className={`relative w-full h-40 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+              className={`relative w-full h-40 rounded-xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.98] ${
                 isDragging
                   ? "border-[var(--cyan-primary)] bg-[var(--cyan-primary)]/10"
                   : "border-border-subtle bg-bg-input hover:border-[var(--cyan-primary)]/50 hover:bg-[var(--cyan-primary)]/5"
               }`}
             >
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                className="hidden"
               />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <div className="w-12 h-12 rounded-full bg-[var(--cyan-primary)]/10 flex items-center justify-center">
                   {isDragging ? (
                     <Upload className="w-6 h-6 text-[var(--cyan-primary)] animate-bounce" />
@@ -368,10 +372,10 @@ export function CreateToken() {
                 </div>
                 <div className="text-center px-4">
                   <p className="text-sm font-medium text-text-primary">
-                    {isDragging ? "Drop image here" : "Click or drag to upload"}
+                    {isDragging ? "Drop image here" : "Tap to upload"}
                   </p>
                   <p className="text-xs text-text-muted mt-1">
-                    PNG, JPG, GIF up to 5MB
+                    Choose from gallery or take photo
                   </p>
                 </div>
               </div>
