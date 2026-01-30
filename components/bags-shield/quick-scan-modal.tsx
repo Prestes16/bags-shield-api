@@ -3,7 +3,8 @@
 import React from "react"
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Scan, AlertCircle, HelpCircle } from "lucide-react";
+import { X, Scan, AlertCircle, HelpCircle, Home } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { cn } from "@/lib/utils";
 
@@ -208,6 +209,7 @@ export function QuickScanModal({ isOpen, onClose, onScan }: QuickScanModalProps)
 // Inline scan input for /scan page when no mint is provided
 export function InlineScanInput({ onScan }: { onScan: (mint: string) => void }) {
   const { t } = useLanguage();
+  const router = useRouter();
   const [mintAddress, setMintAddress] = useState("");
   const [showError, setShowError] = useState(false);
 
@@ -234,7 +236,17 @@ export function InlineScanInput({ onScan }: { onScan: (mint: string) => void }) 
   };
 
   return (
-    <div className="min-h-screen bg-bg-page flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-bg-page flex flex-col items-center justify-center px-4 relative">
+      {/* Discrete Back to Home button */}
+      <button
+        type="button"
+        onClick={() => router.push("/")}
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 w-10 h-10 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary transition-all bg-bg-card/50 hover:bg-bg-card border border-border-subtle/50 hover:border-border-subtle group"
+        title={t.common?.backToHome || "Back to Home"}
+      >
+        <Home className="w-4 h-4 group-hover:scale-110 transition-transform" />
+      </button>
+
       <div className="w-full max-w-md">
         {/* Icon */}
         <div className="flex justify-center mb-6">
