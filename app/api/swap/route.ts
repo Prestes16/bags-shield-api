@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Helius/Jupiter integration (mock for now)
+// Jupiter API v6 Configuration
+const JUPITER_API_KEY = "99bf316b-8d0b-4b09-8b0e-9eab5cc6c162";
+const JUPITER_QUOTE_API = "https://quote-api.jup.ag/v6/quote";
+const JUPITER_SWAP_API = "https://quote-api.jup.ag/v6/swap";
+
+// Real Jupiter API integration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { inputMint, outputMint, amount, isSafe, userAcceptedRisk = false } = body;
+    const { inputMint, outputMint, amount, userPublicKey, isSafe, userAcceptedRisk = false } = body;
 
     // Safety check - but allow if user explicitly accepted risk
     if (!isSafe && !userAcceptedRisk) {
@@ -17,29 +22,74 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock Jupiter API response with platform fee
-    // In production: Forward to Helius RPC or Jupiter API with platformFeeBps: 50
-    const mockSwapTransaction = {
-      transaction: "base64_encoded_transaction_placeholder",
-      inputAmount: amount,
-      outputAmount: Math.floor(amount * 0.95), // Mock 5% slippage
-      platformFee: Math.floor(amount * 0.005), // 50 bps = 0.5%
-      estimatedGas: 5000,
+    // Step 1: Get quote from Jupiter
+    const quoteParams = new URLSearchParams({
+      inputMint,
+      outputMint,
+      amount: amount.toString(),
+      slippageBps: "50", // 0.5% slippage
+      platformFeeBps: "50", // 0.5% platform fee
+    });
+
+    const quoteResponse = await fetch(`${JUPITER_QUOTE_API}?${quoteParams}`, {
+      headers: {
+        "Accept": "application/json",
+        ...(JUPITER_API_KEY && { "Authorization": `Bearer ${JUPITER_API_KEY}` }),
+      },
+    });
+
+    if (!quoteResponse.ok) {
+      const errorText = await quoteResponse.text();
+      console.error("[v0] Jupiter quote failed:", errorText);
+      return NextResponse.json(
+        { error: "Failed to get quote", code: "QUOTE_FAILED" },
+        { status: 400 }
+      );
+    }
+
+    const quoteData = await quoteResponse.json();
+
+    // Step 2: Get swap transaction from Jupiter
+    const swapPayload = {
+      quoteResponse: quoteData,
+      userPublicKey: userPublicKey,
+      wrapAndUnwrapSol: true,
+      prioritizationFeeLamports: "auto",
+      dynamicComputeUnitLimit: true,
     };
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const swapResponse = await fetch(JUPITER_SWAP_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        ...(JUPITER_API_KEY && { "Authorization": `Bearer ${JUPITER_API_KEY}` }),
+      },
+      body: JSON.stringify(swapPayload),
+    });
+
+    if (!swapResponse.ok) {
+      const errorText = await swapResponse.text();
+      console.error("[v0] Jupiter swap failed:", errorText);
+      return NextResponse.json(
+        { error: "Failed to create swap transaction", code: "SWAP_FAILED" },
+        { status: 400 }
+      );
+    }
+
+    const swapData = await swapResponse.json();
 
     return NextResponse.json(
       {
-        swapTransaction: mockSwapTransaction,
+        swapTransaction: swapData.swapTransaction,
         quote: {
           inputMint,
           outputMint,
-          inAmount: amount,
-          outAmount: mockSwapTransaction.outputAmount,
-          priceImpact: 0.5,
-          platformFee: mockSwapTransaction.platformFee,
+          inAmount: quoteData.inAmount,
+          outAmount: quoteData.outAmount,
+          priceImpact: quoteData.priceImpactPct,
+          platformFee: quoteData.platformFee?.amount || 0,
+          otherAmountThreshold: quoteData.otherAmountThreshold,
         },
       },
       {

@@ -10,6 +10,7 @@ interface WalletContextType {
   connect: () => Promise<boolean>;
   disconnect: () => void;
   clearError: () => void;
+  signAndSendTransaction: (transaction: any) => Promise<string>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -83,6 +84,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setConnectionError(null);
   };
 
+  const signAndSendTransaction = async (transaction: any): Promise<string> => {
+    if (typeof window === "undefined") {
+      throw new Error("Window not available");
+    }
+
+    const { solana } = window as any;
+    
+    if (!solana?.isPhantom) {
+      throw new Error("Phantom wallet not found");
+    }
+
+    if (!connected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      const { signature } = await solana.signAndSendTransaction(transaction);
+      return signature;
+    } catch (error: any) {
+      console.error("[v0] Transaction signing error:", error);
+      throw error;
+    }
+  };
+
   return (
     <WalletContext.Provider
       value={{
@@ -93,6 +118,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connect,
         disconnect,
         clearError,
+        signAndSendTransaction,
       }}
     >
       {children}
