@@ -397,17 +397,19 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
     return (
       <div className="min-h-screen flex flex-col pb-24" style={{ background: "#020617" }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{ background: "rgba(2,6,23,0.95)", borderColor: "rgba(255,255,255,0.1)" }}>
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
+        <div className="sticky top-0 z-10 backdrop-blur-xl border-b" style={{ background: "rgba(2,6,23,0.95)", borderColor: "rgba(255,255,255,0.1)" }}>
+          <div className="flex items-center justify-between gap-3 px-4 py-3 max-w-2xl mx-auto">
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all border"
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all border"
               style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
             >
               <Home className="w-5 h-5" />
             </button>
-            <span className="text-sm font-semibold text-white">{t[lang].securityReport}</span>
+            <span className="flex-1 text-center text-sm font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis">
+              {t[lang].securityReport}
+            </span>
             <button
               type="button"
               onClick={() => {
@@ -418,10 +420,11 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
                 setAmount("");
                 setErrorMessage("");
               }}
-              className="px-4 h-10 rounded-lg flex items-center justify-center gap-2 text-cyan-400 hover:text-cyan-300 transition-all border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 font-medium text-sm"
+              className="flex-shrink-0 px-3 h-10 rounded-lg flex items-center justify-center gap-2 text-cyan-400 hover:text-cyan-300 transition-all border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 font-medium text-xs sm:text-sm whitespace-nowrap"
             >
               <Shield className="w-4 h-4" />
-              {t[lang].newScan}
+              <span className="hidden xs:inline">{t[lang].newScan}</span>
+              <span className="xs:hidden">Scan</span>
             </button>
           </div>
         </div>
