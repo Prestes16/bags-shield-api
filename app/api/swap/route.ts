@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
       quoteResponse: quoteData,
       userPublicKey,
       wrapAndUnwrapSol: true,
-      computeUnitPriceMicroLamports: "auto",
       dynamicComputeUnitLimit: true,
       prioritizationFeeLamports: "auto",
     };
