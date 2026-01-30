@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Jupiter API v6 Configuration (Public endpoints)
-const JUPITER_API = "https://quote-api.jup.ag/v6";
+// Jupiter Metis API v1 Configuration
+const JUPITER_API_KEY = "99bf316b-8d0f-4b09-8b0e-9eab5cc6c162";
+const JUPITER_API = "https://api.jup.ag/swap/v1";
 
-// Jupiter API v6 integration
+// Jupiter Metis API integration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -22,12 +23,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Get quote from Jupiter v6
+    // Step 1: Get quote from Jupiter Metis API
     const quoteParams = new URLSearchParams({
       inputMint,
       outputMint,
       amount: amount.toString(),
       slippageBps: "50",
+      restrictIntermediateTokens: "true",
     });
 
     const quoteUrl = `${JUPITER_API}/quote?${quoteParams}`;
@@ -37,6 +39,7 @@ export async function POST(request: NextRequest) {
       method: "GET",
       headers: {
         "Accept": "application/json",
+        "x-api-key": JUPITER_API_KEY,
       },
     });
 
@@ -52,12 +55,14 @@ export async function POST(request: NextRequest) {
     const quoteData = await quoteResponse.json();
     console.log("[v0] Quote received:", { inAmount: quoteData.inAmount, outAmount: quoteData.outAmount });
 
-    // Step 2: Get swap transaction from Jupiter v6
+    // Step 2: Get swap transaction from Jupiter Metis API
     const swapPayload = {
       quoteResponse: quoteData,
       userPublicKey,
       wrapAndUnwrapSol: true,
       computeUnitPriceMicroLamports: "auto",
+      dynamicComputeUnitLimit: true,
+      prioritizationFeeLamports: "auto",
     };
 
     const swapUrl = `${JUPITER_API}/swap`;
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "x-api-key": JUPITER_API_KEY,
       },
       body: JSON.stringify(swapPayload),
     });
