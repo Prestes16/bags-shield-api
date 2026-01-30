@@ -23,50 +23,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Create order with Jupiter Ultra API
-    const orderPayload = {
-      user: userPublicKey,
+    // Step 1: Get order from Jupiter Ultra API (GET request with query params)
+    const orderParams = new URLSearchParams({
       inputMint,
       outputMint,
-      inputAmount: amount.toString(),
-      slippageBps: 50, // 0.5% slippage
-    };
+      amount: amount.toString(),
+      taker: userPublicKey,
+      slippageBps: "50",
+    });
 
-    console.log("[v0] Creating order:", orderPayload);
+    const orderUrl = `${JUPITER_ULTRA_API}/v1/order?${orderParams}`;
+    console.log("[v0] Fetching order from:", orderUrl);
 
-    const orderResponse = await fetch(`${JUPITER_ULTRA_API}/order`, {
-      method: "POST",
+    const orderResponse = await fetch(orderUrl, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": `Bearer ${JUPITER_API_KEY}`,
+        "x-api-key": JUPITER_API_KEY,
       },
-      body: JSON.stringify(orderPayload),
     });
 
     if (!orderResponse.ok) {
       const errorText = await orderResponse.text();
-      console.error("[v0] Jupiter order creation failed:", orderResponse.status, errorText);
+      console.error("[v0] Jupiter order failed:", orderResponse.status, errorText);
       return NextResponse.json(
-        { error: `Failed to create order: ${errorText}`, code: "ORDER_FAILED", details: errorText },
+        { error: `Failed to get order: ${errorText}`, code: "ORDER_FAILED", details: errorText },
         { status: 400 }
       );
     }
 
     const orderData = await orderResponse.json();
-    console.log("[v0] Order created:", orderData);
+    console.log("[v0] Order received:", { requestId: orderData.requestId, hasTransaction: !!orderData.transaction });
+
+    // Check if transaction was returned
+    if (!orderData.transaction) {
+      const errorMsg = orderData.errorMessage || "No transaction returned";
+      console.error("[v0] No transaction in order:", orderData.errorCode, errorMsg);
+      return NextResponse.json(
+        { error: errorMsg, code: "NO_TRANSACTION", details: orderData },
+        { status: 400 }
+      );
+    }
 
     // Ultra API returns the order with transaction details
     return NextResponse.json(
       {
-        orderId: orderData.orderId,
+        requestId: orderData.requestId,
         transaction: orderData.transaction,
         quote: {
-          inputMint,
-          outputMint,
-          inAmount: orderData.inputAmount,
-          outAmount: orderData.outputAmount,
+          inputMint: orderData.inputMint,
+          outputMint: orderData.outputMint,
+          inAmount: orderData.inAmount,
+          outAmount: orderData.outAmount,
           priceImpact: orderData.priceImpact,
+          slippageBps: orderData.slippageBps,
         },
       },
       {
