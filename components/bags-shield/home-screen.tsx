@@ -4,21 +4,22 @@ import { useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { 
-  Home, 
-  Search, 
-  History, 
-  Settings, 
   Wallet, 
   Scan, 
   Eye, 
   Bell, 
   Activity,
   Shield,
-  Plus
+  Plus,
+  Search,
+  History,
+  Settings,
+  Home
 } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/language-context"
 import { useWallet } from "@/lib/wallet/wallet-context"
 import { QuickScanModal } from "./quick-scan-modal"
+import { BottomNav } from "@/components/ui/bottom-nav"
 
 // Configuration for money rain particles
 const moneyParticles = [
@@ -221,42 +222,15 @@ export function HomeScreen() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-bg-page/95 backdrop-blur-lg border-t border-border-subtle z-40 pb-safe">
-        <div className="flex items-center justify-around py-3 px-2 max-w-md mx-auto">
-          <button 
-            type="button" 
-            onClick={() => router.push("/")}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 text-[var(--cyan-primary)] active:scale-95 transition-transform"
-          >
-            <Home className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{t.nav.home}</span>
-          </button>
-          <button 
-            type="button" 
-            onClick={() => setShowScanModal(true)}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 text-text-muted hover:text-text-secondary active:scale-95 transition-all"
-          >
-            <Search className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{t.nav.search}</span>
-          </button>
-          <button 
-            type="button" 
-            onClick={() => router.push("/history")}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 text-text-muted hover:text-text-secondary active:scale-95 transition-all"
-          >
-            <History className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{t.nav.history}</span>
-          </button>
-          <button 
-            type="button" 
-            onClick={() => router.push("/settings")}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 text-text-muted hover:text-text-secondary active:scale-95 transition-all"
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{t.nav.settings}</span>
-          </button>
-        </div>
-      </nav>
+      <BottomNav 
+        items={[
+          { icon: Home, label: t.nav.home, href: "/" },
+          { icon: Search, label: t.nav.search, href: "/search" },
+          { icon: History, label: t.nav.history, href: "/history" },
+          { icon: Settings, label: t.nav.settings, href: "/settings" },
+        ]}
+        onSearchClick={() => setShowScanModal(true)}
+      />
 
       {/* Quick Scan Modal */}
       <QuickScanModal

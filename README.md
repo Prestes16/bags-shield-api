@@ -1,4 +1,4 @@
-﻿# Bags Shield API
+# Bags Shield API
 
 Security gateway for **Solana** dApps and wallets - transaction analysis, risk simulation and integration with the **Bags** ecosystem.
 
@@ -89,17 +89,17 @@ Proxy to Bags `token-launch/create-config`.
 
 **Request example:**
 
-```json
+\`\`\`json
 {
   "launchWallet": "RequiredSolanaPubkey",
   "tipWallet": "OptionalTipPubkey",
   "tipLamports": 1000000
 }
-```
+\`\`\`
 
 **Response (simplified):**
 
-```json
+\`\`\`json
 {
   "success": true,
   "response": {
@@ -113,7 +113,7 @@ Proxy to Bags `token-launch/create-config`.
     "elapsedMs": 1234
   }
 }
-```
+\`\`\`
 
 Behavior:
 
@@ -156,7 +156,7 @@ Behavior:
 
 All JSON responses follow the same shape:
 
-```json
+\`\`\`json
 {
   "success": true,
   "response": {},
@@ -168,7 +168,7 @@ All JSON responses follow the same shape:
     "elapsedMs": 1234
   }
 }
-```
+\`\`\`
 
 - `success`: high-level success/error flag;
 - `response`: business payload for the route;

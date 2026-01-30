@@ -17,9 +17,12 @@ import {
   ShieldCheck,
   Scan,
   FileText,
+  History,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { BottomNav } from "@/components/ui/bottom-nav";
 
 // Types - Ready for API integration
 interface WatchlistToken {
@@ -435,17 +438,15 @@ export function Watchlist({
         )}
       </main>
 
-      {/* Bottom Nav - Back to Home */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-xl border-t border-white/[0.06] px-6 py-3 safe-area-pb">
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-300 text-sm font-medium hover:bg-white/10 hover:text-white transition-all"
-        >
-          <Home className="w-4 h-4" />
-          {t.watchlist.backToHome}
-        </button>
-      </nav>
+      {/* Bottom Navigation */}
+      <BottomNav 
+        items={[
+          { icon: Home, label: t.nav.home, href: "/" },
+          { icon: Search, label: t.nav.search, href: "/search" },
+          { icon: History, label: t.nav.history, href: "/history" },
+          { icon: Settings, label: t.nav.settings, href: "/settings" },
+        ]}
+      />
     </div>
   );
 }
