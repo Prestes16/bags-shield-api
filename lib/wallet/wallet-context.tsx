@@ -100,7 +100,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { signature } = await solana.signAndSendTransaction(transaction);
+      // For versioned transactions, we need to sign and send separately
+      console.log("[v0] Signing transaction with Phantom...");
+      const signedTransaction = await solana.signTransaction(transaction);
+      
+      console.log("[v0] Sending signed transaction...");
+      const { Connection } = await import("@solana/web3.js");
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      
+      const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
+      
+      console.log("[v0] Transaction sent, waiting for confirmation...");
+      await connection.confirmTransaction(signature, "confirmed");
+      
       return signature;
     } catch (error: any) {
       console.error("[v0] Transaction signing error:", error);
