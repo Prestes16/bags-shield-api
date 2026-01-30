@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
     const quoteResponse = await fetch(`${JUPITER_QUOTE_API}?${quoteParams}`, {
       headers: {
         "Accept": "application/json",
-        "x-api-key": JUPITER_API_KEY,
       },
     });
 
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "x-api-key": JUPITER_API_KEY,
       },
       body: JSON.stringify(swapPayload),
     });
