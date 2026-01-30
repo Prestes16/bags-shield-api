@@ -263,12 +263,12 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
 
       setErrorMessage(`${t[lang].processing} (${lang === "pt" ? "Assine na carteira" : "Sign in wallet"})`);
 
-      // Step 2: Deserialize and send transaction via Phantom wallet
+      // Step 2: Deserialize versioned transaction and send via Phantom wallet
       const transactionBuffer = Buffer.from(transaction, "base64");
-      const { Transaction } = await import("@solana/web3.js");
-      const tx = Transaction.from(transactionBuffer);
+      const { VersionedTransaction } = await import("@solana/web3.js");
+      const tx = VersionedTransaction.deserialize(transactionBuffer);
 
-      console.log("[v0] Transaction prepared, requesting signature...");
+      console.log("[v0] Versioned transaction prepared, requesting signature...");
 
       // Sign and send via wallet context
       const signature = await wallet.signAndSendTransaction(tx);
