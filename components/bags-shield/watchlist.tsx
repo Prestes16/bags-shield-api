@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -332,8 +332,64 @@ export function Watchlist({
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
+  const [liveTokens, setLiveTokens] = useState<WatchlistToken[]>(tokens);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
-  const filteredTokens = tokens.filter(
+  // Fetch live prices for all tokens
+  const fetchLivePrices = async (tokensToUpdate: WatchlistToken[]) => {
+    if (tokensToUpdate.length === 0) return;
+
+    setIsLoadingPrices(true);
+    try {
+      const mintAddresses = tokensToUpdate.map((t) => t.mintAddress);
+      const response = await fetch("/api/tokens/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mints: mintAddresses }),
+      });
+
+      if (!response.ok) {
+        console.error("[v0] Failed to fetch prices:", response.status);
+        return;
+      }
+
+      const priceData = await response.json();
+
+      setLiveTokens((prev) =>
+        prev.map((token) => {
+          const price = priceData[token.mintAddress];
+          if (price) {
+            return {
+              ...token,
+              price: price.price,
+              priceChange24h: price.priceChange24h,
+            };
+          }
+          return token;
+        })
+      );
+    } catch (error) {
+      console.error("[v0] Error fetching live prices:", error);
+    } finally {
+      setIsLoadingPrices(false);
+    }
+  };
+
+  // Update prices on mount and every 30 seconds
+  useState(() => {
+    if (tokens.length > 0) {
+      setLiveTokens(tokens);
+      fetchLivePrices(tokens);
+
+      const interval = setInterval(() => {
+        fetchLivePrices(tokens);
+      }, 30000); // Update every 30s
+
+      return () => clearInterval(interval);
+    }
+  });
+
+  const filteredTokens = liveTokens.filter(
     (token) =>
       token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
       token.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -464,98 +520,137 @@ export function Watchlist({
   );
 }
 
-// Demo with mock data
+// Demo with real data from localStorage and Helius API
 export default function WatchlistDemo() {
-  const [tokens, setTokens] = useState<WatchlistToken[]>([
-    {
-      id: "bonk",
-      symbol: "BONK",
-      name: "Bonk",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-      price: 0.00002341,
-      priceChange24h: 12.5,
-      scanned: true,
-      score: 88,
-      riskLabel: "low",
-      hasAlerts: true,
-    },
-    {
-      id: "wif",
-      symbol: "WIF",
-      name: "dogwifhat",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
-      price: 2.45,
-      priceChange24h: -3.2,
-      scanned: false,
-      hasAlerts: false,
-    },
-    {
-      id: "jup",
-      symbol: "JUP",
-      name: "Jupiter",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-      price: 1.23,
-      priceChange24h: 5.8,
-      scanned: true,
-      score: 94,
-      riskLabel: "low",
-      hasAlerts: false,
-    },
-    {
-      id: "scamcoin",
-      symbol: "SCAM",
-      name: "ScamCoin",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "ScamXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      price: 0.00000001,
-      priceChange24h: -99.5,
-      scanned: true,
-      score: 12,
-      riskLabel: "critical",
-      hasAlerts: false,
-      isScamHistory: true, // Frozen scam record
-    },
-    {
-      id: "ray",
-      symbol: "RAY",
-      name: "Raydium",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
-      price: 4.67,
-      priceChange24h: -1.5,
-      scanned: true,
-      score: 45,
-      riskLabel: "high",
-      hasAlerts: true,
-    },
-    {
-      id: "unknown",
-      symbol: "???",
-      name: "Unknown Token",
-      mintAddress: "UnknownXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      scanned: false,
-      hasAlerts: false,
-    },
-  ]);
+  const [tokens, setTokens] = useState<WatchlistToken[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleRemoveToken = (tokenId: string) => {
-    setTokens((prev) => prev.filter((t) => t.id !== tokenId));
+  // Load tokens from localStorage and fetch real data
+  const loadWatchlistTokens = async () => {
+    try {
+      // Import the storage functions dynamically to avoid SSR issues
+      const { getWatchlist } = await import("@/lib/watchlist-storage");
+      const storedTokens = getWatchlist();
+
+      if (storedTokens.length === 0) {
+        // Add some default popular tokens if watchlist is empty
+        const { addToWatchlist } = await import("@/lib/watchlist-storage");
+        const defaultTokens = [
+          {
+            mint: "So11111111111111111111111111111111111111112",
+            symbol: "SOL",
+            name: "Wrapped SOL",
+            logoUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+            hasAlerts: false,
+          },
+          {
+            mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            symbol: "USDC",
+            name: "USD Coin",
+            logoUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+            hasAlerts: false,
+          },
+          {
+            mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+            symbol: "BONK",
+            name: "Bonk",
+            logoUrl: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I",
+            hasAlerts: false,
+          },
+          {
+            mint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+            symbol: "JUP",
+            name: "Jupiter",
+            logoUrl: "https://static.jup.ag/jup/icon.png",
+            hasAlerts: false,
+          },
+        ];
+
+        for (const token of defaultTokens) {
+          addToWatchlist(token);
+        }
+
+        // Reload after adding defaults
+        return loadWatchlistTokens();
+      }
+
+      // Convert stored tokens to component format
+      const watchlistTokens: WatchlistToken[] = await Promise.all(
+        storedTokens.map(async (stored) => {
+          // Fetch real-time data for each token
+          let metadata = null;
+          let price = null;
+
+          try {
+            const response = await fetch("/api/tokens/metadata", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mint: stored.mint }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              metadata = data;
+              price = { price: data.price, priceChange24h: data.priceChange24h };
+            }
+          } catch (error) {
+            console.error("[v0] Error fetching token data:", stored.mint, error);
+          }
+
+          return {
+            id: stored.mint,
+            symbol: metadata?.symbol || stored.symbol,
+            name: metadata?.name || stored.name,
+            logoUrl: metadata?.image || stored.logoUrl || "/images/bags-token-icon.jpg",
+            mintAddress: stored.mint,
+            price: price?.price,
+            priceChange24h: price?.priceChange24h,
+            scanned: !!stored.lastScanned,
+            score: stored.score,
+            riskLabel: stored.riskLabel,
+            hasAlerts: stored.hasAlerts,
+            isScamHistory: stored.score !== undefined && stored.score < 20,
+          };
+        })
+      );
+
+      setTokens(watchlistTokens);
+    } catch (error) {
+      console.error("[v0] Error loading watchlist:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleToggleAlerts = (tokenId: string) => {
-    setTokens((prev) =>
-      prev.map((t) =>
-        t.id === tokenId ? { ...t, hasAlerts: !t.hasAlerts } : t
-      )
-    );
+  // Load on mount
+  useState(() => {
+    loadWatchlistTokens();
+
+    // Listen for watchlist updates
+    const handleUpdate = () => {
+      loadWatchlistTokens();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("watchlist-updated", handleUpdate);
+      return () => window.removeEventListener("watchlist-updated", handleUpdate);
+    }
+  });
+
+  const handleRemoveToken = async (tokenId: string) => {
+    const { removeFromWatchlist } = await import("@/lib/watchlist-storage");
+    removeFromWatchlist(tokenId);
+  };
+
+  const handleToggleAlerts = async (tokenId: string) => {
+    const { toggleTokenAlerts } = await import("@/lib/watchlist-storage");
+    toggleTokenAlerts(tokenId);
   };
 
   return (
     <Watchlist
       tokens={tokens}
+      isLoading={isLoading}
       onRemoveToken={handleRemoveToken}
       onToggleAlerts={handleToggleAlerts}
     />
