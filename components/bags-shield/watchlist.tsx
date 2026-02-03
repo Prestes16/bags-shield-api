@@ -23,6 +23,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { BottomNav } from "@/components/ui/bottom-nav";
+import { heliusClient } from "@/lib/helius-client";
+import { 
+  getWatchlist, 
+  removeFromWatchlist, 
+  toggleTokenAlerts,
+  type WatchlistToken as StoredToken 
+} from "@/lib/watchlist-storage";
 
 // Types - Ready for API integration
 interface WatchlistToken {
@@ -321,8 +328,8 @@ function WatchlistSkeleton() {
 
 // Main Watchlist Component
 export function Watchlist({
-  tokens = [],
-  isLoading = false,
+  tokens: propTokens,
+  isLoading: propIsLoading = false,
   onAddToken,
   onScanToken,
   onRemoveToken,
@@ -332,64 +339,118 @@ export function Watchlist({
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
-  const [liveTokens, setLiveTokens] = useState<WatchlistToken[]>(tokens);
-  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [tokens, setTokens] = useState<WatchlistToken[]>(propTokens || []);
+  const [isLoading, setIsLoading] = useState(propIsLoading);
+  const [priceRefreshKey, setPriceRefreshKey] = useState(0);
 
-  // Fetch live prices for all tokens
-  const fetchLivePrices = async (tokensToUpdate: WatchlistToken[]) => {
-    if (tokensToUpdate.length === 0) return;
+  // Load watchlist from localStorage and fetch real-time data
+  useEffect(() => {
+    if (propTokens && propTokens.length > 0) {
+      // Use provided tokens if available (for demo mode)
+      setTokens(propTokens);
+      return;
+    }
 
-    setIsLoadingPrices(true);
+    // Load from localStorage and fetch real data
+    loadWatchlistData();
+
+    // Set up periodic price refresh every 30 seconds
+    const priceInterval = setInterval(() => {
+      setPriceRefreshKey(prev => prev + 1);
+    }, 30000);
+
+    // Listen for watchlist updates from other tabs
+    const handleStorageChange = () => {
+      loadWatchlistData();
+    };
+    
+    window.addEventListener("watchlist-updated", handleStorageChange);
+
+    return () => {
+      clearInterval(priceInterval);
+      window.removeEventListener("watchlist-updated", handleStorageChange);
+    };
+  }, [propTokens]);
+
+  // Refresh prices when priceRefreshKey changes
+  useEffect(() => {
+    if (priceRefreshKey > 0 && tokens.length > 0) {
+      refreshPrices();
+    }
+  }, [priceRefreshKey]);
+
+  async function loadWatchlistData() {
+    setIsLoading(true);
+    
     try {
-      const mintAddresses = tokensToUpdate.map((t) => t.mintAddress);
-      const response = await fetch("/api/tokens/prices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mints: mintAddresses }),
-      });
-
-      if (!response.ok) {
-        console.error("[v0] Failed to fetch prices:", response.status);
+      const storedTokens = getWatchlist();
+      
+      if (storedTokens.length === 0) {
+        setTokens([]);
+        setIsLoading(false);
         return;
       }
 
-      const priceData = await response.json();
+      console.log("[v0] Loading watchlist data for", storedTokens.length, "tokens");
 
-      setLiveTokens((prev) =>
-        prev.map((token) => {
-          const price = priceData[token.mintAddress];
-          if (price) {
-            return {
-              ...token,
-              price: price.price,
-              priceChange24h: price.priceChange24h,
-            };
-          }
-          return token;
-        })
-      );
+      // Fetch all token data in parallel
+      const tokenDataPromises = storedTokens.map(async (stored) => {
+        const { metadata, price } = await heliusClient.getTokenInfo(stored.mint);
+
+        return {
+          id: stored.mint,
+          symbol: metadata?.symbol || stored.symbol || "???",
+          name: metadata?.name || stored.name || "Unknown Token",
+          logoUrl: metadata?.image || stored.logoUrl,
+          mintAddress: stored.mint,
+          price: price?.price,
+          priceChange24h: price?.priceChange24h,
+          scanned: !!stored.lastScanned,
+          score: stored.score,
+          riskLabel: stored.riskLabel,
+          hasAlerts: stored.hasAlerts,
+          isScamHistory: stored.riskLabel === "critical" && stored.score && stored.score < 30,
+        } as WatchlistToken;
+      });
+
+      const loadedTokens = await Promise.all(tokenDataPromises);
+      console.log("[v0] Loaded", loadedTokens.length, "tokens with real-time data");
+      
+      setTokens(loadedTokens);
     } catch (error) {
-      console.error("[v0] Error fetching live prices:", error);
+      console.error("[v0] Error loading watchlist:", error);
+      setTokens([]);
     } finally {
-      setIsLoadingPrices(false);
+      setIsLoading(false);
     }
-  };
+  }
 
-  // Update prices on mount and every 30 seconds
-  useState(() => {
-    if (tokens.length > 0) {
-      setLiveTokens(tokens);
-      fetchLivePrices(tokens);
+  async function refreshPrices() {
+    if (tokens.length === 0) return;
 
-      const interval = setInterval(() => {
-        fetchLivePrices(tokens);
-      }, 30000); // Update every 30s
+    try {
+      const mints = tokens.map(t => t.mintAddress);
+      const priceMap = await heliusClient.getBatchTokenPrices(mints);
 
-      return () => clearInterval(interval);
+      setTokens(prev => prev.map(token => {
+        const priceData = priceMap.get(token.mintAddress);
+        if (priceData) {
+          return {
+            ...token,
+            price: priceData.price,
+            priceChange24h: priceData.priceChange24h,
+          };
+        }
+        return token;
+      }));
+
+      console.log("[v0] Refreshed prices for", priceMap.size, "tokens");
+    } catch (error) {
+      console.error("[v0] Error refreshing prices:", error);
     }
-  });
+  }
 
-  const filteredTokens = liveTokens.filter(
+  const filteredTokens = tokens.filter(
     (token) =>
       token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
       token.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -411,11 +472,25 @@ export function Watchlist({
   };
 
   const handleRemoveToken = (tokenId: string) => {
-    onRemoveToken?.(tokenId);
+    if (onRemoveToken) {
+      onRemoveToken(tokenId);
+    } else {
+      // Use storage function
+      removeFromWatchlist(tokenId);
+      setTokens(prev => prev.filter(t => t.id !== tokenId));
+    }
   };
 
   const handleToggleAlerts = (tokenId: string) => {
-    onToggleAlerts?.(tokenId);
+    if (onToggleAlerts) {
+      onToggleAlerts(tokenId);
+    } else {
+      // Use storage function
+      toggleTokenAlerts(tokenId);
+      setTokens(prev => prev.map(t => 
+        t.id === tokenId ? { ...t, hasAlerts: !t.hasAlerts } : t
+      ));
+    }
   };
 
   const handleScanAndTrade = (tokenId: string) => {
@@ -520,139 +595,7 @@ export function Watchlist({
   );
 }
 
-// Demo with real data from localStorage and Helius API
-export default function WatchlistDemo() {
-  const [tokens, setTokens] = useState<WatchlistToken[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load tokens from localStorage and fetch real data
-  const loadWatchlistTokens = async () => {
-    try {
-      // Import the storage functions dynamically to avoid SSR issues
-      const { getWatchlist } = await import("@/lib/watchlist-storage");
-      const storedTokens = getWatchlist();
-
-      if (storedTokens.length === 0) {
-        // Add some default popular tokens if watchlist is empty
-        const { addToWatchlist } = await import("@/lib/watchlist-storage");
-        const defaultTokens = [
-          {
-            mint: "So11111111111111111111111111111111111111112",
-            symbol: "SOL",
-            name: "Wrapped SOL",
-            logoUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
-            hasAlerts: false,
-          },
-          {
-            mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-            symbol: "USDC",
-            name: "USD Coin",
-            logoUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
-            hasAlerts: false,
-          },
-          {
-            mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-            symbol: "BONK",
-            name: "Bonk",
-            logoUrl: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I",
-            hasAlerts: false,
-          },
-          {
-            mint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-            symbol: "JUP",
-            name: "Jupiter",
-            logoUrl: "https://static.jup.ag/jup/icon.png",
-            hasAlerts: false,
-          },
-        ];
-
-        for (const token of defaultTokens) {
-          addToWatchlist(token);
-        }
-
-        // Reload after adding defaults
-        return loadWatchlistTokens();
-      }
-
-      // Convert stored tokens to component format
-      const watchlistTokens: WatchlistToken[] = await Promise.all(
-        storedTokens.map(async (stored) => {
-          // Fetch real-time data for each token
-          let metadata = null;
-          let price = null;
-
-          try {
-            const response = await fetch("/api/tokens/metadata", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ mint: stored.mint }),
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              metadata = data;
-              price = { price: data.price, priceChange24h: data.priceChange24h };
-            }
-          } catch (error) {
-            console.error("[v0] Error fetching token data:", stored.mint, error);
-          }
-
-          return {
-            id: stored.mint,
-            symbol: metadata?.symbol || stored.symbol,
-            name: metadata?.name || stored.name,
-            logoUrl: metadata?.image || stored.logoUrl || "/images/bags-token-icon.jpg",
-            mintAddress: stored.mint,
-            price: price?.price,
-            priceChange24h: price?.priceChange24h,
-            scanned: !!stored.lastScanned,
-            score: stored.score,
-            riskLabel: stored.riskLabel,
-            hasAlerts: stored.hasAlerts,
-            isScamHistory: stored.score !== undefined && stored.score < 20,
-          };
-        })
-      );
-
-      setTokens(watchlistTokens);
-    } catch (error) {
-      console.error("[v0] Error loading watchlist:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Load on mount
-  useState(() => {
-    loadWatchlistTokens();
-
-    // Listen for watchlist updates
-    const handleUpdate = () => {
-      loadWatchlistTokens();
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("watchlist-updated", handleUpdate);
-      return () => window.removeEventListener("watchlist-updated", handleUpdate);
-    }
-  });
-
-  const handleRemoveToken = async (tokenId: string) => {
-    const { removeFromWatchlist } = await import("@/lib/watchlist-storage");
-    removeFromWatchlist(tokenId);
-  };
-
-  const handleToggleAlerts = async (tokenId: string) => {
-    const { toggleTokenAlerts } = await import("@/lib/watchlist-storage");
-    toggleTokenAlerts(tokenId);
-  };
-
-  return (
-    <Watchlist
-      tokens={tokens}
-      isLoading={isLoading}
-      onRemoveToken={handleRemoveToken}
-      onToggleAlerts={handleToggleAlerts}
-    />
-  );
+// Default export - Real data from localStorage + Helius API
+export default function WatchlistPage() {
+  return <Watchlist />;
 }
