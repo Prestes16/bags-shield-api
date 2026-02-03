@@ -107,32 +107,34 @@ class HeliusClient {
   }
 
   /**
-   * Get token price from Jupiter Price API (most accurate for Solana tokens)
+   * Get token price from DexScreener API (public, no auth required)
    */
   async getTokenPrice(mintAddress: string): Promise<HeliusTokenPrice | null> {
     try {
-      // Use Jupiter Price API v2 for accurate pricing
+      // DexScreener provides accurate prices without auth requirements
       const response = await fetch(
-        `https://api.jup.ag/price/v2?ids=${mintAddress}&showExtraInfo=true`
+        `https://api.dexscreener.com/latest/dex/tokens/${mintAddress}`
       );
 
       if (!response.ok) {
-        console.error("[v0] Jupiter price fetch failed:", response.status);
+        console.error("[v0] DexScreener price fetch failed:", response.status);
         return null;
       }
 
       const data = await response.json();
-      const priceData = data.data?.[mintAddress];
+      
+      // Get the most liquid pair (usually first in the array)
+      const pair = data.pairs?.[0];
 
-      if (!priceData) {
+      if (!pair) {
         return null;
       }
 
       return {
-        price: priceData.price || 0,
-        priceChange24h: priceData.extraInfo?.quotedPrice?.buyPrice24hChangePercent || 0,
-        volume24h: priceData.extraInfo?.quotedPrice?.buyVolume24h || 0,
-        liquidity: priceData.extraInfo?.quotedPrice?.liquidity || 0,
+        price: parseFloat(pair.priceUsd) || 0,
+        priceChange24h: parseFloat(pair.priceChange?.h24) || 0,
+        volume24h: parseFloat(pair.volume?.h24) || 0,
+        liquidity: parseFloat(pair.liquidity?.usd) || 0,
       };
     } catch (error) {
       console.error("[v0] Error fetching token price:", error);
@@ -162,28 +164,22 @@ class HeliusClient {
     const priceMap = new Map<string, HeliusTokenPrice>();
 
     try {
-      // Jupiter supports batch price queries
-      const ids = mintAddresses.join(",");
-      const response = await fetch(
-        `https://api.jup.ag/price/v2?ids=${ids}&showExtraInfo=true`
-      );
+      // DexScreener batch query - fetch individually and combine
+      // (DexScreener doesn't have a batch endpoint, but it's fast enough)
+      const pricePromises = mintAddresses.map(async (mint) => {
+        const price = await this.getTokenPrice(mint);
+        return { mint, price };
+      });
 
-      if (!response.ok) {
-        console.error("[v0] Batch price fetch failed:", response.status);
-        return priceMap;
+      const results = await Promise.all(pricePromises);
+
+      for (const { mint, price } of results) {
+        if (price) {
+          priceMap.set(mint, price);
+        }
       }
 
-      const data = await response.json();
-
-      for (const [mint, priceData] of Object.entries(data.data || {})) {
-        const pd = priceData as any;
-        priceMap.set(mint, {
-          price: pd.price || 0,
-          priceChange24h: pd.extraInfo?.quotedPrice?.buyPrice24hChangePercent || 0,
-          volume24h: pd.extraInfo?.quotedPrice?.buyVolume24h || 0,
-          liquidity: pd.extraInfo?.quotedPrice?.liquidity || 0,
-        });
-      }
+      console.log("[v0] Batch fetched prices for", priceMap.size, "tokens");
     } catch (error) {
       console.error("[v0] Error fetching batch prices:", error);
     }

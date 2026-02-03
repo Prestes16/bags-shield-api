@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -23,6 +23,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { BottomNav } from "@/components/ui/bottom-nav";
+import { heliusClient } from "@/lib/helius-client";
+import { 
+  getWatchlist, 
+  removeFromWatchlist, 
+  toggleTokenAlerts,
+  type WatchlistToken as StoredToken 
+} from "@/lib/watchlist-storage";
 
 // Types - Ready for API integration
 interface WatchlistToken {
@@ -321,8 +328,8 @@ function WatchlistSkeleton() {
 
 // Main Watchlist Component
 export function Watchlist({
-  tokens = [],
-  isLoading = false,
+  tokens: propTokens,
+  isLoading: propIsLoading = false,
   onAddToken,
   onScanToken,
   onRemoveToken,
@@ -332,6 +339,116 @@ export function Watchlist({
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
+  const [tokens, setTokens] = useState<WatchlistToken[]>(propTokens || []);
+  const [isLoading, setIsLoading] = useState(propIsLoading);
+  const [priceRefreshKey, setPriceRefreshKey] = useState(0);
+
+  // Load watchlist from localStorage and fetch real-time data
+  useEffect(() => {
+    if (propTokens && propTokens.length > 0) {
+      // Use provided tokens if available (for demo mode)
+      setTokens(propTokens);
+      return;
+    }
+
+    // Load from localStorage and fetch real data
+    loadWatchlistData();
+
+    // Set up periodic price refresh every 30 seconds
+    const priceInterval = setInterval(() => {
+      setPriceRefreshKey(prev => prev + 1);
+    }, 30000);
+
+    // Listen for watchlist updates from other tabs
+    const handleStorageChange = () => {
+      loadWatchlistData();
+    };
+    
+    window.addEventListener("watchlist-updated", handleStorageChange);
+
+    return () => {
+      clearInterval(priceInterval);
+      window.removeEventListener("watchlist-updated", handleStorageChange);
+    };
+  }, [propTokens]);
+
+  // Refresh prices when priceRefreshKey changes
+  useEffect(() => {
+    if (priceRefreshKey > 0 && tokens.length > 0) {
+      refreshPrices();
+    }
+  }, [priceRefreshKey]);
+
+  async function loadWatchlistData() {
+    setIsLoading(true);
+    
+    try {
+      const storedTokens = getWatchlist();
+      
+      if (storedTokens.length === 0) {
+        setTokens([]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[v0] Loading watchlist data for", storedTokens.length, "tokens");
+
+      // Fetch all token data in parallel
+      const tokenDataPromises = storedTokens.map(async (stored) => {
+        const { metadata, price } = await heliusClient.getTokenInfo(stored.mint);
+
+        return {
+          id: stored.mint,
+          symbol: metadata?.symbol || stored.symbol || "???",
+          name: metadata?.name || stored.name || "Unknown Token",
+          logoUrl: metadata?.image || stored.logoUrl,
+          mintAddress: stored.mint,
+          price: price?.price,
+          priceChange24h: price?.priceChange24h,
+          scanned: !!stored.lastScanned,
+          score: stored.score,
+          riskLabel: stored.riskLabel,
+          hasAlerts: stored.hasAlerts,
+          isScamHistory: stored.riskLabel === "critical" && stored.score && stored.score < 30,
+        } as WatchlistToken;
+      });
+
+      const loadedTokens = await Promise.all(tokenDataPromises);
+      console.log("[v0] Loaded", loadedTokens.length, "tokens with real-time data");
+      
+      setTokens(loadedTokens);
+    } catch (error) {
+      console.error("[v0] Error loading watchlist:", error);
+      setTokens([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function refreshPrices() {
+    if (tokens.length === 0) return;
+
+    try {
+      const mints = tokens.map(t => t.mintAddress);
+      const priceMap = await heliusClient.getBatchTokenPrices(mints);
+
+      setTokens(prev => prev.map(token => {
+        const priceData = priceMap.get(token.mintAddress);
+        if (priceData) {
+          return {
+            ...token,
+            price: priceData.price,
+            priceChange24h: priceData.priceChange24h,
+          };
+        }
+        return token;
+      }));
+
+      console.log("[v0] Refreshed prices for", priceMap.size, "tokens");
+    } catch (error) {
+      console.error("[v0] Error refreshing prices:", error);
+    }
+  }
 
   const filteredTokens = tokens.filter(
     (token) =>
@@ -355,11 +472,25 @@ export function Watchlist({
   };
 
   const handleRemoveToken = (tokenId: string) => {
-    onRemoveToken?.(tokenId);
+    if (onRemoveToken) {
+      onRemoveToken(tokenId);
+    } else {
+      // Use storage function
+      removeFromWatchlist(tokenId);
+      setTokens(prev => prev.filter(t => t.id !== tokenId));
+    }
   };
 
   const handleToggleAlerts = (tokenId: string) => {
-    onToggleAlerts?.(tokenId);
+    if (onToggleAlerts) {
+      onToggleAlerts(tokenId);
+    } else {
+      // Use storage function
+      toggleTokenAlerts(tokenId);
+      setTokens(prev => prev.map(t => 
+        t.id === tokenId ? { ...t, hasAlerts: !t.hasAlerts } : t
+      ));
+    }
   };
 
   const handleScanAndTrade = (tokenId: string) => {
@@ -464,100 +595,7 @@ export function Watchlist({
   );
 }
 
-// Demo with mock data
-export default function WatchlistDemo() {
-  const [tokens, setTokens] = useState<WatchlistToken[]>([
-    {
-      id: "bonk",
-      symbol: "BONK",
-      name: "Bonk",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-      price: 0.00002341,
-      priceChange24h: 12.5,
-      scanned: true,
-      score: 88,
-      riskLabel: "low",
-      hasAlerts: true,
-    },
-    {
-      id: "wif",
-      symbol: "WIF",
-      name: "dogwifhat",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
-      price: 2.45,
-      priceChange24h: -3.2,
-      scanned: false,
-      hasAlerts: false,
-    },
-    {
-      id: "jup",
-      symbol: "JUP",
-      name: "Jupiter",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-      price: 1.23,
-      priceChange24h: 5.8,
-      scanned: true,
-      score: 94,
-      riskLabel: "low",
-      hasAlerts: false,
-    },
-    {
-      id: "scamcoin",
-      symbol: "SCAM",
-      name: "ScamCoin",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "ScamXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      price: 0.00000001,
-      priceChange24h: -99.5,
-      scanned: true,
-      score: 12,
-      riskLabel: "critical",
-      hasAlerts: false,
-      isScamHistory: true, // Frozen scam record
-    },
-    {
-      id: "ray",
-      symbol: "RAY",
-      name: "Raydium",
-      logoUrl: "/images/bags-token-icon.jpg",
-      mintAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
-      price: 4.67,
-      priceChange24h: -1.5,
-      scanned: true,
-      score: 45,
-      riskLabel: "high",
-      hasAlerts: true,
-    },
-    {
-      id: "unknown",
-      symbol: "???",
-      name: "Unknown Token",
-      mintAddress: "UnknownXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      scanned: false,
-      hasAlerts: false,
-    },
-  ]);
-
-  const handleRemoveToken = (tokenId: string) => {
-    setTokens((prev) => prev.filter((t) => t.id !== tokenId));
-  };
-
-  const handleToggleAlerts = (tokenId: string) => {
-    setTokens((prev) =>
-      prev.map((t) =>
-        t.id === tokenId ? { ...t, hasAlerts: !t.hasAlerts } : t
-      )
-    );
-  };
-
-  return (
-    <Watchlist
-      tokens={tokens}
-      onRemoveToken={handleRemoveToken}
-      onToggleAlerts={handleToggleAlerts}
-    />
-  );
+// Default export - Real data from localStorage + Helius API
+export default function WatchlistPage() {
+  return <Watchlist />;
 }
