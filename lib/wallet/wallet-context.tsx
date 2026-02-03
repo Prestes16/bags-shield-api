@@ -102,31 +102,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[v0] Sending transaction via Phantom...");
       
-      // Convert serialized transaction to base64 string for Phantom
-      const serializedTransaction = transaction.serialize();
-      const base64Transaction = Buffer.from(serializedTransaction).toString("base64");
+      // Import Solana web3 Connection for confirmation
+      const { Connection } = await import("@solana/web3.js");
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
       
-      console.log("[v0] Transaction serialized, requesting signature...");
+      // Get the latest blockhash and set it on the transaction
+      const { blockhash } = await connection.getLatestBlockhash("finalized");
+      transaction.message.recentBlockhash = blockhash;
       
-      // Use Phantom's request API with base64-encoded transaction
-      const { signature } = await solana.request({
-        method: "signAndSendTransaction",
-        params: {
-          message: base64Transaction,
-        },
-      });
+      console.log("[v0] Signing and sending transaction...");
+      
+      // Use Phantom's signAndSendTransaction directly with the VersionedTransaction
+      const { signature } = await solana.signAndSendTransaction(transaction);
       
       console.log("[v0] Transaction sent:", signature);
       
       // Wait for confirmation
-      const { Connection } = await import("@solana/web3.js");
-      const connection = new Connection("https://api.mainnet-beta.solana.com");
       await connection.confirmTransaction(signature, "confirmed");
       
       console.log("[v0] Transaction confirmed");
       return signature;
     } catch (error: any) {
-      console.error("[v0] Transaction error:", error);
+      console.error("[v0] Transaction error:", error.message || error);
       throw error;
     }
   };
