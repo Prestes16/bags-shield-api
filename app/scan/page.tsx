@@ -406,7 +406,7 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
       : "linear-gradient(to right, #10b981, #06b6d4)"; // Green for safe
 
     return (
-      <div className="min-h-screen flex flex-col pb-24" style={{ background: "#020617" }}>
+      <div className="min-h-screen flex flex-col" style={{ background: "#020617" }}>
         {/* Header */}
         <div className="sticky top-0 z-10 backdrop-blur-xl border-b" style={{ background: "rgba(2,6,23,0.95)", borderColor: "rgba(255,255,255,0.1)" }}>
           <div className="flex items-center justify-between gap-3 px-4 py-3 max-w-2xl mx-auto">
@@ -609,22 +609,34 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
             <button
               type="button"
               onClick={() => setShowShareSheet(true)}
-              className="w-full h-12 rounded-xl font-medium text-text-secondary flex items-center justify-center gap-2 transition-all border border-border-subtle bg-bg-card hover:bg-bg-card-hover active:scale-98"
+              className="w-full h-12 rounded-xl font-medium text-text-secondary flex items-center justify-center gap-2 transition-all border border-border-subtle bg-bg-card hover:bg-bg-card-hover active:scale-98 mb-6"
             >
               <Share2 className="w-4 h-4" />
               {t[lang].shareReport}
             </button>
-          </div>
-        </div>
 
-        {/* Sticky Bottom: Native Swap Form */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 backdrop-blur-xl border-t px-4 py-4 pb-safe" style={{ background: "rgba(2,6,23,0.98)", borderColor: "rgba(255,255,255,0.1)" }}>
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-bg-card rounded-2xl p-4 border border-border-subtle mb-3">
+            {/* Trade/Swap Section */}
+            <div className="bg-bg-card rounded-2xl p-5 border border-border-subtle mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
+                  <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {lang === "pt" ? "Negociar Token" : "Trade Token"}
+                  </h3>
+                  <p className="text-xs text-text-muted">
+                    {lang === "pt" ? "Comprar com SOL" : "Buy with SOL"}
+                  </p>
+                </div>
+              </div>
+
               {/* Input Section */}
-              <div className="mb-3">
-                <label className="text-xs font-semibold text-text-muted mb-2 block uppercase tracking-wider">
-                  {t[lang].youPay} (SOL)
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-text-muted mb-2.5 block uppercase tracking-wider">
+                  {t[lang].youPay}
                 </label>
                 <div className="relative">
                   <input
@@ -634,73 +646,76 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
                     placeholder="0.0"
                     step="0.01"
                     min="0"
-                    className="w-full h-14 pl-4 pr-16 rounded-xl text-white text-xl font-bold border-2 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all bg-bg-input"
+                    className="w-full h-16 pl-4 pr-20 rounded-xl text-white text-2xl font-bold border-2 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all bg-bg-input"
                     style={{ borderColor: "rgba(255,255,255,0.1)" }}
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">
-                    SOL
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                      <span className="text-xs font-bold text-white">◎</span>
+                    </div>
+                    <span className="text-sm font-bold text-text-secondary">SOL</span>
                   </div>
                 </div>
               </div>
 
-              {/* Arrow Divider */}
-              <div className="flex justify-center my-2">
-                <div className="w-8 h-8 rounded-lg bg-bg-page flex items-center justify-center">
-                  <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Exchange Arrow */}
+              <div className="flex justify-center my-3">
+                <div className="w-10 h-10 rounded-xl bg-bg-page border border-border-subtle flex items-center justify-center">
+                  <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
                 </div>
               </div>
 
               {/* Receive Section */}
-              <div>
-                <label className="text-xs font-semibold text-text-muted mb-2 block uppercase tracking-wider">
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-text-muted mb-2.5 block uppercase tracking-wider">
                   {t[lang].youReceive}
                 </label>
-                <div className="h-14 px-4 rounded-xl bg-bg-page border-2 border-transparent flex items-center justify-between">
-                  <span className="text-xl font-bold text-text-muted">~</span>
-                  <span className="text-sm font-medium text-text-secondary">{tokenInfo.symbol}</span>
+                <div className="h-16 px-4 rounded-xl bg-bg-page border-2 border-border-subtle flex items-center justify-between">
+                  <span className="text-2xl font-bold text-text-muted">~</span>
+                  <span className="text-sm font-bold text-text-secondary">{tokenInfo.symbol}</span>
                 </div>
               </div>
-            </div>
 
-            {/* Status Message */}
-            {errorMessage && (
-              <div className="mb-3 p-3 rounded-xl border bg-blue-500/10 border-blue-500/30">
-                <p className="text-xs text-blue-400 text-center font-medium">
-                  {errorMessage}
-                </p>
-              </div>
-            )}
-
-            {/* Action Button */}
-            <button
-              type="button"
-              onClick={handleSwapClick}
-              disabled={!amount || parseFloat(amount) <= 0 || isSwapping}
-              className="w-full h-14 rounded-xl font-bold text-white flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 text-base"
-              style={{
-                background: swapButtonColor,
-                boxShadow: isHighRisk ? "0 0 24px rgba(239,68,68,0.5)" : "0 0 24px rgba(16,185,129,0.5)",
-              }}
-            >
-              {isSwapping ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {t[lang].processing}
-                </>
-              ) : wallet.connected ? (
-                <>
-                  {isHighRisk && <AlertTriangle className="w-5 h-5" />}
-                  <span>{t[lang].swap}</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-5 h-5" />
-                  <span>{t[lang].connectWallet}</span>
-                </>
+              {/* Status Message */}
+              {errorMessage && (
+                <div className="mb-4 p-3.5 rounded-xl border bg-blue-500/10 border-blue-500/30 animate-in fade-in duration-200">
+                  <p className="text-xs text-blue-400 text-center font-medium leading-relaxed">
+                    {errorMessage}
+                  </p>
+                </div>
               )}
-            </button>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={handleSwapClick}
+                disabled={!amount || parseFloat(amount) <= 0 || isSwapping}
+                className="w-full h-14 rounded-xl font-bold text-white flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] text-base shadow-lg"
+                style={{
+                  background: swapButtonColor,
+                  boxShadow: isHighRisk ? "0 0 24px rgba(239,68,68,0.5)" : "0 0 24px rgba(16,185,129,0.5)",
+                }}
+              >
+                {isSwapping ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>{t[lang].processing}</span>
+                  </>
+                ) : wallet.connected ? (
+                  <>
+                    {isHighRisk && <AlertTriangle className="w-5 h-5" />}
+                    <span>{t[lang].swap}</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    <span>{t[lang].connectWallet}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
