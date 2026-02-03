@@ -107,9 +107,12 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
   const [amount, setAmount] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [estimatedOutput, setEstimatedOutput] = useState<string>("");
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
   const inFlightRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const quoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!mint) {
@@ -203,6 +206,57 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
   const handleNewScan = () => router.push("/");
   const handleInlineScan = (newMint: string) => {
     router.push(`/scan?mint=${encodeURIComponent(newMint)}`);
+  };
+
+  // Fetch quote from Jupiter API
+  const fetchQuote = async (inputAmount: string, outputMint: string) => {
+    if (!inputAmount || parseFloat(inputAmount) <= 0) {
+      setEstimatedOutput("");
+      return;
+    }
+
+    setIsLoadingQuote(true);
+    try {
+      const lamports = Math.floor(parseFloat(inputAmount) * 1e9);
+      const response = await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const outAmount = parseFloat(data.outAmount);
+        const decimals = scanData?.tokenInfo.decimals || 9;
+        const formattedAmount = (outAmount / Math.pow(10, decimals)).toLocaleString('en-US', {
+          maximumFractionDigits: 6,
+          minimumFractionDigits: 2
+        });
+        setEstimatedOutput(formattedAmount);
+      } else {
+        setEstimatedOutput("");
+      }
+    } catch (error) {
+      console.error("[v0] Quote fetch error:", error);
+      setEstimatedOutput("");
+    } finally {
+      setIsLoadingQuote(false);
+    }
+  };
+
+  // Debounced amount change handler
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    
+    if (quoteTimeoutRef.current) {
+      clearTimeout(quoteTimeoutRef.current);
+    }
+
+    if (scanData && value && parseFloat(value) > 0) {
+      quoteTimeoutRef.current = setTimeout(() => {
+        fetchQuote(value, scanData.tokenInfo.mint);
+      }, 500);
+    } else {
+      setEstimatedOutput("");
+    }
   };
 
   // 2 & 3: REAL WALLET + RISK MODAL LOGIC
@@ -622,9 +676,9 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
             </button>
 
             {/* Trade/Swap Section */}
-            <div className="bg-bg-card rounded-2xl p-5 border border-border-subtle mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
+            <div className="bg-gradient-to-br from-bg-card to-bg-page rounded-2xl p-5 border border-border-subtle mb-6 shadow-xl">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/40 shadow-lg shadow-cyan-500/20">
                   <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
@@ -634,52 +688,61 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
                     {lang === "pt" ? "Negociar Token" : "Trade Token"}
                   </h3>
                   <p className="text-xs text-text-muted">
-                    {lang === "pt" ? "Comprar com SOL" : "Buy with SOL"}
+                    {lang === "pt" ? "Troca instantânea via Jupiter" : "Instant swap via Jupiter"}
                   </p>
                 </div>
               </div>
 
               {/* Input Section */}
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-text-muted mb-2.5 block uppercase tracking-wider">
+              <div className="mb-3">
+                <label className="text-xs font-semibold text-text-secondary mb-2 block uppercase tracking-wider">
                   {t[lang].youPay}
                 </label>
                 <div className="relative">
                   <input
                     type="number"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     placeholder="0.0"
                     step="0.01"
                     min="0"
-                    className="w-full h-16 pl-4 pr-20 rounded-xl text-white text-2xl font-bold border-2 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all bg-bg-input"
+                    className="w-full h-16 pl-4 pr-24 rounded-xl text-white text-2xl font-bold border-2 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all bg-bg-input placeholder:text-text-muted/30"
                     style={{ borderColor: "rgba(255,255,255,0.1)" }}
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                      <span className="text-xs font-bold text-white">◎</span>
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
+                      <span className="text-sm font-bold text-white">◎</span>
                     </div>
-                    <span className="text-sm font-bold text-text-secondary">SOL</span>
+                    <span className="text-sm font-bold text-white">SOL</span>
                   </div>
                 </div>
               </div>
 
               {/* Exchange Arrow */}
-              <div className="flex justify-center my-3">
-                <div className="w-10 h-10 rounded-xl bg-bg-page border border-border-subtle flex items-center justify-center">
+              <div className="flex justify-center my-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-bg-page to-bg-card border border-border-subtle flex items-center justify-center shadow-md">
                   <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
                 </div>
               </div>
 
               {/* Receive Section */}
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-text-muted mb-2.5 block uppercase tracking-wider">
-                  {t[lang].youReceive}
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-text-secondary mb-2 block uppercase tracking-wider">
+                  {t[lang].youReceive} {isLoadingQuote && <span className="text-cyan-400">(calculando...)</span>}
                 </label>
-                <div className="h-16 px-4 rounded-xl bg-bg-page border-2 border-border-subtle flex items-center justify-between">
-                  <span className="text-2xl font-bold text-text-muted">~</span>
+                <div className="relative h-16 px-4 rounded-xl bg-gradient-to-br from-bg-page to-bg-input border-2 border-border-subtle flex items-center justify-between">
+                  {isLoadingQuote ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+                      <span className="text-sm text-text-muted">{lang === "pt" ? "Calculando..." : "Calculating..."}</span>
+                    </div>
+                  ) : estimatedOutput ? (
+                    <span className="text-2xl font-bold text-cyan-400">{estimatedOutput}</span>
+                  ) : (
+                    <span className="text-xl font-bold text-text-muted/50">~</span>
+                  )}
                   <span className="text-sm font-bold text-text-secondary">{tokenInfo.symbol}</span>
                 </div>
               </div>
@@ -697,7 +760,7 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
               <button
                 type="button"
                 onClick={handleSwapClick}
-                disabled={!amount || parseFloat(amount) <= 0 || isSwapping}
+                disabled={!amount || parseFloat(amount) <= 0 || isSwapping || isLoadingQuote}
                 className="w-full h-14 rounded-xl font-bold text-white flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] text-base shadow-lg"
                 style={{
                   background: swapButtonColor,
