@@ -442,130 +442,116 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 pt-6 pb-8">
-            {/* Hero: Token Avatar + Score */}
-            <div className="flex flex-col items-center mb-6">
-              <div className="relative mb-4">
-                <div
-                  className="absolute inset-0 rounded-full blur-2xl opacity-60"
-                  style={{
-                    background: `radial-gradient(circle, ${gradeGlow}, transparent)`,
-                  }}
-                />
-                {/* 4. REAL DATA & ICON FIX */}
-                {tokenInfo.imageUrl ? (
-                  <Image
-                    src={tokenInfo.imageUrl || "/placeholder.svg"}
-                    alt={tokenInfo.name}
-                    width={100}
-                    height={100}
-                    className="relative rounded-full border-4"
-                    style={{ borderColor: "rgba(255,255,255,0.1)" }}
-                    onError={(e) => {
-                      // Fallback to Coins icon on error
-                      e.currentTarget.style.display = "none";
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        const fallback = document.createElement("div");
-                        fallback.className = "relative w-[100px] h-[100px] rounded-full border-4 flex items-center justify-center";
-                        fallback.style.background = "rgba(255,255,255,0.05)";
-                        fallback.style.borderColor = "rgba(255,255,255,0.1)";
-                        fallback.innerHTML = '<svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" strokeWidth="2"/><circle cx="16" cy="9" r="4" strokeWidth="2"/></svg>';
-                        parent.appendChild(fallback);
-                      }
+          <div className="max-w-2xl mx-auto px-4 pt-4 pb-8">
+            {/* Token Info Card */}
+            <div className="bg-bg-card rounded-2xl p-5 mb-4 border border-border-subtle">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  <div
+                    className="absolute inset-0 rounded-full blur-xl opacity-40"
+                    style={{
+                      background: `radial-gradient(circle, ${gradeGlow}, transparent)`,
                     }}
                   />
-                ) : (
-                  <div
-                    className="relative w-[100px] h-[100px] rounded-full border-4 flex items-center justify-center"
-                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
-                  >
-                    <Coins className="w-12 h-12 text-slate-400" />
+                  {tokenInfo.imageUrl ? (
+                    <Image
+                      src={tokenInfo.imageUrl || "/placeholder.svg"}
+                      alt={tokenInfo.name}
+                      width={64}
+                      height={64}
+                      className="relative rounded-full border-2"
+                      style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement("div");
+                          fallback.className = "relative w-16 h-16 rounded-full border-2 flex items-center justify-center";
+                          fallback.style.background = "rgba(255,255,255,0.05)";
+                          fallback.style.borderColor = "rgba(255,255,255,0.1)";
+                          fallback.innerHTML = '<svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" strokeWidth="2"/><circle cx="16" cy="9" r="4" strokeWidth="2"/></svg>';
+                          parent.appendChild(fallback);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="relative w-16 h-16 rounded-full border-2 flex items-center justify-center"
+                      style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
+                    >
+                      <Coins className="w-8 h-8 text-slate-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-lg font-bold text-white mb-0.5 truncate">
+                    {tokenInfo.name}
+                  </h1>
+                  <p className="text-sm text-slate-400 font-mono">
+                    ${tokenInfo.symbol}
+                  </p>
+                </div>
+                {integrity.isVerified && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                    <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-xs font-medium text-emerald-400">Verificado</span>
                   </div>
                 )}
               </div>
 
-              <h1 className="text-xl font-bold text-white mb-1 text-center">
-                {tokenInfo.name}
-              </h1>
-              <p className="text-sm text-slate-400 font-mono mb-4">
-                ${tokenInfo.symbol}
-              </p>
-
-              {/* Compact Radial Gauge */}
-              <div className="relative flex items-center justify-center mb-3">
-                <svg width="160" height="160" viewBox="0 0 160 160" className="transform -rotate-90">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="65"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.1)"
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                  />
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="65"
-                    fill="none"
-                    stroke="url(#scoreGradient)"
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                    strokeDasharray="408"
-                    strokeDashoffset={408 - (security.score / 100) * 408}
-                    style={{
-                      filter: `drop-shadow(0 0 10px ${gradeGlow})`,
-                      transition: "stroke-dashoffset 1.2s ease-out",
-                    }}
-                  />
-                  <defs>
-                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#06b6d4" />
-                      <stop offset="100%" stopColor="#3b82f6" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xs text-slate-400 tracking-wider mb-0.5">
+              {/* Score Display */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-br from-bg-page/50 to-bg-page/30 border border-border-subtle/50">
+                <div>
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider font-medium">
                     {t[lang].shieldScore}
-                  </span>
-                  <span className="text-4xl font-bold text-white">
-                    {security.score}
-                  </span>
-                  <span className="text-sm text-slate-400 mt-0.5">
-                    {t[lang].grade} {security.grade}
-                  </span>
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-white">
+                      {security.score}
+                    </span>
+                    <span className="text-lg text-text-muted">/100</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider font-medium">
+                    {t[lang].grade}
+                  </p>
+                  <div
+                    className={`px-4 py-2 rounded-xl font-bold text-2xl bg-gradient-to-br ${gradeColor} text-white shadow-lg`}
+                    style={{ boxShadow: `0 0 16px ${gradeGlow}` }}
+                  >
+                    {security.grade}
+                  </div>
                 </div>
               </div>
-
-              {/* Verified Badge */}
-              {integrity.isVerified && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium" style={{ background: "rgba(16,185,129,0.1)", borderColor: "rgba(16,185,129,0.3)", color: "#10b981" }}>
-                  <Lock className="w-3.5 h-3.5" />
-                  {t[lang].verified}
-                </div>
-              )}
             </div>
 
             {/* Security Warnings */}
             {(security.mintAuthority || security.freezeAuthority) && (
-              <div className="mb-4 p-3 rounded-xl border" style={{ background: "rgba(245,158,11,0.05)", borderColor: "rgba(245,158,11,0.2)" }}>
-                <h3 className="text-xs font-semibold text-amber-400 mb-2">
-                  {t[lang].securityWarnings}
-                </h3>
-                <div className="space-y-1.5">
+              <div className="mb-4 p-4 rounded-xl border bg-amber-500/5 border-amber-500/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <h3 className="text-sm font-bold text-amber-400">
+                    {t[lang].securityWarnings}
+                  </h3>
+                </div>
+                <div className="space-y-2 pl-10">
                   {security.mintAuthority && (
-                    <div className="flex items-start gap-2 text-xs text-amber-300">
-                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                      <span>{t[lang].mintAuthority}</span>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5" />
+                      <p className="text-xs text-amber-200 leading-relaxed">
+                        {t[lang].mintAuthority}
+                      </p>
                     </div>
                   )}
                   {security.freezeAuthority && (
-                    <div className="flex items-start gap-2 text-xs text-amber-300">
-                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                      <span>{t[lang].freezeAuthority}</span>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5" />
+                      <p className="text-xs text-amber-200 leading-relaxed">
+                        {t[lang].freezeAuthority}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -575,34 +561,39 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
             {/* Findings */}
             {findings.length > 0 && (
               <div className="mb-4">
-                <h3 className="text-xs font-semibold text-white mb-2">
-                  {t[lang].findings} ({findings.length})
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <span>{t[lang].findings}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-bg-card-hover text-xs font-medium text-text-muted">
+                    {findings.length}
+                  </span>
                 </h3>
                 <div className="space-y-2">
                   {findings.map((finding, idx) => {
                     const severityConfig = {
-                      HIGH: { bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)", dot: "bg-red-400", pulse: true },
-                      MEDIUM: { bg: "rgba(245,158,11,0.05)", border: "rgba(245,158,11,0.2)", dot: "bg-yellow-400", pulse: false },
-                      LOW: { bg: "rgba(59,130,246,0.05)", border: "rgba(59,130,246,0.2)", dot: "bg-blue-400", pulse: false },
+                      HIGH: { bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)", icon: "bg-red-500/20", text: "text-red-400", pulse: true },
+                      MEDIUM: { bg: "rgba(245,158,11,0.05)", border: "rgba(245,158,11,0.2)", icon: "bg-amber-500/20", text: "text-amber-400", pulse: false },
+                      LOW: { bg: "rgba(59,130,246,0.05)", border: "rgba(59,130,246,0.2)", icon: "bg-blue-500/20", text: "text-blue-400", pulse: false },
                     };
                     const config = severityConfig[finding.severity];
 
                     return (
                       <div
                         key={idx}
-                        className="backdrop-blur-sm p-3 rounded-lg border"
+                        className="p-3.5 rounded-xl border"
                         style={{
                           background: config.bg,
                           borderColor: config.border,
                         }}
                       >
-                        <div className="flex items-start gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${config.dot} ${config.pulse ? "animate-pulse" : ""}`} />
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-lg ${config.icon} flex items-center justify-center flex-shrink-0 ${config.pulse ? "animate-pulse" : ""}`}>
+                            <AlertCircle className={`w-4 h-4 ${config.text}`} />
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-white mb-0.5">
+                            <p className={`text-sm font-semibold mb-1 ${config.text}`}>
                               {finding.label}
                             </p>
-                            <p className="text-xs text-slate-400 leading-relaxed">
+                            <p className="text-xs text-text-muted leading-relaxed">
                               {finding.description}
                             </p>
                           </div>
@@ -618,51 +609,79 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
             <button
               type="button"
               onClick={() => setShowShareSheet(true)}
-              className="w-full min-h-[48px] rounded-xl font-medium text-slate-300 flex items-center justify-center gap-2 transition-all border hover:bg-white/5 mb-4"
-              style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.1)" }}
+              className="w-full h-12 rounded-xl font-medium text-text-secondary flex items-center justify-center gap-2 transition-all border border-border-subtle bg-bg-card hover:bg-bg-card-hover active:scale-98"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4" />
               {t[lang].shareReport}
             </button>
           </div>
         </div>
 
         {/* Sticky Bottom: Native Swap Form */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 backdrop-blur-xl border-t px-4 py-4" style={{ background: "rgba(2,6,23,0.98)", borderColor: "rgba(255,255,255,0.1)" }}>
+        <div className="fixed bottom-0 left-0 right-0 z-20 backdrop-blur-xl border-t px-4 py-4 pb-safe" style={{ background: "rgba(2,6,23,0.98)", borderColor: "rgba(255,255,255,0.1)" }}>
           <div className="max-w-2xl mx-auto">
-            <label className="text-xs font-medium text-slate-400 mb-1.5 block">
-              {t[lang].youPay} (SOL)
-            </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.0"
-              step="0.01"
-              min="0"
-              className="w-full min-h-[48px] px-4 rounded-xl text-white text-lg font-medium border mb-3 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-              style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
-            />
+            <div className="bg-bg-card rounded-2xl p-4 border border-border-subtle mb-3">
+              {/* Input Section */}
+              <div className="mb-3">
+                <label className="text-xs font-semibold text-text-muted mb-2 block uppercase tracking-wider">
+                  {t[lang].youPay} (SOL)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.0"
+                    step="0.01"
+                    min="0"
+                    className="w-full h-14 pl-4 pr-16 rounded-xl text-white text-xl font-bold border-2 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all bg-bg-input"
+                    style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">
+                    SOL
+                  </div>
+                </div>
+              </div>
 
-            <label className="text-xs font-medium text-slate-400 mb-1.5 block">
-              {t[lang].youReceive} ~ {tokenInfo.symbol}
-            </label>
+              {/* Arrow Divider */}
+              <div className="flex justify-center my-2">
+                <div className="w-8 h-8 rounded-lg bg-bg-page flex items-center justify-center">
+                  <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+              </div>
 
+              {/* Receive Section */}
+              <div>
+                <label className="text-xs font-semibold text-text-muted mb-2 block uppercase tracking-wider">
+                  {t[lang].youReceive}
+                </label>
+                <div className="h-14 px-4 rounded-xl bg-bg-page border-2 border-transparent flex items-center justify-between">
+                  <span className="text-xl font-bold text-text-muted">~</span>
+                  <span className="text-sm font-medium text-text-secondary">{tokenInfo.symbol}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Message */}
             {errorMessage && (
-              <div className="mb-3 p-2 rounded-lg border text-xs text-center" style={{ background: "rgba(59,130,246,0.1)", borderColor: "rgba(59,130,246,0.3)", color: "#60a5fa" }}>
-                {errorMessage}
+              <div className="mb-3 p-3 rounded-xl border bg-blue-500/10 border-blue-500/30">
+                <p className="text-xs text-blue-400 text-center font-medium">
+                  {errorMessage}
+                </p>
               </div>
             )}
 
-            {/* 3. RED BUTTON FOR RISKY TOKENS */}
+            {/* Action Button */}
             <button
               type="button"
               onClick={handleSwapClick}
               disabled={!amount || parseFloat(amount) <= 0 || isSwapping}
-              className="w-full min-h-[52px] rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-14 rounded-xl font-bold text-white flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 text-base"
               style={{
                 background: swapButtonColor,
-                boxShadow: isHighRisk ? "0 0 20px rgba(239,68,68,0.4)" : "0 0 20px rgba(16,185,129,0.4)",
+                boxShadow: isHighRisk ? "0 0 24px rgba(239,68,68,0.5)" : "0 0 24px rgba(16,185,129,0.5)",
               }}
             >
               {isSwapping ? (
@@ -673,12 +692,12 @@ const ScanResultPage = ({ lang = "pt" }: ScanResultPageProps) => {
               ) : wallet.connected ? (
                 <>
                   {isHighRisk && <AlertTriangle className="w-5 h-5" />}
-                  {t[lang].swap}
+                  <span>{t[lang].swap}</span>
                 </>
               ) : (
                 <>
                   <Lock className="w-5 h-5" />
-                  {t[lang].connectWallet}
+                  <span>{t[lang].connectWallet}</span>
                 </>
               )}
             </button>
