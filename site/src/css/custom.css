@@ -1,0 +1,62 @@
+/* --- GLOBAL THEME & DOCS PROFESSIONAL STYLE --- */
+:root {
+  --ifm-color-primary: #06b6d4; /* Cyan */
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg-navy: #020617;
+  --bg-sidebar: #06101b; /* Sidebar mais escura */
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] {
+  --ifm-background-color: var(--bg-navy);
+  --ifm-navbar-background-color: rgba(2, 6, 23, 0.95);
+  --ifm-toc-border-color: var(--border);
+}
+
+/* NAVBAR */
+.navbar { border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+.navbar__brand { font-weight: 800; letter-spacing: -0.01em; color: #fff; margin-right: 2rem; }
+.navbar__brand img {
+  height: 32px;
+  width: auto;
+  opacity: 0.98;
+  filter: drop-shadow(0 0 12px rgba(77, 212, 255, 0.25));
+}
+.navbar__item { font-weight: 600; font-size: 0.9rem; color: #94a3b8; }
+.navbar__item:hover { color: #fff; }
+
+/* NAVBAR BUTTONS */
+.navbar-cta {
+  background: #06b6d4; color: #000 !important;
+  padding: 6px 16px !important; border-radius: 8px;
+  font-weight: 700; transition: all 0.2s;
+}
+.navbar-cta:hover { background: #fff; transform: translateY(-1px); }
+
+/* --- DOCS SIDEBAR (Stripe Style) --- */
+.theme-doc-sidebar-container {
+  background-color: var(--bg-sidebar) !important;
+  border-right: 1px solid var(--border) !important;
+}
+.theme-doc-sidebar-item-link-level-1 { margin-bottom: 4px; }
+.menu__link {
+  border-radius: 6px; font-size: 0.9rem; font-weight: 500; color: #94a3b8;
+}
+.menu__link:hover { background: rgba(255,255,255,0.03); color: #fff; }
+.menu__link--active {
+  background: rgba(6, 182, 212, 0.1) !important;
+  color: #06b6d4 !important;
+  border-right: 2px solid #06b6d4; /* Indicador lateral */
+}
+
+/* --- DOCS CONTENT --- */
+.main-wrapper { max-width: 100%; }
+.markdown h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 1.5rem; color: #fff; }
+.markdown h2 { font-size: 1.75rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 10px; color: #f1f5f9; }
+.markdown p { font-size: 1.05rem; line-height: 1.75; color: #cbd5e1; }
+.markdown code { background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: #38bdf8; }
+.markdown pre { background: #0f172a; border-radius: 8px; border: 1px solid var(--border); }
+
+/* Breadcrumbs */
+.breadcrumbs { margin-bottom: 1.5rem; }
+.breadcrumbs__item { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }

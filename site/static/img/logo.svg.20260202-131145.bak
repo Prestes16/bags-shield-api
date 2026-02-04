@@ -1,0 +1,28 @@
+﻿<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="40" y1="40" x2="216" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4DD4FF"/>
+      <stop offset="1" stop-color="#2FA7FF"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- shield outline -->
+  <path d="M128 20L212 52V120c0 64-44 104-84 116C88 224 44 184 44 120V52L128 20Z"
+        stroke="url(#g)" stroke-width="14" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- inner cut -->
+  <path d="M128 42L190 66v52c0 52-34 84-62 94-28-10-62-42-62-94V66l62-24Z"
+        fill="rgba(77,212,255,0.08)" stroke="rgba(77,212,255,0.25)" stroke-width="2"/>
+
+  <!-- tiny “bag” hint -->
+  <path d="M104 118c0-10 8-18 18-18h12c10 0 18 8 18 18v30c0 14-12 26-24 26s-24-12-24-26v-30Z"
+        fill="rgba(2,6,23,0.65)" stroke="rgba(77,212,255,0.45)" stroke-width="3"/>
+  <path d="M120 100c0-7 6-13 13-13s13 6 13 13" stroke="rgba(77,212,255,0.45)" stroke-width="3" stroke-linecap="round"/>
+</svg>

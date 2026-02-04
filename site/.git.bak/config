@@ -1,0 +1,21 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+	autocrlf = false
+	eol = lf
+[remote "origin"]
+	url = https://github.com/Prestes16/bags-shield-site.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "baseline/mock-working"]
+	remote = origin
+	merge = refs/heads/baseline/mock-working
+[branch "gh-pages"]
+	remote = origin
+	merge = refs/heads/gh-pages

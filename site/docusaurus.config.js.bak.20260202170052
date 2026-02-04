@@ -1,0 +1,55 @@
+﻿// @ts-check
+const lightCodeTheme = require('prism-react-renderer/themes/github');
+const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+
+/** @type {import('@docusaurus/types').Config} */
+const config = {
+  title: 'Bags Shield',
+  tagline: 'Solana Intelligence Layer',
+  url: 'https://bagsshield.org',
+  baseUrl: '/',
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
+  favicon: 'img/favicon.ico',
+  i18n: { defaultLocale: 'en', locales: ['en'] },
+
+  // --- CONFIGURAÇÃO DA LUNA ---
+  customFields: {
+    appUrl: 'https://app.bagsshield.org',
+    apiHealthUrl: 'https://bags-shield-api.vercel.app/api/health',
+    githubUrl: 'https://github.com/Prestes16/bags-shield-site',
+  },
+
+  presets: [
+    [
+      'classic',
+      ({
+        docs: { sidebarPath: require.resolve('./sidebars.js') },
+        blog: false,
+        theme: { customCss: require.resolve('./src/css/custom.css') },
+      }),
+    ],
+  ],
+
+  themeConfig:
+    ({
+      colorMode: { defaultMode: 'dark', disableSwitch: true, respectPrefersColorScheme: false },
+      image: 'img/docusaurus-social-card.jpg',
+      navbar: {
+        title: 'Bags Shield',
+        logo: { alt: 'Bags Shield Logo', src: 'img/logo.svg' },
+        items: [
+          { type: 'docSidebar', sidebarId: 'tutorialSidebar', position: 'left', label: 'Docs' },
+          { to: 'https://app.bagsshield.org', label: 'Launch App', position: 'right', className: 'button button--primary' },
+          { href: 'https://github.com/Prestes16/bags-shield-site', label: 'GitHub', position: 'right' },
+        ],
+      },
+      footer: {
+        style: 'dark',
+        copyright: ©  Bags Shield. Built for Solana.,
+      },
+      prism: { theme: lightCodeTheme, darkTheme: darkCodeTheme },
+    }),
+};
+
+module.exports = config;
