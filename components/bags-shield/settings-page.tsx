@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils"
+
 import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -34,7 +36,7 @@ import type { Language } from "@/lib/i18n/translations";
 import { useTheme, type Theme } from "@/lib/theme/theme-context";
 import { BottomNav } from "@/components/ui/bottom-nav";
 
-// Custom Toggle Switch Component
+// Custom Toggle Switch Component - Mobile Optimized
 function ToggleSwitch({
   enabled,
   onChange,
@@ -45,23 +47,29 @@ function ToggleSwitch({
   return (
     <button
       type="button"
-      onClick={() => onChange(!enabled)}
-      className={`relative w-12 h-7 rounded-full transition-all duration-300 ${
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(!enabled);
+      }}
+      className={cn(
+        "relative inline-flex h-7 w-12 flex-shrink-0 rounded-full transition-all duration-300 touch-manipulation",
         enabled
-          ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] shadow-[0_0_12px_var(--cyan-glow)]"
-          : "bg-bg-card border border-border-subtle"
-      }`}
+          ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)]"
+          : "bg-bg-input border border-border-subtle"
+      )}
     >
-      <div
-        className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
+      <span
+        className={cn(
+          "inline-block h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300",
+          "absolute top-1",
           enabled ? "left-6" : "left-1"
-        }`}
+        )}
       />
     </button>
   );
 }
 
-// Settings Row Component
+// Settings Row Component - Mobile Optimized
 function SettingsRow({
   icon: Icon,
   label,
@@ -78,33 +86,34 @@ function SettingsRow({
   children?: React.ReactNode;
 }) {
   const isClickable = !!onClick;
+  const Component = isClickable ? "button" : "div";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!isClickable && !children}
-      className={`w-full flex items-center justify-between min-h-[52px] py-3 px-1 border-b border-border-subtle last:border-b-0 ${
-        isClickable ? "hover:bg-bg-card-hover active:scale-[0.99] -mx-1 px-2 rounded-lg transition-all" : ""
-      }`}
+    <Component
+      type={isClickable ? "button" : undefined}
+      onClick={isClickable ? onClick : undefined}
+      className={cn(
+        "w-full flex items-center justify-between min-h-[56px] py-3 px-1 border-b border-border-subtle last:border-b-0",
+        isClickable && "hover:bg-bg-card-hover active:scale-[0.99] -mx-1 px-2 rounded-lg transition-all touch-manipulation cursor-pointer"
+      )}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {Icon && <Icon className="w-[18px] h-[18px] text-text-muted flex-shrink-0" />}
         <div className="text-left min-w-0">
           <span className="text-text-primary text-sm font-medium block truncate">{label}</span>
           {sublabel && (
-            <p className="text-xs text-text-muted mt-0.5 truncate">{sublabel}</p>
+            <p className="text-xs text-text-muted mt-0.5 truncate leading-snug">{sublabel}</p>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        {value && <span className="text-text-muted text-sm truncate max-w-[120px]">{value}</span>}
+      <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+        {value && <span className="text-text-muted text-xs truncate max-w-[100px]">{value}</span>}
         {children}
         {isClickable && !children && (
-          <ChevronRight className="w-4 h-4 text-text-muted" />
+          <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
         )}
       </div>
-    </button>
+    </Component>
   );
 }
 

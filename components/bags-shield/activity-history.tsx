@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getScanHistory, type ScanHistoryItem } from "@/lib/scan-history";
 import {
   Search,
   ChevronRight,
@@ -42,92 +43,7 @@ interface Activity {
   isScamHistory?: boolean; // Indicates frozen scam record from history
 }
 
-// Mock data - updated with hasScanned field
-const mockActivities: Activity[] = [
-  {
-    id: "1",
-    type: "scan",
-    tokenName: "BONK",
-    tokenSymbol: "BONK",
-    tokenLogo: "/images/bags-token-icon.jpg",
-    mintAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    status: "pass",
-    score: 85,
-    grade: "B",
-    hasScanned: true,
-  },
-  {
-    id: "2",
-    type: "simulation",
-    tokenName: "Swap SOL → USDC",
-    tokenSymbol: "SOL",
-    mintAddress: "So11111111111111111111111111111111111111112",
-    timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    status: "pass",
-    description: "1.5 SOL → 245.32 USDC",
-    hasScanned: true,
-  },
-  {
-    id: "3",
-    type: "transaction",
-    tokenName: "Buy BAGS",
-    tokenSymbol: "BAGS",
-    tokenLogo: "/images/bags-token-icon.jpg",
-    mintAddress: "8zCmrX3Xtq7fK9pN2wLm5JvH4cRn6sYa8dBt1eQu3Xtq",
-    timestamp: new Date(Date.now() - 45 * 60 * 1000),
-    status: "confirmed",
-    description: "0.5 SOL → 12,450 BAGS",
-    hasScanned: false, // Not scanned
-  },
-  {
-    id: "4",
-    type: "scan",
-    tokenName: "POPCAT",
-    tokenSymbol: "POPCAT",
-    mintAddress: "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    status: "fail",
-    score: 45,
-    grade: "D",
-    hasScanned: true,
-  },
-  {
-    id: "5",
-    type: "simulation",
-    tokenName: "Swap BONK → SOL",
-    tokenSymbol: "BONK",
-    tokenLogo: "/images/bags-token-icon.jpg",
-    mintAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    status: "fail",
-    description: "High slippage detected",
-    hasScanned: true,
-  },
-  {
-    id: "6",
-    type: "scan",
-    tokenName: "Very Long Token Name That Should Truncate Properly",
-    tokenSymbol: "LONGTKN",
-    mintAddress: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    status: "pass",
-    hasScanned: false, // Not scanned
-  },
-  {
-    id: "7",
-    type: "scan",
-    tokenName: "ScamCoin",
-    tokenSymbol: "SCAM",
-    mintAddress: "ScamXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    status: "fail",
-    score: 15,
-    grade: "F",
-    hasScanned: true,
-    isScamHistory: true, // Frozen scam record
-  },
-];
+
 
 // Helper functions
 function getRelativeTime(date: Date, t: any): string {
@@ -396,20 +312,62 @@ function ActivityCard({
   );
 }
 
+// Convert scan history to activities
+function convertScanHistoryToActivities(scans: ScanHistoryItem[]): Activity[] {
+  return scans.map((scan, index) => ({
+    id: `scan-${scan.mint}-${scan.timestamp}`,
+    type: "scan" as ActivityType,
+    tokenName: scan.tokenName,
+    tokenSymbol: scan.tokenSymbol,
+    mintAddress: scan.mint,
+    timestamp: new Date(scan.timestamp),
+    status: scan.isSafe ? ("pass" as ActivityStatus) : ("fail" as ActivityStatus),
+    score: scan.score,
+    grade: scan.grade,
+    hasScanned: true,
+    isScamHistory: !scan.isSafe && scan.score < 30,
+  }));
+}
+
 // Main Component
 interface ActivityHistoryProps {
-  activities?: Activity[];
   isLoading?: boolean;
 }
 
 export function ActivityHistory({
-  activities = mockActivities,
-  isLoading = false,
+  isLoading: initialLoading = false,
 }: ActivityHistoryProps) {
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(initialLoading);
+
+  // Load real scan history from localStorage
+  useEffect(() => {
+    const loadHistory = () => {
+      setIsLoading(true);
+      try {
+        const scanHistory = getScanHistory();
+        const convertedActivities = convertScanHistoryToActivities(scanHistory);
+        setActivities(convertedActivities);
+      } catch (error) {
+        console.error("[v0] Failed to load history:", error);
+        setActivities([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHistory();
+    
+    // Reload when window regains focus (in case history was updated in another tab)
+    const handleFocus = () => loadHistory();
+    window.addEventListener("focus", handleFocus);
+    
+    return () => window.removeEventListener("focus", handleFocus);
+  }, []);
 
   const filterTabs: { id: FilterTab; label: string; icon: typeof ScanSearch }[] = [
     { id: "all", label: t.history.all, icon: History },
