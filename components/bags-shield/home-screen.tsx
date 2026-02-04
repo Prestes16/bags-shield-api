@@ -91,20 +91,19 @@ export function HomeScreen() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col overflow-hidden bg-bg-page">
-      {/* Enhanced Money Rain Effect */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {moneyParticles.map((particle, index) => (
+      {/* Simplified Background Effects - Optimized for mobile */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
+        {moneyParticles.slice(0, 6).map((particle, index) => (
           <span
             key={index}
-            className="absolute text-cyan-400 text-xl font-bold animate-money-fall"
+            className="absolute text-cyan-400 text-lg font-bold animate-money-fall will-change-transform"
             style={{
               left: particle.left,
               top: "-20px",
               animationDelay: particle.delay,
               animationDuration: particle.duration,
-              opacity: particle.opacity,
-              textShadow: "0 0 12px rgba(34,211,238,0.6), 0 0 24px rgba(34,211,238,0.3)",
-              filter: "blur(0.3px)",
+              opacity: particle.opacity * 0.7,
+              textShadow: "0 0 8px rgba(34,211,238,0.4)",
             }}
           >
             $
@@ -112,129 +111,129 @@ export function HomeScreen() {
         ))}
       </div>
 
-      {/* Radar Effect - Centered */}
-      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+      {/* Subtle Radar Effect - Optimized */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-30">
         <div className="relative flex items-center justify-center">
-          <div className="absolute w-32 h-32 rounded-full border border-cyan-500/10 animate-radar-pulse" />
-          <div className="absolute w-48 h-48 rounded-full border border-cyan-500/8 animate-radar-pulse animation-delay-300" />
-          <div className="absolute w-64 h-64 rounded-full border border-cyan-500/6 animate-radar-pulse animation-delay-600" />
-          <div className="absolute w-80 h-80 rounded-full border border-cyan-500/4 animate-radar-pulse animation-delay-900" />
+          <div className="absolute w-32 h-32 rounded-full border border-cyan-500/20 animate-radar-pulse will-change-transform" />
+          <div className="absolute w-48 h-48 rounded-full border border-cyan-500/10 animate-radar-pulse animation-delay-600 will-change-transform" />
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-4 pt-6 pb-24 relative z-10">
-        {/* Header with Icon - More compact */}
-        <div className="flex flex-col items-center mb-8">
+      <main className="flex-1 flex flex-col items-center px-4 pt-4 pb-20 relative z-10 max-w-md mx-auto w-full">
+        {/* Header - Compact Mobile-First */}
+        <div className="flex flex-col items-center mb-6">
           <div 
-            className="relative w-16 h-16 mb-2"
+            className="relative w-14 h-14 mb-2"
             style={{
-              filter: 'drop-shadow(0 0 16px rgba(34,211,238,0.6)) drop-shadow(0 0 32px rgba(34,211,238,0.3))'
+              filter: 'drop-shadow(0 0 12px rgba(34,211,238,0.5))'
             }}
           >
             <Image
               src="/images/bags-shield-icon.png"
-              alt="Bags Shield Logo"
+              alt="Bags Shield"
               fill
               className="object-contain"
               priority
             />
           </div>
-          <h1 className="text-lg font-bold text-text-primary tracking-tight">
+          <h1 className="text-base font-bold text-text-primary tracking-tight">
             Bags Shield
           </h1>
-          <p className="text-[10px] text-text-muted mt-0.5 font-medium tracking-wide">SOLANA SECURITY SCANNER</p>
+          <p className="text-[9px] text-text-muted mt-0.5 font-medium tracking-widest uppercase">
+            Solana Security
+          </p>
         </div>
 
-        {/* Main Action Card */}
-        <div className="w-full max-w-sm bg-bg-card/95 backdrop-blur-xl border border-border-subtle rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-          <div className="space-y-2.5">
-            {/* Connect Wallet Button - Functional wallet connection */}
+        {/* Main Action Card - Mobile Optimized */}
+        <div className="w-full bg-bg-card/90 backdrop-blur-sm border border-border-subtle rounded-2xl p-3.5 shadow-lg mb-4">
+          <div className="space-y-2">
+            {/* Connect Wallet */}
             <button 
               type="button"
               onClick={handleWalletAction}
               disabled={connecting}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] hover:opacity-90 active:scale-[0.98] text-white font-semibold rounded-xl transition-all duration-200 shadow-[0_0_20px_var(--cyan-glow)] hover:shadow-[0_0_30px_var(--cyan-glow)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] hover:opacity-90 active:scale-[0.97] text-white font-semibold rounded-xl transition-all shadow-md text-sm disabled:opacity-50 min-h-[44px] touch-manipulation"
             >
-              <Wallet className="w-4 h-4" />
-              <span>
+              <Wallet className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">
                 {connecting 
-                  ? "Connecting..." 
+                  ? "Conectando..." 
                   : connected && publicKey 
                     ? truncateAddress(publicKey)
                     : t.home.connectWallet}
               </span>
             </button>
 
-            {/* Quick Scan Button - Opens modal */}
+            {/* Quick Scan */}
             <button 
               type="button"
               onClick={() => setShowScanModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-transparent border-2 border-[var(--cyan-primary)]/50 hover:border-[var(--cyan-primary)] hover:bg-[var(--cyan-primary)]/5 active:scale-[0.98] text-[var(--cyan-primary)] font-semibold rounded-xl transition-all duration-200 text-sm"
+              className="w-full flex items-center justify-center gap-2 h-11 px-4 bg-transparent border-2 border-[var(--cyan-primary)]/40 hover:border-[var(--cyan-primary)] hover:bg-[var(--cyan-primary)]/5 active:scale-[0.97] text-[var(--cyan-primary)] font-semibold rounded-xl transition-all text-sm min-h-[44px] touch-manipulation"
             >
-              <Scan className="w-4 h-4" />
+              <Scan className="w-4 h-4 flex-shrink-0" />
               <span>{t.home.quickScan}</span>
             </button>
 
-            {/* Create Token Button */}
+            {/* Create Token */}
             <button 
               type="button"
               onClick={() => router.push("/create-token")}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-transparent border-2 border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-500/5 active:scale-[0.98] text-emerald-400 hover:text-emerald-300 font-semibold rounded-xl transition-all duration-200 text-sm"
+              className="w-full flex items-center justify-center gap-2 h-11 px-4 bg-transparent border-2 border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/5 active:scale-[0.97] text-emerald-400 font-semibold rounded-xl transition-all text-sm min-h-[44px] touch-manipulation"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 flex-shrink-0" />
               <span>{t.home.createToken}</span>
             </button>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="w-full max-w-sm grid grid-cols-3 gap-2.5 mt-5">
+        {/* Quick Actions - Mobile Grid */}
+        <div className="w-full grid grid-cols-3 gap-2 mb-3">
           {quickActions.map((action) => (
             <button
               key={action.route}
               type="button"
               onClick={() => router.push(action.route)}
-              className="bg-bg-card/80 backdrop-blur-md border border-border-subtle rounded-xl p-3.5 flex flex-col items-center gap-2 hover:bg-bg-card-hover hover:border-cyan-500/30 active:scale-95 transition-all duration-200"
+              className="bg-bg-card/70 backdrop-blur-sm border border-border-subtle rounded-xl p-3 flex flex-col items-center gap-1.5 hover:bg-bg-card-hover hover:border-cyan-500/20 active:scale-95 transition-all min-h-[72px] touch-manipulation"
             >
-              <action.icon className={`w-5 h-5 ${action.color}`} />
-              <span className="text-[11px] text-text-muted font-medium">{action.label}</span>
+              <action.icon className={`w-5 h-5 flex-shrink-0 ${action.color}`} />
+              <span className="text-[10px] text-text-muted font-medium text-center leading-tight">{action.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Status Cards */}
-        <div className="w-full max-w-sm grid grid-cols-3 gap-2.5 mt-3">
+        {/* Status Cards - Compact Mobile */}
+        <div className="w-full grid grid-cols-3 gap-2 mb-4">
           {/* API Status */}
-          <div className="bg-bg-card/80 backdrop-blur-md border border-border-subtle rounded-xl p-2.5 text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-              <span className="text-[9px] text-text-muted font-medium uppercase tracking-wide">{t.home.apiStatus}</span>
+          <div className="bg-bg-card/70 backdrop-blur-sm border border-border-subtle rounded-xl p-2 text-center min-h-[60px] flex flex-col justify-center">
+            <div className="flex items-center justify-center gap-1 mb-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-sm" />
+              <span className="text-[8px] text-text-muted font-medium uppercase tracking-wide">Status</span>
             </div>
-            <p className="text-xs font-bold text-emerald-400">{t.home.online}</p>
+            <p className="text-[11px] font-bold text-emerald-400">{t.home.online}</p>
           </div>
 
-          {/* Last Scan - Shows real data or dash */}
-          <div className="bg-bg-card/80 backdrop-blur-md border border-border-subtle rounded-xl p-2.5 text-center">
-            <span className="text-[9px] text-text-muted block mb-1 font-medium uppercase tracking-wide">{t.home.lastScan}</span>
-            <p className="text-xs font-bold text-text-muted">—</p>
+          {/* Last Scan */}
+          <div className="bg-bg-card/70 backdrop-blur-sm border border-border-subtle rounded-xl p-2 text-center min-h-[60px] flex flex-col justify-center">
+            <span className="text-[8px] text-text-muted block mb-0.5 font-medium uppercase tracking-wide">Último</span>
+            <p className="text-[11px] font-bold text-text-muted">—</p>
           </div>
 
-          {/* Daily Alerts - Shows real data or dash */}
-          <div className="bg-bg-card/80 backdrop-blur-md border border-border-subtle rounded-xl p-2.5 text-center">
-            <span className="text-[9px] text-text-muted block mb-1 font-medium uppercase tracking-wide">{t.home.dailyAlerts}</span>
-            <p className="text-xs font-bold text-text-muted">—</p>
+          {/* Daily Alerts */}
+          <div className="bg-bg-card/70 backdrop-blur-sm border border-border-subtle rounded-xl p-2 text-center min-h-[60px] flex flex-col justify-center">
+            <span className="text-[8px] text-text-muted block mb-0.5 font-medium uppercase tracking-wide">Alertas</span>
+            <p className="text-[11px] font-bold text-text-muted">—</p>
           </div>
         </div>
 
-        {/* Recent Scans - 24h History */}
-        <div className="w-full max-w-sm mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-text-muted" />
-              <h3 className="text-sm font-semibold text-text-primary">{t.nav.history}</h3>
+        {/* Recent Scans - Mobile Optimized */}
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-text-muted" />
+              <h3 className="text-xs font-semibold text-text-primary">Histórico Recente</h3>
               {recentScans.length > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-medium">
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-medium">
                   {recentScans.length}
                 </span>
               )}
@@ -243,61 +242,61 @@ export function HomeScreen() {
               <button 
                 type="button"
                 onClick={() => router.push("/history")}
-                className="text-xs text-[var(--cyan-primary)] hover:opacity-80 font-medium flex items-center gap-1"
+                className="text-[10px] text-[var(--cyan-primary)] hover:opacity-80 font-medium flex items-center gap-0.5 touch-manipulation min-h-[32px] px-2 -mr-2"
               >
-                {t.common.details}
+                Ver tudo
                 <ArrowUpRight className="w-3 h-3" />
               </button>
             )}
           </div>
           
-          <div className="bg-bg-card backdrop-blur-md border border-border-subtle rounded-xl overflow-hidden">
+          <div className="bg-bg-card/70 backdrop-blur-sm border border-border-subtle rounded-xl overflow-hidden">
             {recentScans.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-text-muted">
-                <Shield className="w-5 h-5 opacity-50" />
-                <span className="text-xs">No recent scans</span>
-                <span className="text-[10px] text-text-muted/60">Scan history expires after 24h</span>
+              <div className="flex flex-col items-center justify-center gap-1.5 py-6 text-text-muted">
+                <Shield className="w-4 h-4 opacity-40" />
+                <span className="text-[11px] font-medium">Nenhum scan recente</span>
+                <span className="text-[9px] text-text-muted/50">Histórico expira após 24h</span>
               </div>
             ) : (
               <div className="divide-y divide-border-subtle">
-                {recentScans.map((scan, index) => (
+                {recentScans.map((scan) => (
                   <button
                     key={scan.mint}
                     type="button"
                     onClick={() => router.push(`/scan?mint=${scan.mint}`)}
-                    className="w-full p-3 hover:bg-bg-card-hover transition-colors flex items-center justify-between group"
+                    className="w-full p-2.5 hover:bg-bg-card-hover transition-colors flex items-center justify-between group touch-manipulation min-h-[60px]"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {/* Score Badge */}
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      {/* Score Badge - Compact */}
                       <div 
-                        className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold border"
+                        className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-bold border"
                         style={{
                           background: scan.isSafe 
-                            ? "linear-gradient(135deg, rgba(34, 211, 153, 0.2), rgba(16, 185, 129, 0.2))"
-                            : "linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))",
-                          borderColor: scan.isSafe ? "rgba(34, 211, 153, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                            ? "linear-gradient(135deg, rgba(34, 211, 153, 0.15), rgba(16, 185, 129, 0.15))"
+                            : "linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15))",
+                          borderColor: scan.isSafe ? "rgba(34, 211, 153, 0.25)" : "rgba(239, 68, 68, 0.25)",
                           color: scan.isSafe ? "#22d3b9" : "#ef4444"
                         }}
                       >
                         {scan.score}
                       </div>
                       
-                      {/* Token Info */}
+                      {/* Token Info - Compact */}
                       <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-text-primary truncate">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-xs font-semibold text-text-primary truncate">
                             {scan.tokenName}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-page text-text-muted font-medium">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-bg-page text-text-muted font-medium flex-shrink-0">
                             {scan.grade}
                           </span>
                         </div>
-                        <span className="text-xs text-text-muted">${scan.tokenSymbol}</span>
+                        <span className="text-[10px] text-text-muted">${scan.tokenSymbol}</span>
                       </div>
                     </div>
                     
                     {/* Arrow */}
-                    <ArrowUpRight className="w-4 h-4 text-text-muted group-hover:text-cyan-400 transition-colors flex-shrink-0" />
+                    <ArrowUpRight className="w-3.5 h-3.5 text-text-muted group-hover:text-cyan-400 transition-colors flex-shrink-0" />
                   </button>
                 ))}
               </div>

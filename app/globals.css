@@ -229,29 +229,68 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
   }
+  
   body {
     @apply bg-background text-foreground;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Mobile-first typography */
+  @media (max-width: 640px) {
+    body {
+      font-size: 15px;
+    }
+  }
+  
+  /* Touch target optimization */
+  button, 
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
   }
   
   /* Safe area support for APK/TWA */
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     .pb-safe {
-      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
     .mb-safe {
-      margin-bottom: max(0.75rem, env(safe-area-inset-bottom));
+      margin-bottom: max(1rem, env(safe-area-inset-bottom));
     }
     .h-safe-bottom {
       height: env(safe-area-inset-bottom);
     }
+    .pt-safe {
+      padding-top: max(1rem, env(safe-area-inset-top));
+    }
+  }
+  
+  /* Touch manipulation for better mobile UX */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Prevent text selection on interactive elements */
+  button,
+  [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
-/* Money Rain Animation */
+/* Money Rain Animation - GPU Accelerated */
 @keyframes money-fall {
   0% {
-    transform: translateY(-20px) rotate(0deg);
+    transform: translate3d(0, -20px, 0) rotate(0deg);
     opacity: 0;
   }
   10% {
@@ -261,29 +300,31 @@
     opacity: 1;
   }
   100% {
-    transform: translateY(100vh) rotate(360deg);
+    transform: translate3d(0, 100vh, 0) rotate(360deg);
     opacity: 0;
   }
 }
 
 .animate-money-fall {
   animation: money-fall linear infinite;
+  will-change: transform, opacity;
 }
 
-/* Radar Pulse Animation */
+/* Radar Pulse Animation - GPU Accelerated */
 @keyframes radar-pulse {
   0% {
-    transform: scale(0.8);
+    transform: scale3d(0.8, 0.8, 1);
     opacity: 0.5;
   }
   100% {
-    transform: scale(1.5);
+    transform: scale3d(1.5, 1.5, 1);
     opacity: 0;
   }
 }
 
 .animate-radar-pulse {
   animation: radar-pulse 3s ease-out infinite;
+  will-change: transform, opacity;
 }
 
 .animation-delay-300 {

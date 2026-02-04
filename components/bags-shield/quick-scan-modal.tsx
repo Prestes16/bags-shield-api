@@ -85,38 +85,38 @@ export function QuickScanModal({ isOpen, onClose, onScan }: QuickScanModalProps)
             <div className="w-12 h-1 bg-text-muted/30 rounded-full" />
           </div>
 
-          {/* Header Section */}
-          <div className="px-6 pb-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--cyan-primary)]/10 to-[var(--cyan-secondary)]/10 flex items-center justify-center border border-[var(--cyan-primary)]/30 shadow-lg shadow-[var(--cyan-glow)]/30">
-                  <div className="absolute inset-0 rounded-2xl bg-[var(--cyan-primary)]/5 animate-pulse" />
-                  <Scan className="w-8 h-8 text-[var(--cyan-primary)] relative z-10" />
+          {/* Header Section - Mobile Optimized */}
+          <div className="px-4 sm:px-6 pb-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--cyan-primary)]/10 to-[var(--cyan-secondary)]/10 flex items-center justify-center border border-[var(--cyan-primary)]/30 shadow-md shadow-[var(--cyan-glow)]/20 flex-shrink-0">
+                  <div className="absolute inset-0 rounded-xl bg-[var(--cyan-primary)]/5 animate-pulse" />
+                  <Scan className="w-6 h-6 text-[var(--cyan-primary)] relative z-10" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold text-text-primary mb-1 tracking-tight">
+                  <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-0.5 tracking-tight truncate">
                     {t.quickScan?.title || "Scan Token"}
                   </h2>
-                  <p className="text-sm text-text-muted leading-relaxed">
-                    {t.quickScan?.subtitle || "Enter a token mint address to analyze"}
+                  <p className="text-xs sm:text-sm text-text-muted leading-snug">
+                    {t.quickScan?.subtitle || "Enter a token mint address"}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="w-10 h-10 rounded-xl bg-bg-page/80 flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-page transition-all hover:scale-105 active:scale-95 border border-border-subtle/50"
+                className="w-9 h-9 rounded-lg bg-bg-page/80 flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-page transition-all active:scale-95 border border-border-subtle/50 flex-shrink-0 touch-manipulation"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Content Section */}
-          <div className="px-6 pb-8">
+          {/* Content Section - Mobile Optimized */}
+          <div className="px-4 sm:px-6 pb-6">
             {/* Input Field */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-text-secondary mb-3">
+            <div className="mb-5">
+              <label className="block text-xs sm:text-sm font-semibold text-text-secondary mb-2">
                 {t.quickScan?.mintAddress || "Token Mint Address"}
               </label>
               <div className="relative">
@@ -126,7 +126,7 @@ export function QuickScanModal({ isOpen, onClose, onScan }: QuickScanModalProps)
                   onChange={handleInputChange}
                   placeholder={t.quickScan?.placeholder || "So111111..."}
                   className={cn(
-                    "w-full h-14 pl-4 pr-14 rounded-xl bg-bg-input border-2 text-text-primary font-mono text-sm transition-all duration-200",
+                    "w-full h-12 sm:h-14 pl-3 sm:pl-4 pr-12 sm:pr-14 rounded-xl bg-bg-input border-2 text-text-primary font-mono text-xs sm:text-sm transition-all duration-200 touch-manipulation",
                     "focus:outline-none focus:ring-4 focus:ring-[var(--cyan-primary)]/20",
                     "placeholder:text-text-muted/50",
                     showError && !isValid
