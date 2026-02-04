@@ -5,7 +5,7 @@ slug: /api
 
 Quick entrypoint for the API section.
 
-- [Overview](./api/overview)
-- [Authentication](./api/authentication)
-- [Quote](./api/quote)
-- [Swap](./api/swap)
+- [Overview](/docs/api/overview)
+- [Authentication](/docs/api/authentication)
+- [Quote](/docs/api/quote)
+- [Swap](/docs/api/swap)

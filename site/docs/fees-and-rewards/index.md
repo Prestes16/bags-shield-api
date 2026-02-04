@@ -7,9 +7,9 @@ How fees are computed, shared, and how you can earn rewards.
 
 ## Sections
 
-- [Overview](./overview) — Fee model, computation, caps, and split
-- [Partner Fees](./partner-fees) — Fee-share for partners, attribution, wallets, and settlement
-- [Cashback](./cashback) — User cashback tiers, limits, and anti-abuse
+- [Overview](/docs/fees-and-rewards/overview) — Fee model, computation, caps, and split
+- [Partner Fees](/docs/fees-and-rewards/partner-fees) — Fee-share for partners, attribution, wallets, and settlement
+- [Cashback](/docs/fees-and-rewards/cashback) — User cashback tiers, limits, and anti-abuse
 
 ## Quick links
 

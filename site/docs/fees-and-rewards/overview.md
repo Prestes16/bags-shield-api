@@ -29,14 +29,14 @@ Actual numbers are defined in the API and app; use the returned quote for exact 
 ## How fees are split
 
 - A portion of fees may go to **infrastructure** (Bags Shield).
-- A portion may be shared with **partners** (e.g. referrers, integrators) as described in [Partner Fees](./partner-fees).
-- A portion may be used to fund **cashback** or other user rewards; see [Cashback](./cashback).
+- A portion may be shared with **partners** (e.g. referrers, integrators) as described in [Partner Fees](/docs/fees-and-rewards/partner-fees).
+- A portion may be used to fund **cashback** or other user rewards; see [Cashback](/docs/fees-and-rewards/cashback).
 
 Exact split ratios are internal; the user sees the **total fee** they pay, not the breakdown.
 
 ## Rewards (cashback)
 
-- Eligible users may earn **cashback** on swap volume, subject to [tiers, limits, and anti-abuse rules](./cashback).
+- Eligible users may earn **cashback** on swap volume, subject to [tiers, limits, and anti-abuse rules](/docs/fees-and-rewards/cashback).
 - Cashback is typically a percentage of the fee paid (or of volume), credited back to the user’s balance or account.
 
 ## Where to see fees
