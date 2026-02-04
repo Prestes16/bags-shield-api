@@ -1,3 +1,7 @@
+# Release Please - gera PRs de release e tags a partir de conventional commits.
+# Permissão necessária: em Settings > Actions > General > Workflow permissions
+# escolha "Read and write permissions" para o GITHUB_TOKEN poder criar/approvar PRs.
+
 name: Release Please
 
 on:
@@ -13,10 +17,9 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         id: release
         with:
-          package-name: bags-shield-api
           release-type: node
 
       - name: Check Release Created
