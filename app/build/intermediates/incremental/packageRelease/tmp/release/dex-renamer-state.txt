@@ -1,0 +1,4 @@
+#Sun Jan 18 20:33:57 BRT 2026
+base.0=C\:\\Dev\\bags-shield-api\\app\\build\\intermediates\\dex\\release\\minifyReleaseWithR8\\classes.dex
+renamed.0=classes.dex
+path.0=classes.dex

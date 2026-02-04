@@ -1,0 +1,10 @@
+[2025-11-19T15:17:22] === SMOKE START BaseUrl=https://bags-shield-api.vercel.app Origin=http://localhost:5173 Mint=So11111111111111111111111111111111111111112 ===
+[2025-11-19T15:17:22] SCAN POST: 200 CT=application/json; charset=utf-8
+[2025-11-19T15:17:22] {"success":true,"response":{"isSafe":false,"shieldScore":36,"grade":"E","warnings":[],"metadata":{"mode":"mock","rawLength":64,"base":null}},"meta":{"requestId":"f3f9e06a-92a1-4e84-a67e-135829034e71"}}
+[2025-11-19T15:17:23] SIMULATE OK: 200 CT=application/json; charset=utf-8
+[2025-11-19T15:17:23] {"success":true,"response":{"isSafe":false,"shieldScore":68,"grade":"C","warnings":[],"metadata":{"mode":"mock","mintLength":43,"base":null}},"meta":{"requestId":"3606294a-e90d-4dd7-9a57-ffcd0874b1b5"}}
+[2025-11-19T15:17:24] APPLY POST {}: 200 CT=application/json; charset=utf-8
+[2025-11-19T15:17:24] {"success":true,"response":{"applied":true},"meta":{"requestId":"84f06d42-2e67-442a-b4fd-6d2aafcce8a4"}}
+[2025-11-19T15:17:24] TOKEN CREATORS: SKIP (rota ainda não implementada)
+[2025-11-19T15:17:24] TOKEN FEES: SKIP (rota ainda não implementada)
+[2025-11-19T15:17:24] === SMOKE DONE (arquivo: logs/smoke-20251119-151722.txt) ===

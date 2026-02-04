@@ -1,0 +1,13 @@
+[2025-11-19T10:08:38] === SMOKE START BaseUrl=http://localhost:3000 Origin=http://localhost:5173 Mint=So11111111111111111111111111111111111111112 ===
+[2025-11-19T10:08:40] SCAN POST: 200 CT=application/json; charset=utf-8
+[2025-11-19T10:08:40] {"success":true,"response":{"isSafe":false,"shieldScore":36,"grade":"E","warnings":[],"metadata":{"mode":"dev-local","rawLength":64,"base":null}},"meta":{"requestId":"3dab0c4d-4f97-4096-9a69-11919255691c"}}
+[2025-11-19T10:08:41] SIMULATE BAD_JSON: 500 CT=text/plain; charset=utf-8
+[2025-11-19T10:08:41] 
+[2025-11-19T10:08:42] SIMULATE OK: 0 CT=
+[2025-11-19T10:08:42] 
+[2025-11-19T10:08:42] APPLY OPTIONS: SKIP (dev: preflight instável, checando só POST)
+[2025-11-19T10:08:50] APPLY POST {}: 0 CT=
+[2025-11-19T10:08:50] 
+[2025-11-19T10:08:54] TOKEN CREATORS: ERROR (status=0)
+[2025-11-19T10:08:58] TOKEN FEES: ERROR (status=0)
+[2025-11-19T10:08:58] === SMOKE DONE (arquivo: logs/smoke-20251119-100838.txt) ===

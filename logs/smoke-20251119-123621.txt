@@ -1,0 +1,10 @@
+[2025-11-19T12:36:21] === SMOKE START BaseUrl=http://localhost:3000 Origin=http://localhost:5173 Mint=So11111111111111111111111111111111111111112 ===
+[2025-11-19T12:36:22] SCAN POST: 200 CT=application/json; charset=utf-8
+[2025-11-19T12:36:22] {"success":true,"response":{"isSafe":false,"shieldScore":36,"grade":"E","warnings":[],"metadata":{"mode":"dev-local","rawLength":64,"base":null}},"meta":{"requestId":"f459e60d-3ff4-4f42-ba16-f3cd9e1063c1"}}
+[2025-11-19T12:36:23] SIMULATE OK: 200 CT=application/json; charset=utf-8
+[2025-11-19T12:36:23] {"success":true,"response":{"isSafe":false,"shieldScore":68,"grade":"C","warnings":[],"metadata":{"mode":"mock","mintLength":43,"base":null}},"meta":{"requestId":"3dea5305-d48a-4c50-810e-5a91e4fa982e"}}
+[2025-11-19T12:36:24] APPLY POST {}: 200 CT=application/json; charset=utf-8
+[2025-11-19T12:36:24] {"success":true,"response":{"applied":true},"meta":{"requestId":"e3e6f9bf-2a5f-402c-881a-6ec258baf389"}}
+[2025-11-19T12:36:25] TOKEN CREATORS: SKIP (rota ainda não implementada)
+[2025-11-19T12:36:25] TOKEN FEES: SKIP (rota ainda não implementada)
+[2025-11-19T12:36:25] === SMOKE DONE (arquivo: logs/smoke-20251119-123621.txt) ===

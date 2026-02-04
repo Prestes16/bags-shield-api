@@ -4,6 +4,8 @@ import { Inter, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { LanguageProvider } from "@/lib/i18n/language-context";
 import { ThemeProvider } from "@/lib/theme/theme-context";
+import { WalletProvider } from "@/components/providers/wallet-provider";
+import "@solana/wallet-adapter-react-ui/styles.css";
 import "./globals.css";
 
 const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -50,9 +52,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased bg-bg-page min-h-screen transition-colors duration-300">
         <ThemeProvider>
-          <LanguageProvider>
-            {children}
-          </LanguageProvider>
+          <WalletProvider>
+            <LanguageProvider>
+              {children}
+            </LanguageProvider>
+          </WalletProvider>
         </ThemeProvider>
         <Analytics />
       </body>

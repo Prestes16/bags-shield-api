@@ -1,0 +1,30 @@
+{
+  "version": "v0",
+  "integrator": {
+    "name": "Bags Shield",
+    "defaultSwapMode": "ExactIn",
+    "trackingAccount": "PUT_TRACKING_PUBKEY_HERE",
+    "feeAccountsByMint": {
+      "So11111111111111111111111111111111111111112": "PUT_WSOL_ATA_HERE",
+      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": "PUT_USDC_ATA_HERE",
+      "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": "PUT_USDT_ATA_HERE",
+      "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN": "PUT_JUP_ATA_HERE"
+    }
+  },
+  "fees": {
+    "bps": { "default": 10, "premiumMax": 20, "optOut": 0 },
+    "caps": { "maxBps": 20 }
+  },
+  "cashback": {
+    "enabled": false,
+    "model": "shieldCredits",
+    "creditCurrency": "usdCentsApprox",
+    "ratesByShieldGrade": { "A": 0.6, "B": 0.5, "C": 0.35, "D": 0.2, "E": 0.1 },
+    "safety": { "maxCreditsPerUserPerDayUsdCents": 5000, "creditsExpireDays": 90 }
+  },
+  "tiers": {
+    "free": { "feeBpsMultiplier": 1.0, "cashbackMultiplier": 1.0 },
+    "pro": { "feeBpsMultiplier": 0.8, "cashbackMultiplier": 1.25 }
+  },
+  "revenueSplit": { "treasury": 0.55, "ops": 0.2, "payroll": 0.15, "communityRewards": 0.1 }
+}
