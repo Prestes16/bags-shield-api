@@ -5,7 +5,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import '../css/bs-landing.css';
 
-// Ícones de Features (Inline SVG)
+// Ícones de Features
 const FeatIcons = {
   Shield: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   Chart: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
@@ -29,32 +29,23 @@ export default function Home() {
         <div className="bs-hero">
           <div className="bs-container">
             <div className="bs-hero-grid">
-              
               <div className="hero-left">
                 <div className="status-pill">
                   <span className="status-dot"></span>
                   <span>All Systems Operational</span>
                 </div>
-                
                 <h1 className="hero-title">
                   The Intelligence Layer <br/>
                   <span className="txt-gradient">for Solana DeFi.</span>
                 </h1>
-                
                 <p className="hero-desc">
                   Real-time risk analysis, secure swaps, and deep analytics. 
                   Institutional-grade security infrastructure for every trader.
                 </p>
-                
                 <div className="hero-cta-group">
-                  <Link to="https://app.bagsshield.org" className="btn-primary">
-                    Launch App
-                  </Link>
-                  <Link to="/docs/intro" className="btn-secondary">
-                    Documentation
-                  </Link>
+                  <Link to="https://app.bagsshield.org" className="btn-primary">Launch App</Link>
+                  <Link to="/docs/intro" className="btn-secondary">Documentation</Link>
                 </div>
-
                 <div className="partners-section">
                   <div className="partners-label">TRUSTED BY BUILDERS</div>
                   <div className="partners-grid">
@@ -64,45 +55,39 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-
               <div className="mock-col">
                 <div className="phone-wrap">
                   <img className="phone-mock" src={phoneMock} alt="Bags Shield App Mock" loading="eager" />
                 </div>
               </div>
-
             </div>
           </div>
         </div>
 
-        {/* FEATURES SECTION (3 Cards) */}
+        {/* FEATURES SECTION */}
         <section className="bs-features">
           <div className="bs-container">
             <div className="feat-grid">
-              
               <div className="feat-card">
                 <div className="feat-icon"><FeatIcons.Shield /></div>
                 <h3>Scan Risk</h3>
                 <p>Instant contract analysis detecting rugpulls, honeypots, and mutable metadata.</p>
               </div>
-
               <div className="feat-card">
                 <div className="feat-icon"><FeatIcons.Chart /></div>
                 <h3>Secure Analytics</h3>
                 <p>Deep dive into holder distribution and liquidity signals with clear risk explanations.</p>
               </div>
-
               <div className="feat-card">
                 <div className="feat-icon"><FeatIcons.Zap /></div>
                 <h3>Swift Swaps</h3>
                 <p>Integrated routing (Jupiter) for the best prices with safety checks before execution.</p>
               </div>
-
             </div>
           </div>
         </section>
 
-        {/* --- DEEP DIVE SECTION (INFRASTRUCTURE & PHILOSOPHY) --- */}
+        {/* --- DEEP DIVE SECTION (A PARTE QUE FALTOU) --- */}
         <section className="bs-deep-dive">
           <div className="bs-container">
             
@@ -176,7 +161,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FOOTER */}
         <footer className="bs-footer">
           <div className="bs-container">
             <p>© {new Date().getFullYear()} Bags Shield. Built for the Solana Ecosystem.</p>
