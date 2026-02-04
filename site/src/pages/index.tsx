@@ -14,41 +14,40 @@ const FeatIcons = {
 
 export default function Home() {
   const { siteConfig } = useDocusaurusContext();
-
-  // Assets (ícones em img/partners/)
-  const phoneMock = useBaseUrl('img/phone-mock.png');
-  const solanaIcon = useBaseUrl('img/partners/solana.svg');
-  const jupiterIcon = useBaseUrl('img/partners/jupiter.svg');
-  const heliusIcon = useBaseUrl('img/partners/helius.svg');
-  const appUrl = siteConfig.customFields?.appUrl || 'https://app.bagsshield.org';
+  
+  // Assets
+  const phoneMock = useBaseUrl('/img/phone-mock.png');
+  const solanaIcon = useBaseUrl('/img/solana.svg');
+  const jupiterIcon = useBaseUrl('/img/jupiter.svg');
+  const heliusIcon = useBaseUrl('/img/helius.svg');
 
   return (
     <Layout title="Home" description="Solana Intelligence Layer">
       <div className="bs-landing">
-
+        
         {/* HERO SECTION */}
         <div className="bs-hero">
           <div className="bs-container">
             <div className="bs-hero-grid">
-
+              
               <div className="hero-left">
                 <div className="status-pill">
                   <span className="status-dot"></span>
                   <span>All Systems Operational</span>
                 </div>
-
+                
                 <h1 className="hero-title">
                   The Intelligence Layer <br/>
                   <span className="txt-gradient">for Solana DeFi.</span>
                 </h1>
-
+                
                 <p className="hero-desc">
-                  Real-time risk analysis, secure swaps, and deep analytics.
+                  Real-time risk analysis, secure swaps, and deep analytics. 
                   Institutional-grade security infrastructure for every trader.
                 </p>
-
+                
                 <div className="hero-cta-group">
-                  <Link to={appUrl} className="btn-primary">
+                  <Link to="https://app.bagsshield.org" className="btn-primary">
                     Launch App
                   </Link>
                   <Link to="/docs/intro" className="btn-secondary">
@@ -59,15 +58,9 @@ export default function Home() {
                 <div className="partners-section">
                   <div className="partners-label">TRUSTED BY BUILDERS</div>
                   <div className="partners-grid">
-                    <a href="https://solana.com" target="_blank" rel="noreferrer" title="Solana">
-                      <img src={solanaIcon} alt="Solana" />
-                    </a>
-                    <a href="https://jup.ag" target="_blank" rel="noreferrer" title="Jupiter">
-                      <img src={jupiterIcon} alt="Jupiter" />
-                    </a>
-                    <a href="https://helius.dev" target="_blank" rel="noreferrer" title="Helius">
-                      <img src={heliusIcon} alt="Helius" />
-                    </a>
+                    <Link to="#"><img src={solanaIcon} alt="Solana" /></Link>
+                    <Link to="#"><img src={jupiterIcon} alt="Jupiter" /></Link>
+                    <Link to="#"><img src={heliusIcon} alt="Helius" /></Link>
                   </div>
                 </div>
               </div>
@@ -82,11 +75,11 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SEÇÃO FEATURES */}
+        {/* FEATURES SECTION (3 Cards) */}
         <section className="bs-features">
           <div className="bs-container">
             <div className="feat-grid">
-
+              
               <div className="feat-card">
                 <div className="feat-icon"><FeatIcons.Shield /></div>
                 <h3>Scan Risk</h3>
@@ -109,16 +102,18 @@ export default function Home() {
           </div>
         </section>
 
-        {/* DEEP DIVE SECTION */}
+        {/* --- DEEP DIVE SECTION (INFRASTRUCTURE & PHILOSOPHY) --- */}
         <section className="bs-deep-dive">
           <div className="bs-container">
+            
             <div className="section-head">
               <h2>Infrastructure & Philosophy</h2>
               <p>Why we are building the new standard for DeFi safety.</p>
             </div>
 
             <div className="deep-grid">
-
+              
+              {/* CARD 1: MODEL */}
               <div className="deep-card">
                 <div className="deep-head">
                   <span className="deep-tag">MODEL</span>
@@ -126,9 +121,9 @@ export default function Home() {
                 </div>
                 <div className="deep-body">
                   <p>
-                    While Jupiter acts as the powerhouse engine finding the best routes,
-                    Bags Shield operates as the <strong>Intelligence Layer</strong>.
-                    We run deep pre-swap scans, calculate real-time ShieldScores™,
+                    While Jupiter acts as the powerhouse engine finding the best routes, 
+                    Bags Shield operates as the <strong>Intelligence Layer</strong>. 
+                    We run deep pre-swap scans, calculate real-time ShieldScores™, 
                     and apply strict guardrails to filter out traps.
                   </p>
                   <ul className="deep-list">
@@ -139,6 +134,7 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* CARD 2: TRUST */}
               <div className="deep-card">
                 <div className="deep-head">
                   <span className="deep-tag">TRUST</span>
@@ -146,7 +142,7 @@ export default function Home() {
                 </div>
                 <div className="deep-body">
                   <p>
-                    Most scanners just dump data. We transform risk into binary decisions.
+                    Most scanners just dump data. We transform risk into binary decisions. 
                     <strong>Scan → Explain → Secure Action</strong>. No guessing games.
                   </p>
                   <ul className="deep-list">
@@ -157,6 +153,7 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* CARD 3: ENGINE */}
               <div className="deep-card">
                 <div className="deep-head">
                   <span className="deep-tag">ENGINE</span>
