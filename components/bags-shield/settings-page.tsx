@@ -49,12 +49,13 @@ function ToggleSwitch({
       type="button"
       role="switch"
       aria-checked={enabled}
+      aria-label={enabled ? "Enabled" : "Disabled"}
       onClick={(e) => {
         e.stopPropagation();
         onChange(!enabled);
       }}
       className={cn(
-        "relative inline-flex h-7 w-12 flex-shrink-0 rounded-full transition-all duration-300 touch-manipulation focus:outline-none focus:ring-2 focus:ring-[var(--cyan-primary)]/30",
+        "relative inline-flex h-7 w-12 flex-shrink-0 rounded-full transition-all duration-300 touch-manipulation",
         enabled
           ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)]"
           : "bg-bg-input border border-border-subtle"
@@ -63,7 +64,7 @@ function ToggleSwitch({
       <span
         aria-hidden="true"
         className={cn(
-          "inline-block h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300 pointer-events-none",
+          "inline-block h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300",
           "absolute top-1",
           enabled ? "left-6" : "left-1"
         )}
