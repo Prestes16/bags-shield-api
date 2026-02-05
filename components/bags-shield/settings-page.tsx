@@ -36,26 +36,29 @@ import type { Language } from "@/lib/i18n/translations";
 import { useTheme, type Theme } from "@/lib/theme/theme-context";
 import { BottomNav } from "@/components/ui/bottom-nav";
 
-// Custom Toggle Switch Component - Mobile Optimized
+// Custom Toggle Switch Component - iOS Style, Mobile Optimized
 function ToggleSwitch({
   enabled,
   onChange,
+  label,
 }: {
   enabled: boolean;
   onChange: (value: boolean) => void;
+  label?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={enabled}
-      aria-label={enabled ? "Enabled" : "Disabled"}
+      aria-label={label || (enabled ? "Enabled" : "Disabled")}
       onClick={(e) => {
         e.stopPropagation();
         onChange(!enabled);
       }}
       className={cn(
-        "relative inline-flex h-7 w-12 flex-shrink-0 rounded-full transition-all duration-300 touch-manipulation",
+        "relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out touch-manipulation",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary",
         enabled
           ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)]"
           : "bg-bg-input border border-border-subtle"
@@ -64,9 +67,8 @@ function ToggleSwitch({
       <span
         aria-hidden="true"
         className={cn(
-          "inline-block h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300",
-          "absolute top-1",
-          enabled ? "left-6" : "left-1"
+          "inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out",
+          enabled ? "translate-x-6" : "translate-x-0.5"
         )}
       />
     </button>

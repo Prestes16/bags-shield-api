@@ -161,31 +161,37 @@ export function AlertsSetup({ isLoading = false, onSave }: AlertsSetupProps) {
     }));
   };
 
-  // Custom Toggle Switch Component
+  // Custom Toggle Switch Component - iOS Style
   const ToggleSwitch = ({
     enabled,
     onChange,
     disabled = false,
+    label,
   }: {
     enabled: boolean;
     onChange: (value: boolean) => void;
     disabled?: boolean;
+    label?: string;
   }) => (
     <button
       type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label={label || (enabled ? "Enabled" : "Disabled")}
       onClick={() => !disabled && onChange(!enabled)}
       disabled={disabled}
-      className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
+      className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary ${
         disabled
-          ? "bg-white/5 cursor-not-allowed"
+          ? "bg-white/5 cursor-not-allowed opacity-50"
           : enabled
-            ? "bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]"
-            : "bg-white/10 hover:bg-white/15"
+            ? "bg-gradient-to-r from-cyan-500 to-blue-500"
+            : "bg-white/10 hover:bg-white/15 border border-white/10"
       }`}
     >
       <span
-        className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${
-          enabled ? "left-7" : "left-1"
+        aria-hidden="true"
+        className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
+          enabled ? "translate-x-6" : "translate-x-0.5"
         }`}
       />
     </button>

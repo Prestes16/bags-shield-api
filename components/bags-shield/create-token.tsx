@@ -472,20 +472,24 @@ export function CreateToken() {
                 </div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={safetySettings.lockLiquidity}
+                  aria-label={t.createToken.lockLiquidity}
                   onClick={() =>
                     setSafetySettings({
                       ...safetySettings,
                       lockLiquidity: !safetySettings.lockLiquidity,
                     })
                   }
-                  className={`w-12 h-6 rounded-full transition-all ${
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary ${
                     safetySettings.lockLiquidity
                       ? "bg-emerald-500"
-                      : "bg-border-subtle"
+                      : "bg-bg-input border border-border-subtle"
                   }`}
                 >
-                  <div
-                    className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  <span
+                    aria-hidden="true"
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
                       safetySettings.lockLiquidity
                         ? "translate-x-6"
                         : "translate-x-0.5"
