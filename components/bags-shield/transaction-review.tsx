@@ -304,10 +304,10 @@ export function TransactionReview({
             <button
               type="button"
               onClick={handleCancel}
-              className="h-10 px-3 flex items-center gap-1.5 text-text-muted hover:text-text-primary transition-colors text-sm font-medium"
+              className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+              aria-label="Go back"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t.txReview.cancel}</span>
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-base font-semibold text-text-primary">
               {t.txReview.title}
@@ -315,7 +315,8 @@ export function TransactionReview({
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-card transition-colors"
+              className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-[var(--cyan-primary)] hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+              aria-label="Go home"
             >
               <Home className="w-5 h-5" />
             </button>

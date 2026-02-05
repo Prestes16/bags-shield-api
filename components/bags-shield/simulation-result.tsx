@@ -190,19 +190,20 @@ function ErrorState({
         <button
           type="button"
           onClick={onBack || (() => router.back())}
-          className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+          aria-label="Go back"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold text-white">{t.simResult.title}</h1>
+        <h1 className="text-lg font-semibold text-text-primary">{t.simResult.title}</h1>
       </header>
       
       <main className="flex-1 px-4 flex flex-col items-center justify-center text-center">
         <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
           <AlertCircle className="w-10 h-10 text-red-400" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">{t.simResult.errorTitle}</h2>
-        <p className="text-slate-400 text-sm mb-2">{t.simResult.errorDesc}</p>
+        <h2 className="text-xl font-bold text-text-primary mb-2">{t.simResult.errorTitle}</h2>
+        <p className="text-text-muted text-sm mb-2">{t.simResult.errorDesc}</p>
         <p className="text-red-400/80 text-xs font-mono mb-8 max-w-xs">{message}</p>
         
         <div className="flex gap-3 w-full max-w-xs">
@@ -210,7 +211,7 @@ function ErrorState({
             <button
               type="button"
               onClick={onRetry}
-              className="flex-1 py-3 rounded-xl bg-[var(--cyan-primary)]/20 text-[var(--cyan-primary)] font-medium hover:bg-[var(--cyan-primary)]/30 transition-all flex items-center justify-center gap-2"
+              className="flex-1 h-12 rounded-xl bg-[var(--cyan-primary)]/20 text-[var(--cyan-primary)] font-medium hover:bg-[var(--cyan-primary)]/30 active:scale-[0.98] transition-all duration-200 ease-out touch-manipulation flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
             >
               <RefreshCw className="w-4 h-4" />
               {t.simResult.tryAgain}
@@ -219,7 +220,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onBack || (() => router.push("/"))}
-            className="flex-1 py-3 rounded-xl bg-white/5 text-slate-300 font-medium hover:bg-white/10 transition-all"
+            className="flex-1 h-12 rounded-xl bg-bg-card border border-border-subtle text-text-primary font-medium hover:bg-bg-card-hover active:scale-[0.98] transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
           >
             {t.simResult.backToHome}
           </button>
@@ -245,24 +246,25 @@ function EmptyState({
         <button
           type="button"
           onClick={onBack || (() => router.back())}
-          className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+          aria-label="Go back"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold text-white">{t.simResult.title}</h1>
+        <h1 className="text-lg font-semibold text-text-primary">{t.simResult.title}</h1>
       </header>
       
       <main className="flex-1 px-4 flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 rounded-full bg-slate-500/20 flex items-center justify-center mb-6">
-          <Zap className="w-10 h-10 text-slate-400" />
+        <div className="w-20 h-20 rounded-full bg-bg-card/50 flex items-center justify-center mb-6">
+          <Zap className="w-10 h-10 text-text-muted" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">{t.simResult.noData}</h2>
-        <p className="text-slate-400 text-sm mb-8">{t.simResult.noDataDesc}</p>
+        <h2 className="text-xl font-bold text-text-primary mb-2">{t.simResult.noData}</h2>
+        <p className="text-text-muted text-sm mb-8">{t.simResult.noDataDesc}</p>
         
         <button
           type="button"
           onClick={onBack || (() => router.push("/simulate"))}
-          className="py-3 px-6 rounded-xl bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white font-medium hover:opacity-90 transition-all shadow-[0_0_16px_var(--cyan-glow)]"
+          className="h-12 px-6 rounded-xl bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white font-semibold hover:shadow-[0_6px_20px_var(--cyan-glow)] active:scale-[0.98] transition-all duration-200 ease-out touch-manipulation shadow-[0_4px_14px_var(--cyan-glow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
         >
           {t.simulator.title}
         </button>

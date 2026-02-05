@@ -322,20 +322,21 @@ export function NetworkStatus() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-page text-white">
+    <div className="min-h-screen bg-bg-page text-text-primary">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+            className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+            aria-label="Go back"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-white">Solana Network Health</h1>
-            <p className="text-xs text-slate-500">Monitoramento em tempo real</p>
+            <h1 className="text-xl font-bold text-text-primary">Solana Network Health</h1>
+            <p className="text-xs text-text-muted">Monitoramento em tempo real</p>
           </div>
         </div>
 

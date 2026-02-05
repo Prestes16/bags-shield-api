@@ -215,7 +215,7 @@ export function AuthorityToggle({
   );
 }
 
-// Advanced Mode Toggle Component
+// Advanced Mode Toggle Component - iOS Style
 export function AdvancedModeToggle({
   enabled,
   onChange,
@@ -235,13 +235,21 @@ export function AdvancedModeToggle({
       </div>
       <button
         type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={t.authority.advancedMode}
         onClick={() => onChange(!enabled)}
-        className={`w-11 h-6 rounded-full transition-all flex items-center ${
-          enabled ? "bg-[var(--cyan-primary)] justify-end" : "bg-border-subtle justify-start"
+        className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50 ${
+          enabled 
+            ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)]" 
+            : "bg-bg-input border border-border-subtle"
         }`}
       >
-        <div
-          className={`w-5 h-5 bg-white rounded-full shadow mx-0.5 transition-transform`}
+        <span
+          aria-hidden="true"
+          className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
+            enabled ? "translate-x-6" : "translate-x-0.5"
+          }`}
         />
       </button>
     </div>

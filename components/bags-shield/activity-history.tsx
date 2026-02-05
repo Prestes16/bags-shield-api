@@ -435,8 +435,9 @@ export function ActivityHistory({
           <div className="flex items-center gap-3 mb-4">
             <button
               type="button"
-              onClick={() => router.push("/")}
-              className="w-11 h-11 rounded-xl bg-bg-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all"
+              onClick={() => router.back()}
+              className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+              aria-label="Go back"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -459,7 +460,7 @@ export function ActivityHistory({
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
             {filterTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeFilter === tab.id;
@@ -469,13 +470,14 @@ export function ActivityHistory({
                   type="button"
                   onClick={() => setActiveFilter(tab.id)}
                   className={cn(
-                    "flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0",
+                    "inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-sm font-medium transition-all duration-200 ease-out whitespace-nowrap flex-shrink-0 touch-manipulation",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50",
                     isActive
-                      ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                      ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] text-white shadow-[0_4px_14px_var(--cyan-glow)]"
                       : "bg-bg-card border border-border-subtle text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95"
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4 flex-shrink-0" />
                   <span>{tab.label}</span>
                 </button>
               );

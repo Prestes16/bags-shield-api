@@ -728,11 +728,12 @@ export function CreateToken() {
       {/* Header */}
       <header className="sticky top-0 z-20 bg-bg-page/95 backdrop-blur-lg border-b border-border-subtle">
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => (currentStep > 1 ? handlePrevious() : router.back())}
-              className="w-10 h-10 rounded-xl bg-bg-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all"
+              className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+              aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -748,7 +749,8 @@ export function CreateToken() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="w-10 h-10 rounded-xl bg-bg-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-[var(--cyan-primary)] hover:bg-bg-card-hover active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-[var(--cyan-primary)] hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+            aria-label="Go home"
           >
             <Home className="w-5 h-5" />
           </button>
@@ -768,14 +770,14 @@ export function CreateToken() {
       </main>
 
       {/* Bottom Actions - Safe Area Aware */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[var(--bg-page)] border-t border-border-subtle/50 z-10 pb-safe">
-        <div className="px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-bg-page/95 backdrop-blur-lg border-t border-border-subtle z-10">
+        <div className="px-4 py-3 pb-safe">
           <div className="max-w-lg mx-auto flex gap-3">
             {currentStep > 1 && (
               <button
                 type="button"
                 onClick={handlePrevious}
-                className="flex-1 h-12 rounded-xl font-medium text-text-secondary bg-bg-card border border-border-subtle hover:bg-bg-card-hover active:scale-98 transition-all flex items-center justify-center gap-2"
+                className="flex-1 h-12 rounded-xl font-medium text-text-primary bg-bg-card border border-border-subtle hover:bg-bg-card-hover active:scale-[0.98] transition-all duration-200 ease-out flex items-center justify-center gap-2 touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
               >
                 <ArrowLeft className="w-4 h-4" />
                 {t.createToken.previous}
@@ -786,7 +788,7 @@ export function CreateToken() {
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex-1 h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] shadow-[0_0_16px_var(--cyan-glow)] hover:shadow-[0_0_24px_var(--cyan-glow)] hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2"
+                className="flex-1 h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] shadow-[0_4px_14px_var(--cyan-glow)] hover:shadow-[0_6px_20px_var(--cyan-glow)] active:scale-[0.98] transition-all duration-200 ease-out flex items-center justify-center gap-2 touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
               >
                 {t.createToken.next}
                 <ArrowRight className="w-4 h-4" />
@@ -795,10 +797,10 @@ export function CreateToken() {
               <button
                 type="button"
                 onClick={() => setShowLaunchModal(true)}
-                className="flex-1 h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-[var(--cyan-primary)] shadow-[0_0_16px_var(--cyan-glow)] hover:shadow-[0_0_24px_var(--cyan-glow)] hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2"
+                className="flex-1 h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-green-600 shadow-[0_4px_14px_rgba(52,211,153,0.3)] hover:shadow-[0_6px_20px_rgba(52,211,153,0.4)] active:scale-[0.98] transition-all duration-200 ease-out flex items-center justify-center gap-2 touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
               >
                 <Sparkles className="w-4 h-4" />
-                Launch
+                {t.createToken.launch || "Launch"}
               </button>
             )}
           </div>

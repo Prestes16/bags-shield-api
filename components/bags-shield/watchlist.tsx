@@ -504,23 +504,23 @@ export function Watchlist({
   return (
     <div className="min-h-screen bg-bg-page">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-bg-page/95 backdrop-blur-xl border-b border-white/[0.06]">
+      <header className="sticky top-0 z-50 bg-bg-page/95 backdrop-blur-xl border-b border-border-subtle">
         <div className="px-4 py-3">
           {/* Top Row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => router.push("/")}
-                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                title={t.watchlist.backToHome}
+                onClick={() => router.back()}
+                className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+                aria-label="Go back"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-white">{t.watchlist.title}</h1>
+                <h1 className="text-xl font-bold text-text-primary">{t.watchlist.title}</h1>
                 {tokens.length > 0 && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-text-muted">
                     {tokens.length} {t.watchlist.tokens}
                   </p>
                 )}
@@ -529,7 +529,8 @@ export function Watchlist({
             <button
               type="button"
               onClick={handleAddToken}
-              className="w-9 h-9 rounded-full bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] flex items-center justify-center shadow-lg shadow-[var(--cyan-glow)] hover:opacity-90 transition-all"
+              className="w-10 h-10 rounded-xl bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] flex items-center justify-center shadow-[0_4px_14px_var(--cyan-glow)] hover:shadow-[0_6px_20px_var(--cyan-glow)] active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+              aria-label="Add token"
             >
               <Plus className="w-5 h-5 text-white" />
             </button>

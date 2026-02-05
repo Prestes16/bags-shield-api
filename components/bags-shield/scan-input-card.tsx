@@ -102,15 +102,23 @@ export function ScanInputCard({
           </div>
           <button
             type="button"
+            role="switch"
+            aria-checked={proScan}
+            aria-label="Pro Scan"
             onClick={() => setProScan(!proScan)}
-            className={`w-10 h-6 rounded-full transition-all flex items-center ${
-              proScan
-                ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)] justify-end"
-                : "bg-bg-card-hover justify-start"
-            }`}
             disabled={!features?.proScanEnabled}
+            className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50 ${
+              proScan
+                ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)]"
+                : "bg-bg-input border border-border-subtle"
+            }`}
           >
-            <div className="w-5 h-5 rounded-full bg-white shadow-md mx-0.5" />
+            <span
+              aria-hidden="true"
+              className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
+                proScan ? "translate-x-6" : "translate-x-0.5"
+              }`}
+            />
           </button>
         </div>
       )}

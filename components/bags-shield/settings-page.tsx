@@ -420,12 +420,13 @@ export function SettingsPage() {
         <div className="flex items-center gap-3 mb-6">
           <button
             type="button"
-            onClick={() => router.push("/")}
-            className="w-11 h-11 rounded-xl bg-bg-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all"
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+            aria-label="Go back"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-text-primary">Settings</h1>
+          <h1 className="text-xl font-bold text-text-primary">{t.settings.title}</h1>
         </div>
 
         {/* Identity Card */}
@@ -474,12 +475,12 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={handleCopyAddress}
-              className="flex-1 flex items-center justify-center gap-1.5 h-11 rounded-lg bg-bg-card border border-border-subtle text-text-secondary hover:bg-bg-card-hover hover:text-text-primary active:scale-98 transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 h-12 rounded-xl bg-bg-card border border-border-subtle text-text-secondary hover:bg-bg-card-hover hover:text-text-primary active:scale-[0.98] transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
             >
               {copied ? (
                 <>
-                  <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium text-green-400">{t.common.copied}</span>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-medium text-emerald-400">{t.common.copied}</span>
                 </>
               ) : (
                 <>
@@ -491,8 +492,8 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={handleDisconnect}
-              className="flex items-center justify-center w-11 h-11 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:scale-98 transition-all"
-              title="Disconnect"
+              className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:scale-[0.98] transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+              aria-label="Disconnect wallet"
             >
               <LogOut className="w-4 h-4" />
             </button>

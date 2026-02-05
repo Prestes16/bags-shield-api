@@ -105,9 +105,10 @@ export function QuickScanModal({ isOpen, onClose, onScan }: QuickScanModalProps)
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-lg bg-bg-page/80 flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-page transition-all active:scale-95 border border-border-subtle/50 flex-shrink-0 touch-manipulation"
+                className="w-10 h-10 rounded-xl bg-bg-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out flex-shrink-0 touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+                aria-label="Close modal"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>

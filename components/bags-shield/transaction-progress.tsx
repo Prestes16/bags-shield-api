@@ -197,12 +197,12 @@ export function TransactionProgress({
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+          className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+          aria-label="Go back"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm">Back</span>
         </button>
-        <div className="w-20" />
+        <div className="w-10" />
       </header>
 
       {/* Main Content */}

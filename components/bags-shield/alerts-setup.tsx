@@ -178,14 +178,17 @@ export function AlertsSetup({ isLoading = false, onSave }: AlertsSetupProps) {
       role="switch"
       aria-checked={enabled}
       aria-label={label || (enabled ? "Enabled" : "Disabled")}
-      onClick={() => !disabled && onChange(!enabled)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled) onChange(!enabled);
+      }}
       disabled={disabled}
-      className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary ${
+      className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary ${
         disabled
-          ? "bg-white/5 cursor-not-allowed opacity-50"
+          ? "bg-bg-input cursor-not-allowed opacity-50"
           : enabled
-            ? "bg-gradient-to-r from-cyan-500 to-blue-500"
-            : "bg-white/10 hover:bg-white/15 border border-white/10"
+            ? "bg-gradient-to-r from-[var(--cyan-primary)] to-[var(--cyan-secondary)]"
+            : "bg-bg-input border border-border-subtle"
       }`}
     >
       <span
@@ -198,20 +201,21 @@ export function AlertsSetup({ isLoading = false, onSave }: AlertsSetupProps) {
   );
 
   return (
-    <div className="min-h-screen bg-bg-page text-white">
+    <div className="min-h-screen bg-bg-page text-text-primary">
       <div className="max-w-2xl mx-auto px-4 py-6 pb-32 sm:pb-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-2">
+        <div className="flex items-center gap-3 mb-2">
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+            className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+            aria-label="Go back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-white">Centro de Alertas</h1>
+          <h1 className="text-xl font-bold text-text-primary">Centro de Alertas</h1>
         </div>
-        <p className="text-sm text-slate-500 mb-8 ml-14">
+        <p className="text-sm text-text-muted mb-8 ml-14">
           Configure seus gatilhos de seguranca on-chain
         </p>
 

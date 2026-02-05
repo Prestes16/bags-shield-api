@@ -115,8 +115,9 @@ export function SearchPage() {
           <div className="flex items-center gap-3 mb-4">
             <button
               type="button"
-              onClick={() => router.push("/")}
-              className="w-11 h-11 rounded-xl bg-bg-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all touch-manipulation"
+              onClick={() => router.back()}
+              className="w-10 h-10 rounded-xl bg-bg-card/80 backdrop-blur-sm border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-card-hover active:scale-95 transition-all duration-200 ease-out touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyan-primary)]/50"
+              aria-label="Go back"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
