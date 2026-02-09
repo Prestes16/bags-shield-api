@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Schema de validação para variáveis de ambiente.
@@ -15,7 +15,7 @@ const EnvSchema = z.object({
       if (!trimmed) return null;
       try {
         const url = new URL(trimmed);
-        return url.toString().replace(/\/+$/, "");
+        return url.toString().replace(/\/+$/, '');
       } catch {
         return null;
       }
@@ -31,7 +31,7 @@ const EnvSchema = z.object({
   BAGS_TIMEOUT_MS: z
     .string()
     .optional()
-    .default("15000")
+    .default('15000')
     .transform((val: string | undefined) => {
       const parsed = Number(val);
       if (!Number.isFinite(parsed) || parsed <= 0) return 15000;
@@ -43,28 +43,25 @@ const EnvSchema = z.object({
     .transform((val: string | undefined) => {
       if (!val) return false;
       const s = val.toLowerCase().trim();
-      return s === "1" || s === "true" || s === "yes" || s === "on";
+      return s === '1' || s === 'true' || s === 'yes' || s === 'on';
     }),
 
   // Mode Configuration (mock/prod/preview/dev)
-  BAGS_SCAN_MODE: z
-    .enum(["mock", "prod", "preview", "dev"])
-    .optional()
-    .default("mock"),
-  BAGS_SIM_MODE: z
-    .enum(["mock", "prod", "preview", "dev"])
-    .optional()
-    .default("mock"),
+  BAGS_SCAN_MODE: z.enum(['mock', 'prod', 'preview', 'dev']).optional().default('mock'),
+  BAGS_SIM_MODE: z.enum(['mock', 'prod', 'preview', 'dev']).optional().default('mock'),
 
   // CORS Configuration
   CORS_ORIGINS: z
     .string()
     .optional()
     .transform((val: string | undefined): string | string[] => {
-      if (!val) return "*";
+      if (!val) return '*';
       const trimmed = val.trim();
-      if (!trimmed) return "*";
-      return trimmed.split(",").map((s: string) => s.trim()).filter(Boolean);
+      if (!trimmed) return '*';
+      return trimmed
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter(Boolean);
     }),
 
   // Vercel/Node Environment
@@ -77,7 +74,7 @@ const EnvSchema = z.object({
     .string()
     .optional()
     .transform((val: string | undefined) => {
-      if (!val || val.trim() === "") return null;
+      if (!val || val.trim() === '') return null;
       try {
         new URL(val);
         return val;
@@ -93,19 +90,16 @@ const EnvSchema = z.object({
     .transform((val: string | undefined) => {
       if (!val) return false;
       const s = val.toLowerCase().trim();
-      return s === "1" || s === "true" || s === "yes" || s === "on";
+      return s === '1' || s === 'true' || s === 'yes' || s === 'on';
     }),
-  LAUNCHPAD_MODE: z
-    .enum(["stub", "real"])
-    .optional()
-    .default("stub"),
+  LAUNCHPAD_MODE: z.enum(['stub', 'real']).optional().default('stub'),
   ALLOWED_IMAGE_DOMAINS: z
     .string()
     .optional()
     .transform((val: string | undefined) => {
-      if (!val || val.trim() === "") return null;
+      if (!val || val.trim() === '') return null;
       return val
-        .split(",")
+        .split(',')
         .map((d) => d.trim().toLowerCase())
         .filter(Boolean);
     }),
@@ -120,10 +114,20 @@ const EnvSchema = z.object({
       if (!trimmed) return null;
       try {
         const url = new URL(trimmed);
-        return url.toString().replace(/\/+$/, "");
+        return url.toString().replace(/\/+$/, '');
       } catch {
         return null;
       }
+    }),
+
+  // Token Creator feature flag (Beta: scaffold only, routes 501)
+  FEATURE_TOKEN_CREATOR: z
+    .string()
+    .optional()
+    .transform((val: string | undefined) => {
+      if (!val) return false;
+      const s = val.toLowerCase().trim();
+      return s === '1' || s === 'true' || s === 'yes' || s === 'on';
     }),
 });
 
@@ -141,7 +145,7 @@ export function getEnv(): EnvConfig {
   try {
     // Safe env access for non-Node environments
     const ENV: Record<string, string | undefined> =
-      typeof process !== "undefined" && process.env ? (process.env as any) : {};
+      typeof process !== 'undefined' && process.env ? (process.env as any) : {};
 
     const raw = {
       BAGS_API_BASE: ENV.BAGS_API_BASE,
@@ -159,53 +163,56 @@ export function getEnv(): EnvConfig {
       LAUNCHPAD_MODE: ENV.LAUNCHPAD_MODE,
       ALLOWED_IMAGE_DOMAINS: ENV.ALLOWED_IMAGE_DOMAINS,
       BAGS_SHIELD_API_BASE: ENV.BAGS_SHIELD_API_BASE,
+      FEATURE_TOKEN_CREATOR: ENV.FEATURE_TOKEN_CREATOR,
     };
 
     const result = EnvSchema.safeParse(raw);
     if (!result.success) {
       // Em caso de erro de validação, usa defaults seguros
-      console.warn("[env] Validation failed, using defaults:", result.error);
+      console.warn('[env] Validation failed, using defaults:', result.error);
       cachedEnv = {
-      BAGS_API_BASE: null,
-      BAGS_API_KEY: null,
-      BAGS_TIMEOUT_MS: 15000,
-      BAGS_ALLOW_MOCK_FALLBACK: false,
-      BAGS_SCAN_MODE: "mock",
-      BAGS_SIM_MODE: "mock",
-      CORS_ORIGINS: "*",
-      VERCEL_ENV: undefined,
-      NODE_ENV: undefined,
-      BAGS_BEARER: undefined,
-      SOLANA_RPC_URL: null,
-      LAUNCHPAD_ENABLED: false,
-      LAUNCHPAD_MODE: "stub",
-      ALLOWED_IMAGE_DOMAINS: null,
-      BAGS_SHIELD_API_BASE: null,
-    };
-    return cachedEnv;
-  }
+        BAGS_API_BASE: null,
+        BAGS_API_KEY: null,
+        BAGS_TIMEOUT_MS: 15000,
+        BAGS_ALLOW_MOCK_FALLBACK: false,
+        BAGS_SCAN_MODE: 'mock',
+        BAGS_SIM_MODE: 'mock',
+        CORS_ORIGINS: '*',
+        VERCEL_ENV: undefined,
+        NODE_ENV: undefined,
+        BAGS_BEARER: undefined,
+        SOLANA_RPC_URL: null,
+        LAUNCHPAD_ENABLED: false,
+        LAUNCHPAD_MODE: 'stub',
+        ALLOWED_IMAGE_DOMAINS: null,
+        BAGS_SHIELD_API_BASE: null,
+        FEATURE_TOKEN_CREATOR: false,
+      };
+      return cachedEnv;
+    }
 
     cachedEnv = result.data;
     return cachedEnv;
   } catch (error) {
     // Fallback seguro em caso de erro inesperado
-    console.error("[env] Unexpected error, using defaults:", error);
+    console.error('[env] Unexpected error, using defaults:', error);
     cachedEnv = {
       BAGS_API_BASE: null,
       BAGS_API_KEY: null,
       BAGS_TIMEOUT_MS: 15000,
       BAGS_ALLOW_MOCK_FALLBACK: false,
-      BAGS_SCAN_MODE: "mock",
-      BAGS_SIM_MODE: "mock",
-      CORS_ORIGINS: "*",
+      BAGS_SCAN_MODE: 'mock',
+      BAGS_SIM_MODE: 'mock',
+      CORS_ORIGINS: '*',
       VERCEL_ENV: undefined,
       NODE_ENV: undefined,
       BAGS_BEARER: undefined,
       SOLANA_RPC_URL: null,
       LAUNCHPAD_ENABLED: false,
-      LAUNCHPAD_MODE: "stub",
+      LAUNCHPAD_MODE: 'stub',
       ALLOWED_IMAGE_DOMAINS: null,
       BAGS_SHIELD_API_BASE: null,
+      FEATURE_TOKEN_CREATOR: false,
     };
     return cachedEnv;
   }
@@ -216,7 +223,7 @@ export function getEnv(): EnvConfig {
  */
 export function getBagsBase(): string {
   const env = getEnv();
-  return env.BAGS_API_BASE ?? "https://public-api-v2.bags.fm/api/v1";
+  return env.BAGS_API_BASE ?? 'https://public-api-v2.bags.fm/api/v1';
 }
 
 /**
@@ -251,14 +258,14 @@ export function getCorsOrigins(): string | string[] {
 /**
  * Helper: retorna modo de scan (mock/prod/preview/dev).
  */
-export function getScanMode(): "mock" | "prod" | "preview" | "dev" {
+export function getScanMode(): 'mock' | 'prod' | 'preview' | 'dev' {
   return getEnv().BAGS_SCAN_MODE;
 }
 
 /**
  * Helper: retorna modo de simulação (mock/prod/preview/dev).
  */
-export function getSimMode(): "mock" | "prod" | "preview" | "dev" {
+export function getSimMode(): 'mock' | 'prod' | 'preview' | 'dev' {
   return getEnv().BAGS_SIM_MODE;
 }
 
@@ -267,7 +274,7 @@ export function getSimMode(): "mock" | "prod" | "preview" | "dev" {
  */
 export function isProduction(): boolean {
   const env = getEnv();
-  return env.VERCEL_ENV === "production" || env.NODE_ENV === "production";
+  return env.VERCEL_ENV === 'production' || env.NODE_ENV === 'production';
 }
 
 /**
@@ -280,7 +287,7 @@ export function isLaunchpadEnabled(): boolean {
 /**
  * Helper: retorna modo da Launchpad (stub|real).
  */
-export function getLaunchpadMode(): "stub" | "real" {
+export function getLaunchpadMode(): 'stub' | 'real' {
   return getEnv().LAUNCHPAD_MODE;
 }
 
@@ -296,4 +303,11 @@ export function getAllowedImageDomains(): string[] | null {
  */
 export function getBagsShieldApiBase(): string | null {
   return getEnv().BAGS_SHIELD_API_BASE;
+}
+
+/**
+ * Helper: retorna se Token Creator está habilitado (Beta: false, scaffold only).
+ */
+export function isFeatureTokenCreatorEnabled(): boolean {
+  return getEnv().FEATURE_TOKEN_CREATOR === true;
 }

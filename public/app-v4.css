@@ -210,3 +210,54 @@ body {
   color: #f0a07a;
   border-color: rgba(240,160,122,0.25);
 }
+
+/* Status pills — RPC, Mercado, Meteora */
+.status-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.65);
+}
+
+.status-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill[data-status="ok"] {
+  color: #7af0d6;
+  border-color: rgba(122,240,214,0.25);
+  background: rgba(122,240,214,0.08);
+}
+
+.status-pill[data-status="error"],
+.status-pill[data-status="off"] {
+  color: #f87171;
+  border-color: rgba(248,113,113,0.4);
+  background: rgba(248,113,113,0.12);
+}
+
+.status-pill[data-status="checking"]::before {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

@@ -1,11 +1,8 @@
-/**
- * Internal API client for calling /api/scan and /api/simulate internally
+﻿/**
+ * Internal API client for calling /api/scan and /api/simulate internally.
+ * Server-only: uses BAGS_SHIELD_API_BASE only (never NEXT_PUBLIC_*), so no API keys or secrets can leak to the client.
  */
-
-const API_BASE =
-  process.env.BAGS_SHIELD_API_BASE?.trim() ||
-  process.env.NEXT_PUBLIC_API_BASE?.trim() ||
-  "http://localhost:3000";
+const API_BASE = process.env.BAGS_SHIELD_API_BASE?.trim() || 'http://localhost:3000';
 
 export interface ScanResponse {
   success: boolean;
@@ -39,17 +36,14 @@ export interface SimulateResponse {
 /**
  * Call /api/scan internally
  */
-export async function callInternalScan(
-  mint: string,
-  requestId: string
-): Promise<ScanResponse> {
+export async function callInternalScan(mint: string, requestId: string): Promise<ScanResponse> {
   try {
     const url = `${API_BASE}/api/scan`;
     const response = await fetch(url, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "X-Request-Id": requestId,
+        'Content-Type': 'application/json',
+        'X-Request-Id': requestId,
       },
       body: JSON.stringify({ mint }),
     });
@@ -62,7 +56,7 @@ export async function callInternalScan(
     } catch {
       return {
         success: false,
-        error: "Failed to parse scan response",
+        error: 'Failed to parse scan response',
         meta: { requestId },
       };
     }
@@ -71,8 +65,7 @@ export async function callInternalScan(
   } catch (error) {
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to call scan endpoint",
+      error: error instanceof Error ? error.message : 'Failed to call scan endpoint',
       meta: { requestId },
     };
   }
@@ -81,17 +74,14 @@ export async function callInternalScan(
 /**
  * Call /api/simulate internally
  */
-export async function callInternalSimulate(
-  mint: string,
-  requestId: string
-): Promise<SimulateResponse> {
+export async function callInternalSimulate(mint: string, requestId: string): Promise<SimulateResponse> {
   try {
     const url = `${API_BASE}/api/simulate`;
     const response = await fetch(url, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "X-Request-Id": requestId,
+        'Content-Type': 'application/json',
+        'X-Request-Id': requestId,
       },
       body: JSON.stringify({ mint }),
     });
@@ -104,7 +94,7 @@ export async function callInternalSimulate(
     } catch {
       return {
         success: false,
-        error: "Failed to parse simulate response",
+        error: 'Failed to parse simulate response',
         meta: { requestId },
       };
     }
@@ -113,11 +103,10 @@ export async function callInternalSimulate(
   } catch (error) {
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to call simulate endpoint",
+      error: error instanceof Error ? error.message : 'Failed to call simulate endpoint',
       meta: { requestId },
     };
   }
 }
+
+

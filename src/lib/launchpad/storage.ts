@@ -1,11 +1,11 @@
-/**
+﻿/**
  * LocalStorage utilities for Launchpad drafts and history
  */
 
-import type { LaunchConfigDraft, ShieldProofManifest } from "./types";
+import type { LaunchConfigDraft, ShieldProofManifest } from './types';
 
-const STORAGE_KEY_DRAFT = "launchpad.draft";
-const STORAGE_KEY_HISTORY = "launchpad.history";
+const STORAGE_KEY_DRAFT = 'launchpad.draft';
+const STORAGE_KEY_HISTORY = 'launchpad.history';
 
 export interface HistoryEntry {
   mint: string;
@@ -16,13 +16,22 @@ export interface HistoryEntry {
 
 /**
  * Save draft to localStorage
+ * Não persiste data URLs (imagePreviewUrl nem imageUrl data:) para evitar quota exceeded
  */
 export function saveDraft(draft: LaunchConfigDraft): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY_DRAFT, JSON.stringify(draft));
+    const toSave = { ...draft, token: { ...draft.token } };
+    const token = toSave.token as Record<string, unknown>;
+    // Remove imagePreviewUrl (sempre data:)
+    delete token.imagePreviewUrl;
+    // Se imageUrl for data:, não persistir (manter só metadados pequenos)
+    if (token.imageUrl && String(token.imageUrl).startsWith('data:')) {
+      delete token.imageUrl;
+    }
+    localStorage.setItem(STORAGE_KEY_DRAFT, JSON.stringify(toSave));
   } catch (error) {
-    console.error("Failed to save draft:", error);
+    console.error('Failed to save draft:', error);
   }
 }
 
@@ -30,13 +39,13 @@ export function saveDraft(draft: LaunchConfigDraft): void {
  * Load draft from localStorage
  */
 export function loadDraft(): LaunchConfigDraft | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DRAFT);
     if (!stored) return null;
     return JSON.parse(stored) as LaunchConfigDraft;
   } catch (error) {
-    console.error("Failed to load draft:", error);
+    console.error('Failed to load draft:', error);
     return null;
   }
 }
@@ -45,11 +54,11 @@ export function loadDraft(): LaunchConfigDraft | null {
  * Clear draft from localStorage
  */
 export function clearDraft(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(STORAGE_KEY_DRAFT);
   } catch (error) {
-    console.error("Failed to clear draft:", error);
+    console.error('Failed to clear draft:', error);
   }
 }
 
@@ -57,7 +66,7 @@ export function clearDraft(): void {
  * Add entry to history
  */
 export function addToHistory(entry: HistoryEntry): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   try {
     const history = loadHistory();
     // Remove duplicate if exists (same mint)
@@ -65,7 +74,7 @@ export function addToHistory(entry: HistoryEntry): void {
     const updated = [entry, ...filtered].slice(0, 50); // Keep last 50
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
   } catch (error) {
-    console.error("Failed to add to history:", error);
+    console.error('Failed to add to history:', error);
   }
 }
 
@@ -73,13 +82,13 @@ export function addToHistory(entry: HistoryEntry): void {
  * Load history from localStorage
  */
 export function loadHistory(): HistoryEntry[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === 'undefined') return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY_HISTORY);
     if (!stored) return [];
     return JSON.parse(stored) as HistoryEntry[];
   } catch (error) {
-    console.error("Failed to load history:", error);
+    console.error('Failed to load history:', error);
     return [];
   }
 }
@@ -91,3 +100,5 @@ export function getHistoryEntry(mint: string): HistoryEntry | null {
   const history = loadHistory();
   return history.find((e) => e.mint === mint) || null;
 }
+
+

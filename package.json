@@ -21,7 +21,8 @@
     "start:render": "node scripts/server.cjs",
     "lint:fix": "eslint 'src/**/*.{ts,js}' --fix",
     "check:secrets": "bash scripts/check-secrets.sh",
-    "precommit": "lint-staged"
+    "precommit": "lint-staged",
+    "prepare": "husky install"
   },
   "engines": {
     "node": "20.x"

@@ -1,11 +1,12 @@
-/**
- * Layout for Launchpad pages
+﻿/**
+ * Layout for Launchpad pages — Server Component
  * Provides consistent structure and navigation
  */
 
 import { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LaunchpadProviders } from "./providers";
 
 export default function LaunchpadLayout({
   children,
@@ -52,7 +53,11 @@ export default function LaunchpadLayout({
       </nav>
 
       {/* Main Content */}
-      <main>{children}</main>
+      <main>
+        <LaunchpadProviders>{children}</LaunchpadProviders>
+      </main>
     </div>
   );
 }
+
+

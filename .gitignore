@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+﻿# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules
@@ -25,9 +25,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
+# local env files (never commit real keys; only .env.example is safe)
 .env
+.env*.local
+.env.development
+.env.production
+*.env.bak
+.env.backup
 
 # vercel
 .vercel
@@ -55,3 +59,31 @@ local.properties
 
 # OS
 Thumbs.db
+# --- Bags Shield: generated / local-only ---
+.env
+.env.*.local
+.vercel
+.next
+out
+dist
+coverage
+*.log
+
+# Gradle / Android local cache
+.gradle/
+build/
+
+# Reports / artifacts
+build/reports/
+**/reports/
+
+# Local quarantine (never commit)
+_quarantine/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+# Legacy nested app folder (kept locally; not versioned in this repo)
+/app/

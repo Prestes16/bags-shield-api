@@ -20,6 +20,11 @@
   <div class="view view-home hidden" id="view-home" data-view="home">
     <div class="header">
       <div class="logo">🛡️ Bags Shield</div>
+      <div class="status-pills" id="status-pills-home" aria-label="Status dos serviços">
+        <span class="status-pill" id="status-rpc-home" data-status="checking" title="Solana RPC">RPC</span>
+        <span class="status-pill" id="status-mercado-home" data-status="checking" title="API Mercado">Mercado</span>
+        <span class="status-pill" id="status-meteora-home" data-status="checking" title="Meteora DEX">Meteora</span>
+      </div>
       <div class="wallet-info" id="home-wallet-info">
         <button class="wallet-connect-btn" data-action="open_wallet_modal">Connect Wallet</button>
       </div>
@@ -94,6 +99,11 @@
   <div class="view view-preview-transaction hidden" id="view-preview-transaction" data-view="preview-transaction">
     <div class="header">
       <div class="logo">🛡️ Bags Shield</div>
+      <div class="status-pills" id="status-pills" aria-label="Status dos serviços">
+        <span class="status-pill" id="status-rpc" data-status="checking" title="Solana RPC">RPC</span>
+        <span class="status-pill" id="status-mercado" data-status="checking" title="API Mercado">Mercado</span>
+        <span class="status-pill" id="status-meteora" data-status="checking" title="Meteora DEX">Meteora</span>
+      </div>
       <div class="user-icon">👤</div>
     </div>
     <div class="token-header">
@@ -204,6 +214,7 @@
       <h3>Connect Wallet</h3>
       <button data-action="wallet_connect_phantom">Phantom</button>
       <button data-action="wallet_connect_solflare">Solflare</button>
+      <button data-action="wallet_connect_backpack">Backpack</button>
       <button data-action="wallet_connect_mwa">Seed Vault (MWA)</button>
       <button data-action="close_wallet_modal">Cancel</button>
     </div>
