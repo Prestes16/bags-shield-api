@@ -95,3 +95,7 @@ site/.docusaurus/
 site/.cache/
 site/.turbo/
 site/.next/
+
+**/_quarantine/**
+
+_app__trash_*/

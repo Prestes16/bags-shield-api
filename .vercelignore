@@ -4,3 +4,6 @@
 **/dist/**
 site/**
 **/*.log
+_quarantine/**
+
+_app__trash_*/**
