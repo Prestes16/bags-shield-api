@@ -3,7 +3,7 @@
  * Public endpoint showing available features and system status
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getOrGenerateRequestId, applyCorsHeaders, applyNoStore, applySecurityHeaders, SafeLogger } from "@/lib/security";
 import { createSuccessResponse } from "@/lib/launchpad/security-schemas";
 import { getLaunchpadFeatures, getFeatureSummary } from "@/lib/launchpad/feature-flags";
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
 
     const response = createSuccessResponse(statusData, requestId, endpoint);
     
-    let res = Response.json(response, { 
+    let res = NextResponse.json(response, { 
       status: 200,
       headers: {
         "Cache-Control": "public, max-age=60", // Cache for 1 minute
@@ -117,8 +117,8 @@ export async function GET(req: NextRequest) {
       }
     });
     
-    res = applyCorsHeaders(req, res);
-    res = applySecurityHeaders(res);
+    res = applyCorsHeaders(req, res) as NextResponse;
+    res = applySecurityHeaders(res) as NextResponse;
     res.headers.set("X-Request-Id", requestId);
     
     SafeLogger.debug("Status request completed", { 
@@ -147,10 +147,10 @@ export async function GET(req: NextRequest) {
     
     const response = createSuccessResponse(fallbackData, requestId, endpoint);
     
-    let res = Response.json(response, { status: 200 });
-    res = applyCorsHeaders(req, res);
-    res = applyNoStore(res);
-    res = applySecurityHeaders(res);
+    let res = NextResponse.json(response, { status: 200 });
+    res = applyCorsHeaders(req, res) as NextResponse;
+    res = applyNoStore(res) as NextResponse;
+    res = applySecurityHeaders(res) as NextResponse;
     res.headers.set("X-Request-Id", requestId);
     
     return res;
@@ -163,9 +163,9 @@ export async function GET(req: NextRequest) {
 export async function OPTIONS(req: NextRequest) {
   const requestId = getOrGenerateRequestId(req.headers);
   
-  let res = new Response(null, { status: 204 });
-  res = applyCorsHeaders(req, res);
-  res = applySecurityHeaders(res);
+  let res = new NextResponse(null, { status: 204 });
+  res = applyCorsHeaders(req, res) as NextResponse;
+  res = applySecurityHeaders(res) as NextResponse;
   res.headers.set("X-Request-Id", requestId);
   
   return res;

@@ -22,6 +22,27 @@ function safeNumber(v: unknown): number | null {
   return null;
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function pickLiquidityUsd(p: unknown): unknown {
+  if (!isRecord(p)) return undefined;
+  const liq = p["liquidity"];
+  if (typeof liq === "number") return liq;
+  if (isRecord(liq)) return liq["usd"];
+  return undefined;
+}
+
+function pickVolume24h(p: unknown): unknown {
+  if (!isRecord(p)) return undefined;
+  const vol = p["volume"];
+  if (typeof vol === "number") return vol;
+  if (isRecord(vol)) return vol["h24"];
+  // fallback comum
+  return p["volume24h"];
+}
+
 function unwrapBirdeyeData(data: unknown): Record<string, unknown> | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;
@@ -56,9 +77,9 @@ function extractDexScreenerPairs(data: unknown): Array<{ liquidity?: number; pri
   const pairs = d.pairs ?? d;
   if (!Array.isArray(pairs)) return [];
   return pairs.map((p: Record<string, unknown>) => ({
-    liquidity: safeNumber(p.liquidity?.usd ?? p.liquidity) ?? undefined,
+    liquidity: safeNumber(pickLiquidityUsd(p)) ?? undefined,
     priceUsd: safeNumber(p.priceUsd ?? p.price) ?? undefined,
-    volume: safeNumber(p.volume?.h24 ?? p.volume24h) ?? undefined,
+    volume: safeNumber(pickVolume24h(p)) ?? undefined,
   }));
 }
 

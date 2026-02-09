@@ -5,7 +5,7 @@
  * Includes comprehensive input sanitization and validation
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { checkLaunchpadEnabled } from "@/lib/launchpad/middleware";
 import { getOrGenerateRequestId, applyCorsHeaders, applyNoStore, applySecurityHeaders, SafeLogger } from "@/lib/security";
 import { SubmitRequestSchema, createErrorResponse, createSuccessResponse, LaunchpadErrorCodes } from "@/lib/launchpad/security-schemas";
@@ -50,10 +50,10 @@ export async function POST(req: NextRequest) {
         413
       );
       
-      let res = Response.json(errorResponse.response, { status: errorResponse.status });
-      res = applyCorsHeaders(req, res);
-      res = applyNoStore(res);  
-      res = applySecurityHeaders(res);
+      let res = NextResponse.json(errorResponse.response, { status: errorResponse.status });
+      res = applyCorsHeaders(req, res) as NextResponse;
+      res = applyNoStore(res) as NextResponse;  
+      res = applySecurityHeaders(res) as NextResponse;
       res.headers.set("X-Request-Id", requestId);
       return res;
     }
@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
         400
       );
       
-      let res = Response.json(errorResponse.response, { status: errorResponse.status });
-      res = applyCorsHeaders(req, res);
-      res = applyNoStore(res);
-      res = applySecurityHeaders(res);  
+      let res = NextResponse.json(errorResponse.response, { status: errorResponse.status });
+      res = applyCorsHeaders(req, res) as NextResponse;
+      res = applyNoStore(res) as NextResponse;
+      res = applySecurityHeaders(res) as NextResponse;  
       res.headers.set("X-Request-Id", requestId);
       return res;
     }
@@ -111,10 +111,10 @@ export async function POST(req: NextRequest) {
         400
       );
       
-      let res = Response.json(errorResponse.response, { status: errorResponse.status });
-      res = applyCorsHeaders(req, res);
-      res = applyNoStore(res);
-      res = applySecurityHeaders(res);
+      let res = NextResponse.json(errorResponse.response, { status: errorResponse.status });
+      res = applyCorsHeaders(req, res) as NextResponse;
+      res = applyNoStore(res) as NextResponse;
+      res = applySecurityHeaders(res) as NextResponse;
       res.headers.set("X-Request-Id", requestId);
       return res;
     }
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
     const response = createSuccessResponse(roadmapResponse, requestId, endpoint);
     
-    let res = Response.json(response, { 
+    let res = NextResponse.json(response, { 
       status: 501, // Not Implemented
       headers: {
         "X-Implementation-Status": "PR0-Foundation",
@@ -167,9 +167,9 @@ export async function POST(req: NextRequest) {
       }
     });
     
-    res = applyCorsHeaders(req, res);
-    res = applyNoStore(res);
-    res = applySecurityHeaders(res);
+    res = applyCorsHeaders(req, res) as NextResponse;
+    res = applyNoStore(res) as NextResponse;
+    res = applySecurityHeaders(res) as NextResponse;
     res.headers.set("X-Request-Id", requestId);
     
     SafeLogger.info("Submit request completed (not implemented)", { 
@@ -195,10 +195,10 @@ export async function POST(req: NextRequest) {
       500
     );
     
-    let res = Response.json(errorResponse.response, { status: errorResponse.status });
-    res = applyCorsHeaders(req, res);
-    res = applyNoStore(res);
-    res = applySecurityHeaders(res);
+    let res = NextResponse.json(errorResponse.response, { status: errorResponse.status });
+    res = applyCorsHeaders(req, res) as NextResponse;
+    res = applyNoStore(res) as NextResponse;
+    res = applySecurityHeaders(res) as NextResponse;
     res.headers.set("X-Request-Id", requestId);
     return res;
   }
@@ -210,9 +210,9 @@ export async function POST(req: NextRequest) {
 export async function OPTIONS(req: NextRequest) {
   const requestId = getOrGenerateRequestId(req.headers);
   
-  let res = new Response(null, { status: 204 });
-  res = applyCorsHeaders(req, res);
-  res = applySecurityHeaders(res);
+  let res = new NextResponse(null, { status: 204 });
+  res = applyCorsHeaders(req, res) as NextResponse;
+  res = applySecurityHeaders(res) as NextResponse;
   res.headers.set("X-Request-Id", requestId);
   
   return res;
@@ -232,10 +232,10 @@ export async function GET(req: NextRequest) {
     405
   );
   
-  let res = Response.json(errorResponse.response, { status: errorResponse.status });
-  res = applyCorsHeaders(req, res);
-  res = applyNoStore(res);
-  res = applySecurityHeaders(res);
+  let res = NextResponse.json(errorResponse.response, { status: errorResponse.status });
+  res = applyCorsHeaders(req, res) as NextResponse;
+  res = applyNoStore(res) as NextResponse;
+  res = applySecurityHeaders(res) as NextResponse;
   res.headers.set("X-Request-Id", requestId);
   res.headers.set("Allow", "POST, OPTIONS");
   

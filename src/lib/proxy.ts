@@ -2,6 +2,8 @@
  * Generic proxy helper for forwarding requests to Bags Shield API backend
  */
 
+import { NextResponse } from "next/server";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,7 @@ export async function forwardToBackend(
   const base = process.env.BAGS_SHIELD_API_BASE;
   
   if (!base) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: {
@@ -38,7 +40,7 @@ export async function forwardToBackend(
     try {
       body = await req.text();
     } catch (error) {
-      return Response.json(
+      return NextResponse.json(
         {
           success: false,
           error: {
@@ -85,7 +87,7 @@ export async function forwardToBackend(
     }
 
     // Return JSON response
-    return Response.json(json, {
+    return NextResponse.json(json, {
       status: response.status,
       headers: {
         "content-type": "application/json",
@@ -97,7 +99,7 @@ export async function forwardToBackend(
       },
     });
   } catch (error) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: {

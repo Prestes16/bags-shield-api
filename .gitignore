@@ -87,3 +87,11 @@ Thumbs.db
 .idea/
 # Legacy nested app folder (kept locally; not versioned in this repo)
 /app/
+node_modules/
+**/node_modules/
+site/node_modules/
+site/build/
+site/.docusaurus/
+site/.cache/
+site/.turbo/
+site/.next/

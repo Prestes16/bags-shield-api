@@ -48,6 +48,9 @@
     "dist",
     "logs",
     "backups-*",
-    ".backups"
+    ".backups",
+    ".next",
+    "site",
+    "site/**"
   ]
 }
