@@ -22,7 +22,7 @@
     "lint:fix": "eslint 'src/**/*.{ts,js}' --fix",
     "check:secrets": "bash scripts/check-secrets.sh",
     "precommit": "lint-staged",
-    "prepare": "husky install"
+    "prepare": "node -e \"if (process.env.CI || process.env.VERCEL) process.exit(0); try { require('child_process').execSync('npx --yes husky install', { stdio: 'inherit' }); } catch (e) { process.exit(0); }\""
   },
   "engines": {
     "node": "20.x"
