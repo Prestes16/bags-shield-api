@@ -1,6 +1,6 @@
 {
   "name": "bags-shield-app",
-  "version": "1.0.0",
+  "version": "0.2.0-mock",
   "description": "Frontend App for Bags Shield project on Vercel",
   "scripts": {
     "dev": "next dev",
