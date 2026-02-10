@@ -1,5 +1,5 @@
 /**
- * POST /api/swap ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Jupiter swapTransaction builder (server returns tx base64; wallet signs+sends).
+ * POST /api/swap ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Jupiter swapTransaction builder (server returns tx base64; wallet signs+sends).
  * Body: { quoteResponse, userPublicKey, wrapAndUnwrapSol?, dynamicComputeUnitLimit?, prioritizationFeeLamports?, asLegacyTransaction? }
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -29,12 +29,12 @@ export async function OPTIONS(req: NextRequest) {
 
 const RATE_LIMIT = { windowMs: 60_000, max: 15 };
 
-// ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œSwitchÃƒÂ¢Ã¢â€šÂ¬Ã‚Â de seguranÃƒÆ’Ã‚Â§a: sÃƒÆ’Ã‚Â³ liga trade real quando vocÃƒÆ’Ã‚Âª setar env no Vercel
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“SwitchÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â de seguranÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a: sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ liga trade real quando vocÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âª setar env no Vercel
 const TRADING_ENABLED = (process.env.BETA_TRADING_ENABLED ?? '').trim().toLowerCase() === 'true';
 
 // Guardrail opcional (super recomendado no beta):
-// limite mÃƒÆ’Ã‚Â¡ximo de inAmount (em unidades mÃƒÆ’Ã‚Â­nimas do token).
-// default bem conservador pra evitar ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œoopsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â.
+// limite mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ximo de inAmount (em unidades mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nimas do token).
+// default bem conservador pra evitar ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“oopsÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â.
 const MAX_IN_AMOUNT = BigInt((process.env.SWAP_MAX_IN_AMOUNT ?? '50000000').trim()); // ex: 0.05 SOL em lamports
 const MAX_SLIPPAGE_BPS = Number((process.env.SWAP_MAX_SLIPPAGE_BPS ?? '500').trim()); // 5%
 
@@ -214,8 +214,20 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
-  const res = NextResponse.json(
-    { success: true, response: result.data, meta: { requestId, latencyMs: result.latencyMs, source: 'jupiter' } },
+    const simErr = (result.data as any)?.simulationError?.error;
+  const warning = simErr
+    ? {
+        code: /no record of a prior credit/i.test(String(simErr))
+          ? 'INSUFFICIENT_SOL_FOR_SIMULATION'
+          : /rpc failed/i.test(String(simErr))
+          ? 'RPC_SIMULATION_FAILED'
+          : 'JUPITER_SIMULATION_ERROR',
+        message: String(simErr),
+      }
+    : undefined;
+
+
+  const res = NextResponse.json({ success: true, response: result.data, warning, meta: { requestId, latencyMs: result.latencyMs, source: 'jupiter' } },
     { status: 200, headers: { 'X-Request-Id': requestId, 'Cache-Control': 'no-store' } },
   );
   applyCorsHeaders(req, res);
