@@ -1,5 +1,5 @@
 /**
- * POST /api/swap Ã¢â‚¬â€ Jupiter swapTransaction builder (server returns tx base64; wallet signs+sends).
+ * POST /api/swap ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Jupiter swapTransaction builder (server returns tx base64; wallet signs+sends).
  * Body: { quoteResponse, userPublicKey, wrapAndUnwrapSol?, dynamicComputeUnitLimit?, prioritizationFeeLamports?, asLegacyTransaction? }
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -29,12 +29,12 @@ export async function OPTIONS(req: NextRequest) {
 
 const RATE_LIMIT = { windowMs: 60_000, max: 15 };
 
-// Ã¢â‚¬Å“SwitchÃ¢â‚¬Â de seguranÃƒÂ§a: sÃƒÂ³ liga trade real quando vocÃƒÂª setar env no Vercel
+// ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œSwitchÃƒÂ¢Ã¢â€šÂ¬Ã‚Â de seguranÃƒÆ’Ã‚Â§a: sÃƒÆ’Ã‚Â³ liga trade real quando vocÃƒÆ’Ã‚Âª setar env no Vercel
 const TRADING_ENABLED = (process.env.BETA_TRADING_ENABLED ?? '').trim().toLowerCase() === 'true';
 
 // Guardrail opcional (super recomendado no beta):
-// limite mÃƒÂ¡ximo de inAmount (em unidades mÃƒÂ­nimas do token).
-// default bem conservador pra evitar Ã¢â‚¬Å“oopsÃ¢â‚¬Â.
+// limite mÃƒÆ’Ã‚Â¡ximo de inAmount (em unidades mÃƒÆ’Ã‚Â­nimas do token).
+// default bem conservador pra evitar ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œoopsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â.
 const MAX_IN_AMOUNT = BigInt((process.env.SWAP_MAX_IN_AMOUNT ?? '50000000').trim()); // ex: 0.05 SOL em lamports
 const MAX_SLIPPAGE_BPS = Number((process.env.SWAP_MAX_SLIPPAGE_BPS ?? '500').trim()); // 5%
 
