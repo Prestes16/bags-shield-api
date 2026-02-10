@@ -9,7 +9,7 @@ import { cacheGet, cacheSet, cacheKey, getTtlMs } from './cache';
 
 const PROVIDER = 'jupiter';
 const CB_KEY = 'jupiter:quote';
-const BASE = 'https://quote-api.jup.ag/v6';
+const BASE = 'https://lite-api.jup.ag/swap/v1';
 
 export interface JupiterQuoteParams {
   inputMint: string;
