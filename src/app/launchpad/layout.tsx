@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Layout for Launchpad pages — Server Component
  * Provides consistent structure and navigation
  */
@@ -6,6 +6,9 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ConnectWalletButton } from "@/components/solana/ConnectWalletButton";
+import { SwapPanel } from "@/components/solana/SwapPanel";
+import { SwapTestButton } from "@/components/solana/SwapTestButton";
 import { LaunchpadProviders } from "./providers";
 
 export default function LaunchpadLayout({
@@ -27,6 +30,8 @@ export default function LaunchpadLayout({
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <ConnectWalletButton />
+              <SwapTestButton />
               <Link href="/launchpad">
                 <Button variant="ghost" size="sm">
                   Home
@@ -51,6 +56,12 @@ export default function LaunchpadLayout({
           </div>
         </div>
       </nav>
+
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex justify-end">
+          <SwapPanel />
+        </div>
+      </div>
 
       {/* Main Content */}
       <main>
