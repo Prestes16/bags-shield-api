@@ -1,4 +1,7 @@
-﻿import type { ReactNode } from "react";
+import './globals.css';
+import '@solana/wallet-adapter-react-ui/styles.css';
+
+import type { ReactNode } from "react";
 
 export const metadata = {
   title: "Bags Shield",
