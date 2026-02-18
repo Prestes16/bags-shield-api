@@ -67,7 +67,7 @@
     "newman": "^6.2.1",
     "postcss": "^8.4.41",
     "prettier": "^3.8.1",
-    "tailwindcss": "^3.4.19",
+    "tailwindcss": "^4.2.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.5.3"
   },
