@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Scan upstreams: Helius, DexScreener, Birdeye, Meteora.
  * Todos tratados por igual: Promise.allSettled, timeouts, nenhum quebra o outro.
  */
@@ -124,8 +124,11 @@ async function fetchBirdeye(mint: string): Promise<UpstreamResult> {
   }
 }
 
+const METEORA_ENABLED = (process.env.METEORA_ENABLED ?? '').trim() === '1';
+
 /** Meteora DLMM: pair/all e filtrar por token (ou token-pairs se houver) */
 async function fetchMeteora(mint: string): Promise<UpstreamResult> {
+  if (!METEORA_ENABLED) return { status: 'down' };
   const url = 'https://dlmm-api.meteora.ag/pair/all';
   const { ok, status, text } = await fetchWithTimeout(url, {
     method: 'GET',
@@ -155,7 +158,7 @@ export interface ScanUpstreamsResult {
 
 /**
  * Chama Helius, DexScreener, Birdeye e Meteora em paralelo.
- * Promise.allSettled garante que falha de um não quebra os outros.
+ * Promise.allSettled garante que falha de um nÃ£o quebra os outros.
  */
 export async function fetchAllUpstreams(mint: string): Promise<ScanUpstreamsResult> {
   const [heliusR, dexscreenerR, birdeyeR, meteoraR] = await Promise.allSettled([
@@ -170,7 +173,7 @@ export async function fetchAllUpstreams(mint: string): Promise<ScanUpstreamsResu
   const birdeye = birdeyeR.status === 'fulfilled' ? birdeyeR.value : { status: 'down' as const };
   const meteora = meteoraR.status === 'fulfilled' ? meteoraR.value : { status: 'down' as const };
 
-  const degraded = dexscreener.status !== 'ok' || birdeye.status !== 'ok' || meteora.status !== 'ok';
+  const degraded = dexscreener.status !== 'ok' || birdeye.status !== 'ok';
 
   return { helius, dexscreener, birdeye, meteora, degraded };
 }
@@ -180,6 +183,10 @@ export function formatUpstreamsHeader(r: ScanUpstreamsResult): string {
   const h = r.helius.status;
   const d = r.dexscreener.status === 'ok' ? 'ok' : 'down';
   const b = r.birdeye.status === 'ok' ? 'ok' : 'down';
-  const m = r.meteora.status === 'ok' ? 'ok' : 'down';
+  const m = !METEORA_ENABLED ? 'off' : (r.meteora.status === 'ok' ? 'ok' : 'down');
   return `helius=${h}; dexscreener=${d}; birdeye=${b}; meteora=${m}`;
 }
+
+
+
+

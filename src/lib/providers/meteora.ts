@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Meteora provider: DLMM pair/all, filter by mint. Uses fetchGuard + circuit breaker + cache.
  */
 
@@ -9,6 +9,7 @@ import { cacheGet, cacheSet, cacheKey, getTtlMs } from './cache';
 const PROVIDER = 'meteora';
 const CB_KEY = 'meteora:pair_all';
 const BASE = 'https://dlmm-api.meteora.ag';
+const ENABLED = (process.env.METEORA_ENABLED ?? '').trim() === '1';
 
 export interface MeteoraSourceResult {
   ok: boolean;
@@ -19,6 +20,7 @@ export interface MeteoraSourceResult {
 }
 
 export async function fetchMeteoraPairsForMint(mint: string): Promise<MeteoraSourceResult> {
+  if (!ENABLED) return { ok: false, latencyMs: 0, error: 'Disabled', quality: ['DISABLED'] };
   const cacheKeyStr = cacheKey(PROVIDER, 'pair_all', { mint: 'all' });
   const ttl = getTtlMs('medium');
 
@@ -60,3 +62,5 @@ export async function fetchMeteoraPairsForMint(mint: string): Promise<MeteoraSou
     quality: result.timedOut ? ['TIMEOUT'] : ['DEGRADED'],
   };
 }
+
+
