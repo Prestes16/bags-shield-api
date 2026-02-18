@@ -395,11 +395,13 @@ function heliusNotConfigured(requestId: string, req: NextRequest): NextResponse 
   return res;
 }
 
+function isSourceDisabled(s: SourceMetaItem): boolean {
+  return s.quality?.includes('DISABLED') === true || (s.error?.toLowerCase?.() ?? '').includes('disabled');
+}
+
 function formatUpstreamsHeaderFromSources(sources: SourceMetaItem[]): string {
   const parts = sources.map((s) => {
-    const isDisabled =
-      s.quality?.includes('DISABLED') || (s.error?.toLowerCase?.() ?? '').includes('disabled');
-    if (isDisabled) return `${s.name}=off`;
+    if (isSourceDisabled(s)) return `${s.name}=off`;
     return `${s.name}=${s.ok ? 'ok' : 'down'}`;
   });
   return parts.join('; ') || 'helius=ok';
@@ -564,6 +566,10 @@ async function runLocalScan(
   const sourcesUsed = [...(signals.market.sourcesUsed ?? [])];
   if (token && !sourcesUsed.includes('helius')) sourcesUsed.unshift('helius');
 
+  const enabledSources = sources.filter((s) => !isSourceDisabled(s));
+  const coverageSourcesOk = enabledSources.filter((s) => s.ok).length;
+  const coverageSourcesTotal = enabledSources.length;
+
   const responseData = {
     success: true,
     response: {
@@ -581,7 +587,7 @@ async function runLocalScan(
       },
       market: {
         price: signals.market.priceUsd ?? null,
-        liquidity: signals.market.liquidityUsd ?? null,
+        liquidity: liquidityEvidence?.liquidityUsd ?? signals.market.liquidityUsd ?? null,
         volume24h: signals.market.volume24hUsd ?? null,
         marketCap,
         sourcesUsed,
@@ -605,9 +611,9 @@ async function runLocalScan(
       requestId,
       sources,
       coverage: {
-        sourcesOk: signals.sourcesOk,
-        sourcesTotal: signals.sourcesTotal,
-        degraded: signals.sourcesTotal > signals.sourcesOk,
+        sourcesOk: coverageSourcesOk,
+        sourcesTotal: coverageSourcesTotal,
+        degraded: coverageSourcesOk < coverageSourcesTotal,
       },
       timingMs: {
         total: totalMs,
