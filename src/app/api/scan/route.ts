@@ -396,8 +396,89 @@ function heliusNotConfigured(requestId: string, req: NextRequest): NextResponse 
 }
 
 function formatUpstreamsHeaderFromSources(sources: SourceMetaItem[]): string {
-  const parts = sources.map((s) => `${s.name}=${s.ok ? 'ok' : 'down'}`);
+  const parts = sources.map((s) => {
+    const isDisabled =
+      s.quality?.includes('DISABLED') || (s.error?.toLowerCase?.() ?? '').includes('disabled');
+    if (isDisabled) return `${s.name}=off`;
+    return `${s.name}=${s.ok ? 'ok' : 'down'}`;
+  });
   return parts.join('; ') || 'helius=ok';
+}
+
+/** Extracts token info from Helius getAsset result (optional chaining, never crashes). */
+function extractTokenFromHelius(heliusData: unknown): {
+  name?: string;
+  symbol?: string;
+  imageUrl?: string;
+  decimals?: number;
+  source: 'helius';
+} | null {
+  try {
+    const res = (heliusData as { result?: unknown })?.result;
+    if (!res || typeof res !== 'object') return null;
+    const r = res as Record<string, unknown>;
+    const content = r.content as { metadata?: Record<string, unknown>; files?: Array<{ uri?: string }>; links?: { image?: string } } | undefined;
+    const meta = content?.metadata;
+    const name = typeof meta?.name === 'string' ? meta.name : undefined;
+    const symbol = typeof meta?.symbol === 'string' ? meta.symbol : undefined;
+    const decimals = typeof meta?.decimals === 'number' ? meta.decimals : undefined;
+    const imageUrl =
+      (content?.files?.[0] as { uri?: string })?.uri ??
+      (content?.links as { image?: string })?.image ??
+      undefined;
+    if (!name && !symbol) return null;
+    return { name: name ?? undefined, symbol: symbol ?? undefined, imageUrl, decimals, source: 'helius' as const };
+  } catch {
+    return null;
+  }
+}
+
+/** Extracts marketCap from Birdeye token_overview (tolerant to mc, marketCap, fdv). */
+function extractMarketCapFromBirdeye(birdeyeData: unknown): number | null {
+  try {
+    const d = birdeyeData as Record<string, unknown> | undefined;
+    if (!d || typeof d !== 'object') return null;
+    const inner = (d.data && typeof d.data === 'object' ? d.data : d) as Record<string, unknown>;
+    const v = inner?.mc ?? inner?.marketCap ?? inner?.market_cap ?? inner?.fdv ?? inner?.fully_diluted_valuation;
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string') {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Picks the DexScreener pair with highest USD liquidity. */
+function extractLiquidityEvidenceFromDexScreener(dexscreenerData: unknown): {
+  dexId: string;
+  pairAddress: string;
+  liquidityUsd: number;
+} | null {
+  try {
+    const d = dexscreenerData as Record<string, unknown> | undefined;
+    if (!d || typeof d !== 'object') return null;
+    const pairs = (d.pairs ?? d) as unknown[];
+    if (!Array.isArray(pairs)) return null;
+    let best: { dexId: string; pairAddress: string; liquidityUsd: number } | null = null;
+    for (const p of pairs) {
+      const pair = p as Record<string, unknown>;
+      const liq = pair.liquidity;
+      const usd = typeof liq === 'number' ? liq : (liq && typeof liq === 'object' && 'usd' in liq) ? (liq as { usd?: number }).usd : undefined;
+      const liquidityUsd = typeof usd === 'number' ? usd : typeof usd === 'string' ? parseFloat(usd) : NaN;
+      if (!Number.isFinite(liquidityUsd) || liquidityUsd <= 0) continue;
+      const dexId = String(pair.dexId ?? pair.dex_id ?? '');
+      const pairAddress = String(pair.pairAddress ?? pair.pair_address ?? '');
+      if (!best || liquidityUsd > best.liquidityUsd) {
+        best = { dexId, pairAddress, liquidityUsd };
+      }
+    }
+    return best;
+  } catch {
+    return null;
+  }
 }
 
 async function runLocalScan(
@@ -477,10 +558,17 @@ async function runLocalScan(
   const computeMs = Date.now() - computeStart;
   const totalMs = Date.now() - fetchStart;
 
+  const token = extractTokenFromHelius(heliusR.data);
+  const marketCap = birdeyeR.ok ? extractMarketCapFromBirdeye(birdeyeR.data) : null;
+  const liquidityEvidence = dexscreenerR.ok ? extractLiquidityEvidenceFromDexScreener(dexscreenerR.data) : null;
+  const sourcesUsed = [...(signals.market.sourcesUsed ?? [])];
+  if (token && !sourcesUsed.includes('helius')) sourcesUsed.unshift('helius');
+
   const responseData = {
     success: true,
     response: {
       mint,
+      token: token ?? undefined,
       score: engineResult.score,
       badge: engineResult.badge,
       confidence: engineResult.confidence,
@@ -490,15 +578,14 @@ async function runLocalScan(
         sourcesOk: signals.sourcesOk,
         sourcesTotal: signals.sourcesTotal,
         mintActive: signals.mintActive,
-        lpLockSeconds: signals.lpLockSeconds,
-        top10ConcentrationPercent: signals.top10ConcentrationPercent,
-        sellTaxBps: signals.sellTaxBps,
       },
       market: {
-        price: signals.market.priceUsd ?? 0,
-        liquidity: signals.market.liquidityUsd ?? 0,
-        volume24h: signals.market.volume24hUsd ?? 0,
-        sourcesUsed: signals.market.sourcesUsed,
+        price: signals.market.priceUsd ?? null,
+        liquidity: signals.market.liquidityUsd ?? null,
+        volume24h: signals.market.volume24hUsd ?? null,
+        marketCap,
+        sourcesUsed,
+        liquidityEvidence,
       },
       pools: engineResult.signals.pools.map((p) => ({
         type: p.type,
@@ -517,6 +604,11 @@ async function runLocalScan(
     meta: {
       requestId,
       sources,
+      coverage: {
+        sourcesOk: signals.sourcesOk,
+        sourcesTotal: signals.sourcesTotal,
+        degraded: signals.sourcesTotal > signals.sourcesOk,
+      },
       timingMs: {
         total: totalMs,
         fetch: fetchMs,
