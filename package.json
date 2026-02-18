@@ -52,7 +52,7 @@
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.24.1",
-    "@types/node": "20.14.9",
+    "@types/node": "25.2.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^8.52.0",
