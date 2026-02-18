@@ -10,6 +10,7 @@ export { fetchBirdeyeTokenOverview, type BirdeyeSourceResult } from './birdeye';
 export { fetchDexScreenerTokenPairs, type DexScreenerSourceResult } from './dexscreener';
 export { fetchMeteoraPairsForMint, type MeteoraSourceResult } from './meteora';
 export { fetchJupiterQuote, type JupiterQuoteParams, type JupiterQuoteResult } from './jupiter';
+export { fetchJupiterSwap, type JupiterSwapParams, type JupiterSwapResult } from './jupiterSwap';
 
 export type SourceMetaItem = {
   name: string;

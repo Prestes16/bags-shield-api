@@ -1,12 +1,12 @@
-import './globals.css';
+﻿import './globals.css';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 import type { ReactNode } from "react";
-import { WalletProviders } from "@/components/solana/WalletProviders";
+import WalletProviders from "@/components/solana/WalletProviders";
 
 export const metadata = {
   title: "Bags Shield",
-  description: "Bags Shield Ã¢â‚¬â€ security & launchpad tools",
+  description: "Bags Shield ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â security & launchpad tools",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -18,3 +18,4 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     </html>
   );
 }
+
