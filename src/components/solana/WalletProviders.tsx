@@ -34,7 +34,7 @@ export default function WalletProviders({ children }: Props) {
     const appIdentity = {
       name: "Bags Shield",
       uri: origin,
-      icon: `${origin}/icons/icon-192.png`,
+      icon: "icons/icon-192.png", // relativo ao uri (spec Solana Mobile)
     };
 
     const mobile = new SolanaMobileWalletAdapter({
