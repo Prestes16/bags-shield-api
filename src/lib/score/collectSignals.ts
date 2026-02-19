@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Build ScoreSignals from provider results (Helius, Birdeye, DexScreener, Meteora).
  * Normalizes and cross-checks; sets dataConflict when price/volume diverge.
  */
@@ -10,8 +10,8 @@ import type { BirdeyeSourceResult } from '@/lib/providers/birdeye';
 import type { DexScreenerSourceResult } from '@/lib/providers/dexscreener';
 import type { MeteoraSourceResult } from '@/lib/providers/meteora';
 
-const PRICE_DIVERGENCE_THRESHOLD = 0.25; // 25% diff → conflict
-const VOLUME_DIVERGENCE_THRESHOLD = 0.5; // 50% diff → conflict
+const PRICE_DIVERGENCE_THRESHOLD = 0.25; // 25% diff â†’ conflict
+const VOLUME_DIVERGENCE_THRESHOLD = 0.5; // 50% diff â†’ conflict
 
 function safeNumber(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -161,13 +161,16 @@ export function collectSignals(mint: string, results: ProviderResults): ScoreSig
     signals.evidence.dexscreener = results.dexscreener.data;
   }
   signals.sourcesTotal++;
+  const meteoraDisabled = (Array.isArray(results.meteora.quality) && results.meteora.quality.includes('DISABLED')) || /disabled/i.test(String(results.meteora.error ?? ''));
 
-  if (results.meteora.ok && results.meteora.data) {
-    sourcesOk++;
-    sources.push('meteora');
-    signals.evidence.meteora = results.meteora.data;
+  if (!meteoraDisabled) {
+    if (results.meteora.ok && results.meteora.data) {
+      sourcesOk++;
+      sources.push('meteora');
+      signals.evidence.meteora = results.meteora.data;
+    }
+    signals.sourcesTotal++;
   }
-  signals.sourcesTotal++;
 
   signals.sourcesOk = sourcesOk;
   signals.market.sourcesUsed = sources;
@@ -221,3 +224,4 @@ export function collectSignals(mint: string, results: ProviderResults): ScoreSig
 
   return signals;
 }
+
