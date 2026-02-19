@@ -113,7 +113,7 @@ export default function NetworkStatusScreen() {
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
                     if (target.parentElement) {
-                      target.parentElement.innerHTML = "🛡️";
+                      target.parentElement.textContent = "🛡️";
                     }
                   }}
                 />
@@ -152,7 +152,10 @@ export default function NetworkStatusScreen() {
                         const target = e.target as HTMLImageElement;
                         target.style.display = "none";
                         if (target.parentElement) {
-                          target.parentElement.innerHTML = '<span class="text-2xl">🛡️</span>';
+                          const span = document.createElement("span");
+                          span.className = "text-2xl";
+                          span.textContent = "🛡️";
+                          target.parentElement.replaceChildren(span);
                         }
                       }}
                     />

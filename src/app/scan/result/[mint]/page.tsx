@@ -45,7 +45,9 @@ interface ScanData {
 }
 
 function isSourceDisabled(s: SourceMetaItem): boolean {
-  return s.quality?.includes("DISABLED") === true || (s.error?.toLowerCase?.() ?? "").includes("disabled");
+  const q = s.quality;
+  const hasDisabled = Array.isArray(q) && q.includes("DISABLED");
+  return hasDisabled || (s.error?.toLowerCase?.() ?? "").includes("disabled");
 }
 
 function getSourceStatus(s: SourceMetaItem): "OK" | "OFF" | "DOWN" {
@@ -108,13 +110,18 @@ export default function ScanResultPage() {
     }
     const ctrl = new AbortController();
     fetch(`/api/scan?mint=${encodeURIComponent(mint)}`, { cache: "no-store", signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d: ScanData) => {
-        if (!d.success || !d.response) setError("Scan falhou");
+      .then(async (r) => {
+        if (!r.ok) {
+          setError("Scan falhou");
+          return null;
+        }
+        const d = await r.json().catch(() => null) as ScanData | null;
+        if (!d?.success || !d?.response) setError("Scan falhou");
         else setData(d);
+        return d;
       })
       .catch((e) => {
-        if (e.name !== "AbortError") setError("Erro ao buscar scan");
+        if ((e as { name?: string })?.name !== "AbortError") setError("Erro ao buscar scan");
       })
       .finally(() => setLoading(false));
     return () => ctrl.abort();
@@ -156,7 +163,7 @@ export default function ScanResultPage() {
   const token = resp.token;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6 pb-24 md:pb-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <Button onClick={() => router.back()} variant="outline" size="sm">
           ← Voltar
@@ -164,13 +171,13 @@ export default function ScanResultPage() {
 
         {/* Token Header */}
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-700">
-          {token && (token.name || token.symbol) ? (
+          {token && (String(token.name ?? "").trim() || String(token.symbol ?? "").trim() || (token.imageUrl ?? "")) ? (
             <div className="flex items-center gap-4">
-              {token.imageUrl && (
+              {token.imageUrl ? (
                 <div className="relative w-12 h-12 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex-shrink-0">
                   <Image
                     src={token.imageUrl}
-                    alt={token.name || token.symbol || ""}
+                    alt={token.name ?? token.symbol ?? ""}
                     fill
                     className="object-cover"
                     unoptimized
@@ -179,15 +186,21 @@ export default function ScanResultPage() {
                     }}
                   />
                 </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 text-slate-500 dark:text-slate-400 text-xl">
+                  ?
+                </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-lg text-slate-900 dark:text-slate-100">{token.name || "—"}</span>
-                  {token.symbol && (
+                  <span className="font-bold text-xl text-slate-900 dark:text-slate-100">
+                    {(token.name != null && String(token.name).trim()) ? token.name : "—"}
+                  </span>
+                  {(token.symbol != null && String(token.symbol).trim()) ? (
                     <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium">
                       {token.symbol}
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="font-mono text-sm text-slate-500 dark:text-slate-400">{shortMint(resp.mint)}</span>
@@ -203,16 +216,24 @@ export default function ScanResultPage() {
               </div>
             </div>
           ) : (
-            <div>
-              <p className="font-mono text-sm text-slate-900 dark:text-slate-100 break-all">{resp.mint}</p>
-              <button
-                type="button"
-                onClick={copyMint}
-                className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline mt-1"
-                aria-label="Copiar mint"
-              >
-                Copiar
-              </button>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 text-slate-500 dark:text-slate-400 text-xl">
+                ?
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-xl text-slate-900 dark:text-slate-100">Token não identificado</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-mono text-sm text-slate-500 dark:text-slate-400">{shortMint(resp.mint)}</span>
+                  <button
+                    type="button"
+                    onClick={copyMint}
+                    className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline"
+                    aria-label="Copiar mint"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -234,10 +255,10 @@ export default function ScanResultPage() {
               {resp.badge} {resp.score}
             </span>
           </div>
-          {resp.reasons.filter((r) => !(r.code === "DEGRADED_SOURCES" && !degraded)).length > 0 && (
+          {(resp.reasons ?? []).filter((r) => !(r.code === "DEGRADED_SOURCES" && !degraded)).length > 0 && (
             <div className="space-y-2 mt-4">
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Verificações</p>
-              {resp.reasons
+              {(resp.reasons ?? [])
                 .filter((r) => !(r.code === "DEGRADED_SOURCES" && !degraded))
                 .map((r, i) => (
                 <div
@@ -346,8 +367,9 @@ export default function ScanResultPage() {
           <summary className="p-3 cursor-pointer text-sm text-slate-600 dark:text-slate-400">
             Detalhes técnicos
           </summary>
-          <div className="p-3 pt-0 text-xs font-mono text-slate-500 dark:text-slate-500 break-all">
-            requestId: {meta?.requestId ?? "—"}
+          <div className="p-3 pt-0 text-xs font-mono text-slate-500 dark:text-slate-500 space-y-1 break-all">
+            <p>requestId: {meta?.requestId ?? "—"}</p>
+            <p>mint: {resp.mint}</p>
           </div>
         </details>
       </div>

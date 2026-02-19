@@ -19,6 +19,8 @@ import {
 
 type Props = { children: React.ReactNode };
 
+const FALLBACK_ORIGIN = "https://app.bagsshield.org";
+
 export default function WalletProviders({ children }: Props) {
   const network = WalletAdapterNetwork.Mainnet;
 
@@ -27,7 +29,8 @@ export default function WalletProviders({ children }: Props) {
     clusterApiUrl("mainnet-beta");
 
   const wallets = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://app.bagsshield.org";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
     const appIdentity = {
       name: "Bags Shield",
       uri: origin,
@@ -50,9 +53,12 @@ export default function WalletProviders({ children }: Props) {
     ];
   }, []);
 
+  const isAndroid =
+    typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect={!isAndroid}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

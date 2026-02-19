@@ -60,7 +60,10 @@ export function ScanLoadingRadar({ mintAddress }: ScanLoadingRadarProps) {
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
                     if (target.parentElement) {
-                      target.parentElement.innerHTML = '<span class="text-4xl">🛡️</span>';
+                      const span = document.createElement("span");
+                      span.className = "text-4xl";
+                      span.textContent = "🛡️";
+                      target.parentElement.replaceChildren(span);
                     }
                   }}
                 />

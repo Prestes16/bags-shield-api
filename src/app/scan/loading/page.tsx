@@ -12,7 +12,7 @@ function ScanLoadingContent() {
 
 export default function ScanLoadingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">Carregando…</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">Carregando…</div>}>
       <ScanLoadingContent />
     </Suspense>
   );

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -333,7 +333,7 @@ export default function CreatePage() {
                     type="number"
                     value={initialSupply}
                     onChange={(e) =>
-                      setInitialSupply(Math.max(0, parseInt(e.target.value) || 0))
+                      setInitialSupply(Math.max(0, parseInt(e.target.value, 10) || 0))
                     }
                     min={0}
                     placeholder={t("launchpad_step2_initialSupplyPlaceholder")}
@@ -413,7 +413,7 @@ export default function CreatePage() {
                         onChange={(e) =>
                           setSafetyConfig({
                             ...safetyConfig,
-                            lpLockMonths: parseInt(e.target.value),
+                            lpLockMonths: Math.max(0, parseInt(e.target.value, 10) || 0),
                           })
                         }
                         className="mt-2 w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-200 text-sm"
@@ -462,11 +462,12 @@ export default function CreatePage() {
                       <input
                         type="number"
                         value={tipLamports || ""}
-                        onChange={(e) =>
-                          setTipLamports(
-                            e.target.value ? parseInt(e.target.value) : undefined
-                          )
-                        }
+                        onChange={(e) => {
+                          const v = e.target.value.trim();
+                          if (!v) { setTipLamports(undefined); return; }
+                          const n = parseInt(v, 10);
+                          setTipLamports(isNaN(n) ? undefined : n);
+                        }}
                         min={0}
                         placeholder="1000000"
                         className="w-full p-3 rounded-xl bg-slate-900/50 border border-slate-700 text-slate-100 font-mono"
