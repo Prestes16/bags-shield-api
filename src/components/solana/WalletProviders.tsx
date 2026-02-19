@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
@@ -27,10 +27,11 @@ export default function WalletProviders({ children }: Props) {
     clusterApiUrl("mainnet-beta");
 
   const wallets = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://app.bagsshield.org";
     const appIdentity = {
       name: "Bags Shield",
-      uri: "https://app.bagsshield.org",
-      icon: "/icons/icon-192.png",
+      uri: origin,
+      icon: `${origin}/icons/icon-192.png`,
     };
 
     const mobile = new SolanaMobileWalletAdapter({
