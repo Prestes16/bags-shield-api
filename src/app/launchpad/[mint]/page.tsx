@@ -30,26 +30,38 @@ export default function TokenPage() {
     }
 
     // If not in history, try to get shield score from scan API
+    const ctrl = new AbortController();
     const fetchTokenData = async () => {
       try {
         const scanResponse = await fetch(`/api/scan?mint=${encodeURIComponent(mint)}`, {
           method: "GET",
-          headers: {
-            "Cache-Control": "no-store",
-          },
+          headers: { "Cache-Control": "no-store" },
+          signal: ctrl.signal,
         });
 
         if (scanResponse.ok) {
           const scanData = await scanResponse.json();
           if (scanData.response) {
-            // Create manifest from scan data
+            const resp = scanData.response;
+            const badgeToGrade = (b: string): ShieldProofManifest["grade"] => {
+              if (b === "SAFE") return "A";
+              if (b === "CAUTION") return "C";
+              if (b === "HIGH_RISK") return "E";
+              return "E";
+            };
             const manifestFromScan: ShieldProofManifest = {
               mint,
-              shieldScore: scanData.response.shieldScore || 0,
-              grade: scanData.response.grade || "E",
-              isSafe: scanData.response.isSafe !== false,
-              badges: scanData.response.badges || [],
-              summary: scanData.response.summary || "Token scan completed",
+              shieldScore: typeof resp.score === "number" ? resp.score : 0,
+              grade: badgeToGrade(resp.badge ?? "") ?? "E",
+              isSafe: (resp.badge ?? "HIGH_RISK") === "SAFE",
+              badges: (resp.reasons ?? []).map((r: { code?: string; title?: string; severity?: string }) => ({
+                key: r.code ?? "",
+                title: r.title ?? "",
+                severity: (r.severity?.toLowerCase() ?? "low") as "low" | "medium" | "high" | "critical",
+                impact: "neutral" as const,
+                tags: [],
+              })),
+              summary: resp.summary ?? (resp.reasons?.[0]?.title ?? "Token scan completed"),
               evaluatedAt: new Date().toISOString(),
               requestId: scanData.meta?.requestId || crypto.randomUUID(),
             };
@@ -59,6 +71,7 @@ export default function TokenPage() {
           }
         }
       } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
         console.warn("Failed to fetch token data:", err);
       }
 
@@ -68,6 +81,7 @@ export default function TokenPage() {
     };
 
     fetchTokenData();
+    return () => ctrl.abort();
   }, [mint]);
 
   if (loading) {
@@ -181,7 +195,7 @@ export default function TokenPage() {
                 <div className="flex flex-wrap gap-2">
                   {manifest.badges.map((badge, idx) => (
                     <div
-                      key={idx}
+                      key={badge.key || idx}
                       className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700"
                     >
                       <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">

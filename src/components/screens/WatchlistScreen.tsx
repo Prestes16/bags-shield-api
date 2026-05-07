@@ -55,10 +55,10 @@ export default function WatchlistScreen() {
 
   // Simulação de carregamento de dados da sua API Solana
   useEffect(() => {
-    const loadWatchlist = async () => {
-      setIsLoading(true);
-      // Futuramente: fetch('/api/watchlist')
-      setTimeout(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    const tid = setTimeout(() => {
+        if (cancelled) return;
         setTokens([
           {
             id: "1",
@@ -101,10 +101,12 @@ export default function WatchlistScreen() {
             hasAlert: true,
           },
         ]);
-        setIsLoading(false);
-      }, 1200);
+        if (!cancelled) setIsLoading(false);
+    }, 1200);
+    return () => {
+      cancelled = true;
+      clearTimeout(tid);
     };
-    loadWatchlist();
   }, []);
 
   const handleNavigateToScan = (mint: string) => {
@@ -155,7 +157,7 @@ export default function WatchlistScreen() {
                       const target = e.target as HTMLImageElement;
                       target.style.display = "none";
                       if (target.parentElement) {
-                        target.parentElement.innerHTML = "🪙";
+                        target.parentElement.textContent = "🪙";
                       }
                     }}
                   />

@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { loadDraft, clearDraft, addToHistory } from "@/lib/launchpad/storage";
@@ -58,6 +58,7 @@ export default function ReviewPage() {
   const [manifest, setManifest] = useState<ShieldProofManifest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<"draft" | "preflight" | "manifest">("draft");
+  const manifestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const saved = loadDraft();
@@ -67,6 +68,13 @@ export default function ReviewPage() {
     }
     setDraft(saved);
   }, [router]);
+
+  useEffect(
+    () => () => {
+      if (manifestTimeoutRef.current) clearTimeout(manifestTimeoutRef.current);
+    },
+    []
+  );
 
   const handlePreflight = async () => {
     if (!draft) return;
@@ -99,7 +107,8 @@ export default function ReviewPage() {
       setPreflightReport(normalized);
       setStep("preflight");
       if (result.response.isValid) {
-        setTimeout(() => handleGenerateManifest(), 1000);
+        if (manifestTimeoutRef.current) clearTimeout(manifestTimeoutRef.current);
+        manifestTimeoutRef.current = setTimeout(() => handleGenerateManifest(), 1000);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run preflight");

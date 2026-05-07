@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
@@ -19,6 +19,8 @@ import {
 
 type Props = { children: React.ReactNode };
 
+const FALLBACK_ORIGIN = "https://app.bagsshield.org";
+
 export default function WalletProviders({ children }: Props) {
   const network = WalletAdapterNetwork.Mainnet;
 
@@ -27,10 +29,12 @@ export default function WalletProviders({ children }: Props) {
     clusterApiUrl("mainnet-beta");
 
   const wallets = useMemo(() => {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
     const appIdentity = {
       name: "Bags Shield",
-      uri: "https://app.bagsshield.org",
-      icon: "/icons/icon-192.png",
+      uri: origin,
+      icon: "icons/icon-192.png", // relativo ao uri (spec Solana Mobile)
     };
 
     const mobile = new SolanaMobileWalletAdapter({
@@ -49,9 +53,12 @@ export default function WalletProviders({ children }: Props) {
     ];
   }, []);
 
+  const isAndroid =
+    typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect={!isAndroid}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

@@ -11,26 +11,28 @@ export default function LaunchpadPage() {
   const [mode, setMode] = useState<string>("");
 
   useEffect(() => {
-    // Check if Launchpad is enabled
+    const ctrl = new AbortController();
     fetch("/api/launchpad/preflight", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
       body: JSON.stringify({
         config: {
           launchWallet: "So11111111111111111111111111111111111111112",
-          token: {
-            name: "Test",
-            symbol: "TEST",
-            decimals: 9,
-          },
+          token: { name: "Test", symbol: "TEST", decimals: 9 },
         },
       }),
+      signal: ctrl.signal,
     })
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
+        if (!res.ok) {
+          setIsEnabled(null);
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (!data) {
+          setIsEnabled(null);
+          return;
+        }
         if (data.error?.code === "FEATURE_DISABLED") {
           setIsEnabled(false);
         } else {
@@ -38,9 +40,10 @@ export default function LaunchpadPage() {
           setMode(data.meta?.mode || "unknown");
         }
       })
-      .catch(() => {
-        setIsEnabled(null);
+      .catch((e) => {
+        if ((e as { name?: string })?.name !== "AbortError") setIsEnabled(null);
       });
+    return () => ctrl.abort();
   }, []);
 
   return (

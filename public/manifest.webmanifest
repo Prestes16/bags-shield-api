@@ -1,13 +1,17 @@
 {
   "name": "Bags Shield",
   "short_name": "Bags Shield",
-  "description": "Security gateway for Solana dApps — scan + simulate with traceable results.",
-  "start_url": "/app.html?source=twa",
+  "description": "Solana Token Intelligence — Scan, Trust Score, Launchpad & Swap.",
+  "start_url": "/app-v5.html?source=pwa",
+  "id": "/app-v5.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#4dd4ff",
-  "orientation": "portrait",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#080811",
+  "theme_color": "#080811",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "utilities"],
+  "lang": "pt-BR",
   "icons": [
     {
       "src": "/icons/icon-192.png",

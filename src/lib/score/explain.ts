@@ -74,8 +74,8 @@ export function explainReasons(signals: ScoreSignals, score: number): Reason[] {
   if (signals.dataConflict) {
     reasons.push({
       code: 'DATA_CONFLICT',
-      title: 'Data conflict',
-      detail: 'Price or volume differs significantly between sources.',
+      title: 'Conflito de dados',
+      detail: 'Preço ou volume diverge significativamente entre fontes.',
       severity: 'MEDIUM',
       evidence: {},
     });
@@ -85,8 +85,8 @@ export function explainReasons(signals: ScoreSignals, score: number): Reason[] {
   if (liqPen < 0 && signals.market.liquidityUsd != null) {
     reasons.push({
       code: 'LOW_LIQUIDITY',
-      title: 'Low liquidity',
-      detail: `Liquidity is $${signals.market.liquidityUsd.toLocaleString()}.`,
+      title: 'Liquidez baixa',
+      detail: `Liquidez é $${signals.market.liquidityUsd.toLocaleString('pt-BR')}.`,
       severity: (signals.market.liquidityUsd ?? 0) < 1_000 ? 'HIGH' : 'MEDIUM',
       evidence: { liquidityUsd: signals.market.liquidityUsd },
     });
@@ -114,8 +114,8 @@ export function explainReasons(signals: ScoreSignals, score: number): Reason[] {
   if (signals.sourcesOk < signals.sourcesTotal && signals.sourcesTotal > 0) {
     reasons.push({
       code: 'DEGRADED_SOURCES',
-      title: 'Incomplete data',
-      detail: `${signals.sourcesOk}/${signals.sourcesTotal} data sources available.`,
+      title: 'Dados incompletos',
+      detail: `${signals.sourcesOk}/${signals.sourcesTotal} fontes habilitadas disponíveis.`,
       severity: 'LOW',
       evidence: { sourcesOk: signals.sourcesOk, sourcesTotal: signals.sourcesTotal },
     });
