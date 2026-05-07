@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#020617",
   "enableNotifications": true,
-  "startUrl": "/app.html?source=twa",
+  "startUrl": "/app-v5.html?source=twa",
   "iconUrl": "https://bags-shield-api.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://bags-shield-api.vercel.app/icons/icon-512-maskable.png",
   "splashScreenFadeOutDuration": 300,

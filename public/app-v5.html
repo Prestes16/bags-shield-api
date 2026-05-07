@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#080811"/>
+<meta name="description" content="Bags Shield — Solana Token Scanner & Launchpad"/>
+<title>Bags Shield</title>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+:root{
+  --bg:        #080811;
+  --bg1:       #0D0D1A;
+  --bg2:       #111122;
+  --surface:   rgba(255,255,255,0.05);
+  --surface2:  rgba(255,255,255,0.08);
+  --border:    rgba(255,255,255,0.08);
+  --cyan:      #4DD4FF;
+  --purple:    #9945FF;
+  --green:     #00D68F;
+  --red:       #FF3B5C;
+  --amber:     #FFB340;
+  --txt:       #F0F0FF;
+  --txt2:      rgba(240,240,255,0.55);
+  --txt3:      rgba(240,240,255,0.30);
+  --r-card:    20px;
+  --r-btn:     50px;
+  --r-input:   16px;
+  --spring:    cubic-bezier(0.34,1.56,0.64,1);
+  --ease-out:  cubic-bezier(0.22,1,0.36,1);
+  --blur:      20px;
+  --nav-h:     82px;
+  --safe-b:    env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── RESET ─────────────────────────────────────────────────── */
+*,::before,::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
+  color:var(--txt);-webkit-font-smoothing:antialiased;user-select:none}
+
+/* ─── SCROLLBAR ──────────────────────────────────────────────── */
+::-webkit-scrollbar{width:0}
+
+/* ─── APP SHELL ──────────────────────────────────────────────── */
+#app{position:fixed;inset:0;display:flex;flex-direction:column;
+  background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(77,212,255,.07) 0%,transparent 70%),
+             radial-gradient(ellipse 60% 40% at 90% 110%,rgba(153,69,255,.08) 0%,transparent 60%),
+             var(--bg)}
+
+/* ─── VIEWS ──────────────────────────────────────────────────── */
+.view{position:absolute;inset:0;bottom:var(--nav-h);overflow-y:auto;overflow-x:hidden;
+  display:none;flex-direction:column;padding-top:env(safe-area-inset-top,44px)}
+.view.active{display:flex}
+.view.anim-in{animation:slideIn .42s var(--spring) both}
+.view.anim-back{animation:slideBack .38s var(--ease-out) both}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideBack{from{transform:translateX(-30%);opacity:.5}to{transform:none;opacity:1}}
+
+/* ─── HEADER ─────────────────────────────────────────────────── */
+.hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px 8px;position:sticky;top:0;z-index:10;
+  background:linear-gradient(to bottom,var(--bg) 70%,transparent)}
+.hdr-logo{display:flex;align-items:center;gap:10px}
+.hdr-logo svg{filter:drop-shadow(0 0 8px rgba(77,212,255,.5))}
+.hdr-title{font-size:22px;font-weight:900;letter-spacing:-.5px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr-btn{width:36px;height:36px;border-radius:50%;border:none;
+  background:var(--surface2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:transform .18s var(--spring),background .18s}
+.hdr-btn:active{transform:scale(.88)}
+
+/* ─── SECTION TITLE ──────────────────────────────────────────── */
+.sec-title{font-size:13px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--txt2);padding:20px 20px 10px}
+
+/* ─── CARDS ──────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);padding:18px;margin:0 16px 12px;
+  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  transition:transform .2s var(--spring)}
+.card:active{transform:scale(.98)}
+.card-glow-cyan{box-shadow:0 0 0 1px rgba(77,212,255,.15),0 8px 32px rgba(77,212,255,.06)}
+.card-glow-purple{box-shadow:0 0 0 1px rgba(153,69,255,.15),0 8px 32px rgba(153,69,255,.06)}
+
+/* ─── PILLS / BADGES ─────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;
+  border-radius:50px;font-size:12px;font-weight:700;letter-spacing:.04em}
+.badge-safe{background:rgba(0,214,143,.15);color:var(--green);border:1px solid rgba(0,214,143,.25)}
+.badge-caution{background:rgba(255,179,64,.15);color:var(--amber);border:1px solid rgba(255,179,64,.25)}
+.badge-danger{background:rgba(255,59,92,.15);color:var(--red);border:1px solid rgba(255,59,92,.25)}
+.badge-new{background:rgba(77,212,255,.12);color:var(--cyan);border:1px solid rgba(77,212,255,.2)}
+
+/* ─── BUTTONS ────────────────────────────────────────────────── */
+.btn{width:100%;padding:17px;border:none;border-radius:var(--r-btn);
+  font-size:16px;font-weight:800;letter-spacing:.01em;cursor:pointer;
+  transition:transform .22s var(--spring),opacity .18s,box-shadow .22s;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.95)}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),#3BB5E8);color:#000;
+  box-shadow:0 4px 24px rgba(77,212,255,.3)}
+.btn-primary:active{box-shadow:0 2px 12px rgba(77,212,255,.2)}
+.btn-secondary{background:var(--surface2);color:var(--txt);border:1px solid var(--border)}
+.btn-purple{background:linear-gradient(135deg,var(--purple),#7B34D4);color:#fff;
+  box-shadow:0 4px 24px rgba(153,69,255,.3)}
+.btn-sm{padding:10px 20px;width:auto;font-size:14px;border-radius:50px}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--txt2)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+/* ─── INPUT ──────────────────────────────────────────────────── */
+.input-wrap{position:relative;margin:0 16px 12px}
+.input-wrap input{width:100%;padding:17px 52px 17px 18px;
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-input);
+  color:var(--txt);font-size:15px;font-weight:500;outline:none;
+  transition:border-color .22s,box-shadow .22s}
+.input-wrap input:focus{border-color:rgba(77,212,255,.5);
+  box-shadow:0 0 0 3px rgba(77,212,255,.1)}
+.input-wrap input::placeholder{color:var(--txt3)}
+.input-wrap .ic{position:absolute;right:14px;top:50%;transform:translateY(-50%);opacity:.5}
+.input-wrap input:focus+.ic{opacity:1;color:var(--cyan)}
+.input-label{font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:7px;
+  padding-left:2px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ─── NAV BAR ────────────────────────────────────────────────── */
+#nav{position:absolute;bottom:0;left:0;right:0;height:var(--nav-h);
+  background:rgba(8,8,17,.85);border-top:1px solid var(--border);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  display:flex;align-items:flex-start;padding-top:8px;
+  padding-bottom:var(--safe-b);z-index:100}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  cursor:pointer;padding:6px 0;transition:transform .22s var(--spring)}
+.ni:active{transform:scale(.85)}
+.ni .ico{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:9px;transition:background .22s,box-shadow .22s}
+.ni.on .ico{background:rgba(77,212,255,.15);box-shadow:0 0 12px rgba(77,212,255,.25)}
+.ni .ico svg{transition:opacity .22s}
+.ni:not(.on) .ico svg{opacity:.4}
+.ni .lbl{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--txt2);
+  transition:color .22s;text-transform:uppercase}
+.ni.on .lbl{color:var(--cyan)}
+
+/* ─── SPLASH ─────────────────────────────────────────────────── */
+#vs{display:flex!important;flex-direction:column;align-items:center;justify-content:center;
+  bottom:0;gap:0;animation:none}
+#vs .sp-logo{animation:logoPop .9s var(--spring) .1s both}
+#vs .sp-tagline{animation:fadeUp .6s var(--ease-out) .7s both}
+#vs .sp-bar{animation:fadeUp .5s var(--ease-out) .9s both}
+@keyframes logoPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* ─── SCORE RING ─────────────────────────────────────────────── */
+.ring-wrap{display:flex;flex-direction:column;align-items:center;padding:24px 0 16px;
+  position:relative}
+.ring-score{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
+  text-align:center}
+.ring-num{font-size:52px;font-weight:900;letter-spacing:-3px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ring-lbl{font-size:11px;font-weight:700;color:var(--txt2);letter-spacing:.1em;
+  text-transform:uppercase;margin-top:2px}
+
+/* ─── TRUST LAYERS ───────────────────────────────────────────── */
+.tl-item{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  border-bottom:1px solid var(--border)}
+.tl-item:last-child{border-bottom:none}
+.tl-ico{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.tl-ico-pass{background:rgba(0,214,143,.15);border:1px solid rgba(0,214,143,.2)}
+.tl-ico-fail{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.15)}
+.tl-ico-warn{background:rgba(255,179,64,.1);border:1px solid rgba(255,179,64,.15)}
+.tl-body{flex:1;min-width:0}
+.tl-name{font-size:14px;font-weight:700}
+.tl-desc{font-size:12px;color:var(--txt2);margin-top:2px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.tl-pts{font-size:13px;font-weight:800;flex-shrink:0}
+.tl-pts.pass{color:var(--green)}
+.tl-pts.fail{color:var(--txt3)}
+
+/* ─── MARKET ROW ─────────────────────────────────────────────── */
+.mkt-row{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--border)}
+.mkt-row:last-child{border-bottom:none}
+.mkt-k{font-size:13px;color:var(--txt2);font-weight:500}
+.mkt-v{font-size:13px;font-weight:700}
+.mkt-v.up{color:var(--green)}
+.mkt-v.dn{color:var(--red)}
+
+/* ─── POOL PILL ──────────────────────────────────────────────── */
+.pool-list{display:flex;flex-direction:column;gap:8px}
+.pool-item{display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:12px 14px}
+.pool-dex{font-size:13px;font-weight:700}
+.pool-tvl{font-size:12px;color:var(--txt2)}
+.pool-lp{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700}
+.pool-lp.locked{color:var(--green)}
+.pool-lp.open{color:var(--amber)}
+
+/* ─── LOADING OVERLAY ────────────────────────────────────────── */
+#loading{display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(8,8,17,.95);backdrop-filter:blur(24px);
+  flex-direction:column;align-items:center;justify-content:center;gap:24px}
+#loading.show{display:flex}
+.ld-ring{width:64px;height:64px;border:3px solid rgba(77,212,255,.15);
+  border-top-color:var(--cyan);border-radius:50%;animation:spin .9s linear infinite}
+.ld-msg{font-size:15px;font-weight:600;color:var(--txt2);
+  animation:ld-pulse 1.8s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ld-pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ─── TOAST ──────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:calc(var(--nav-h) + 16px);left:50%;
+  transform:translateX(-50%) translateY(20px);z-index:1000;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:50px;padding:10px 22px;font-size:14px;font-weight:600;
+  backdrop-filter:blur(24px);white-space:nowrap;pointer-events:none;
+  opacity:0;transition:all .3s var(--spring)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─── PROGRESS BAR ───────────────────────────────────────────── */
+.progress-bar{height:5px;border-radius:50px;background:var(--surface2);overflow:hidden}
+.progress-fill{height:100%;border-radius:50px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  transition:width .6s var(--ease-out)}
+
+/* ─── TOGGLE ─────────────────────────────────────────────────── */
+.lang-pill{display:flex;background:var(--surface2);border:1px solid var(--border);
+  border-radius:50px;padding:3px;gap:3px}
+.lang-opt{padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;
+  cursor:pointer;transition:all .22s var(--spring);color:var(--txt2)}
+.lang-opt.active{background:var(--cyan);color:#000;box-shadow:0 2px 8px rgba(77,212,255,.3)}
+
+/* ─── SWAP ───────────────────────────────────────────────────── */
+.sw-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:16px;margin:0 16px 4px;transition:border-color .22s}
+.sw-box:focus-within{border-color:rgba(77,212,255,.4)}
+.sw-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sw-amount{flex:1;background:none;border:none;font-size:28px;font-weight:900;
+  color:var(--txt);outline:none;min-width:0;letter-spacing:-1px}
+.sw-amount::placeholder{color:var(--txt3)}
+.sw-token-btn{display:flex;align-items:center;gap:6px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:50px;padding:7px 12px;
+  cursor:pointer;transition:transform .18s var(--spring);flex-shrink:0}
+.sw-token-btn:active{transform:scale(.92)}
+.sw-token-ico{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple))}
+.sw-token-sym{font-size:14px;font-weight:800}
+.sw-flip{display:flex;justify-content:center;align-items:center;
+  margin:0 16px;height:36px;cursor:pointer}
+.sw-flip-btn{width:36px;height:36px;border-radius:50%;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .4s var(--spring)}
+.sw-flip-btn:active{transform:rotate(180deg) scale(.9)}
+.sw-bal{font-size:12px;color:var(--txt2);margin-top:8px;font-weight:500}
+.sw-max{color:var(--cyan);font-weight:700;cursor:pointer;margin-left:6px}
+.sw-rate-row{display:flex;justify-content:space-between;padding:10px 20px;
+  font-size:12px;color:var(--txt2);font-weight:500}
+
+/* ─── LAUNCHPAD ──────────────────────────────────────────────── */
+.launch-check{display:flex;align-items:flex-start;gap:12px;padding:14px 0;
+  border-bottom:1px solid var(--border);cursor:pointer}
+.launch-check:last-child{border-bottom:none}
+.check-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px}
+.check-ico.done{background:rgba(0,214,143,.15)}
+.check-ico.todo{background:var(--surface2)}
+.check-body{flex:1}
+.check-name{font-size:14px;font-weight:700}
+.check-desc{font-size:12px;color:var(--txt2);margin-top:3px;line-height:1.5}
+.check-pts{font-size:12px;font-weight:800;color:var(--green);margin-top:3px}
+
+/* ─── HISTORY ────────────────────────────────────────────────── */
+.hist-item{display:flex;align-items:center;gap:14px;padding:14px 0;
+  border-bottom:1px solid var(--border);cursor:pointer;transition:opacity .18s}
+.hist-item:last-child{border-bottom:none}
+.hist-item:active{opacity:.6}
+.hist-ico{width:40px;height:40px;border-radius:12px;background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  font-weight:900;flex-shrink:0;overflow:hidden}
+.hist-body{flex:1;min-width:0}
+.hist-sym{font-size:15px;font-weight:800}
+.hist-mint{font-size:11px;color:var(--txt2);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.hist-time{font-size:11px;color:var(--txt3);font-weight:500;margin-top:4px}
+.hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+
+/* ─── SETTINGS ───────────────────────────────────────────────── */
+.sett-row{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 0;border-bottom:1px solid var(--border)}
+.sett-row:last-child{border-bottom:none}
+.sett-left{display:flex;align-items:center;gap:12px}
+.sett-ico{width:36px;height:36px;border-radius:10px;background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;font-size:18px}
+.sett-label{font-size:15px;font-weight:700}
+.sett-sub{font-size:12px;color:var(--txt2);margin-top:2px}
+.sett-val{font-size:13px;font-weight:600;color:var(--txt2)}
+
+/* ─── EMPTY STATE ────────────────────────────────────────────── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:60px 32px;text-align:center}
+.empty-icon{font-size:52px;opacity:.4;animation:float 3s ease-in-out infinite}
+.empty-title{font-size:18px;font-weight:800;color:var(--txt2)}
+.empty-sub{font-size:14px;color:var(--txt3);line-height:1.6}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ─── MISC ───────────────────────────────────────────────────── */
+.spacer{height:24px}
+.row{display:flex;align-items:center;justify-content:space-between}
+.col{display:flex;flex-direction:column;gap:4px}
+.c-cyan{color:var(--cyan)}
+.c-green{color:var(--green)}
+.c-red{color:var(--red)}
+.c-amber{color:var(--amber)}
+.c-purple{color:var(--purple)}
+.txt-sm{font-size:12px;color:var(--txt2);font-weight:500}
+
+/* ─── PULSE DOT ──────────────────────────────────────────────── */
+.pulse-dot{display:inline-flex;width:8px;height:8px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 0 0 rgba(0,214,143,.4);
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(0,214,143,.4)}
+  70%{box-shadow:0 0 0 8px rgba(0,214,143,0)}
+  100%{box-shadow:0 0 0 0 rgba(0,214,143,0)}}
+
+/* ─── TOKEN AVATAR ───────────────────────────────────────────── */
+.token-avatar{width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+  font-weight:900;color:#000;flex-shrink:0;box-shadow:0 4px 20px rgba(77,212,255,.25);
+  overflow:hidden}
+.token-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+
+/* ─── QUICK STATS ────────────────────────────────────────────── */
+.quick-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.qs{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:14px;display:flex;align-items:center;gap:12px}
+.qs-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:18px}
+.qs-val{font-size:16px;font-weight:900;letter-spacing:-.3px}
+.qs-key{font-size:10px;font-weight:700;color:var(--txt2);text-transform:uppercase;
+  letter-spacing:.06em;margin-top:2px}
+
+/* ─── RESULT HEADER ──────────────────────────────────────────── */
+.res-hdr{display:flex;align-items:center;gap:16px;padding:0 20px 20px}
+.res-info{flex:1;min-width:0}
+.res-name{font-size:22px;font-weight:900;letter-spacing:-.5px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.res-sym{font-size:14px;color:var(--txt2);font-weight:600;margin-top:2px}
+.res-mint{font-size:11px;color:var(--txt3);margin-top:4px;font-family:monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ─── REASON ITEM ────────────────────────────────────────────── */
+.reason-item{display:flex;align-items:flex-start;gap:10px;
+  padding:10px 0;border-bottom:1px solid var(--border)}
+.reason-item:last-child{border-bottom:none}
+.reason-ico{font-size:16px;margin-top:1px;flex-shrink:0}
+.reason-txt{font-size:13px;color:var(--txt2);line-height:1.5;font-weight:500}
+
+/* ─── CONFIDENCE BAR ─────────────────────────────────────────── */
+.conf-bar{display:flex;gap:4px;margin-top:10px}
+.conf-seg{flex:1;height:4px;border-radius:50px;background:var(--surface2)}
+.conf-seg.fill{background:linear-gradient(90deg,var(--cyan),var(--purple))}
+
+/* ─── ACTOR CHIPS ────────────────────────────────────────────── */
+.actor-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
+.actor-chip{background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:6px 10px}
+.actor-addr{font-size:10px;font-family:monospace;color:var(--txt2);font-weight:600}
+.actor-pct{font-size:12px;font-weight:800;margin-top:2px}
+.actor-pct.whale{color:var(--red)}
+.actor-pct.ok{color:var(--txt2)}
+
+/* ─── SCAN HINT ──────────────────────────────────────────────── */
+.scan-hint{margin:0 16px 16px;padding:14px 16px;
+  background:rgba(77,212,255,.06);border:1px solid rgba(77,212,255,.12);
+  border-radius:16px;display:flex;align-items:flex-start;gap:12px}
+.scan-hint-ico{font-size:20px;flex-shrink:0}
+.scan-hint-txt{font-size:13px;color:var(--txt2);line-height:1.6;font-weight:500}
+.scan-hint-txt strong{color:var(--cyan);font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ════════════════════════ SPLASH ════════════════════════════ -->
+<div id="vs" class="view">
+  <div class="sp-logo" style="margin-bottom:28px">
+    <svg width="100" height="100" viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="sg1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4DD4FF"/>
+          <stop offset="100%" stop-color="#9945FF"/>
+        </linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <path d="M50 8 L82 20 L82 52 C82 70 66 84 50 92 C34 84 18 70 18 52 L18 20 Z"
+        fill="url(#sg1)" filter="url(#glow)" opacity=".9"/>
+      <path d="M50 20 L70 29 L70 51 C70 63 61 73 50 79 C39 73 30 63 30 51 L30 29 Z"
+        fill="rgba(0,0,0,0.4)"/>
+      <path d="M41 48 L47 54 L60 42" stroke="white" stroke-width="3.5"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+  </div>
+  <div class="sp-tagline" style="text-align:center">
+    <div style="font-size:32px;font-weight:900;letter-spacing:-1px;
+      background:linear-gradient(135deg,#4DD4FF,#9945FF);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent">Bags Shield</div>
+    <div style="font-size:14px;color:rgba(240,240,255,.5);font-weight:600;
+      margin-top:6px;letter-spacing:.04em">Solana Token Intelligence</div>
+  </div>
+  <div class="sp-bar" style="margin-top:56px;width:160px">
+    <div class="progress-bar"><div class="progress-fill" id="sp-progress" style="width:0%"></div></div>
+    <div style="font-size:11px;color:rgba(240,240,255,.35);font-weight:600;
+      text-align:center;margin-top:8px;letter-spacing:.04em" id="sp-status">Initializing...</div>
+  </div>
+</div>
+
+<!-- ════════════════════════ HOME ══════════════════════════════ -->
+<div id="vhome" class="view">
+  <div class="hdr">
+    <div class="hdr-logo">
+      <svg width="28" height="28" viewBox="0 0 100 100">
+        <defs><linearGradient id="hg1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4DD4FF"/><stop offset="100%" stop-color="#9945FF"/>
+        </linearGradient></defs>
+        <path d="M50 8L82 20L82 52C82 70 66 84 50 92C34 84 18 70 18 52L18 20Z"
+          fill="url(#hg1)" opacity=".9"/>
+        <path d="M41 48L47 54L60 42" stroke="white" stroke-width="4"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span class="hdr-title">Bags Shield</span>
+    </div>
+    <button class="hdr-btn" onclick="goTo('vhist')" title="History">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Scan Search -->
+  <div style="padding:8px 0 4px">
+    <div class="input-wrap">
+      <div class="input-label" data-i18n="home.label" style="padding-left:0;margin-bottom:7px">Token Address or Symbol</div>
+      <input id="mint-input" type="text" inputmode="text" autocorrect="off"
+        autocapitalize="none" autocomplete="off" spellcheck="false"
+        placeholder="So11111111111111111..." />
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </div>
+    <div style="padding:0 16px">
+      <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/>
+          <rect x="7" y="7" width="10" height="10" rx="2"/>
+        </svg>
+        <span data-i18n="home.scan">Scan Token</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Hint -->
+  <div class="scan-hint">
+    <div class="scan-hint-ico">💡</div>
+    <div class="scan-hint-txt" data-i18n-html="home.hint">
+      Paste any <strong>Solana mint address</strong> to get a real-time trust score powered by Helius, Birdeye &amp; DexScreener.
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="sec-title" data-i18n="home.stats">Live Network</div>
+  <div class="quick-stats">
+    <div class="qs">
+      <div class="qs-ico" style="background:rgba(77,212,255,.12)">⚡</div>
+      <div class="col">
+        <div class="qs-val c-cyan" id="qs-scans">0</div>
+        <div class="qs-key" data-i18n="home.scansToday">Scans Today</div>
+      </div>
+    </div>
+    <div class="qs">
+      <div class="qs-ico" style="background:rgba(0,214,143,.12)">🛡️</div>
+      <div class="col">
+        <div class="qs-val c-green" id="qs-safe">0</div>
+        <div class="qs-key" data-i18n="home.safe">SAFE Tokens</div>
+      </div>
+    </div>
+    <div class="qs">
+      <div class="qs-ico" style="background:rgba(153,69,255,.12)">🪙</div>
+      <div class="col">
+        <div class="qs-val c-purple" id="qs-meme">0</div>
+        <div class="qs-key" data-i18n="home.memes">Memecoins</div>
+      </div>
+    </div>
+    <div class="qs">
+      <div class="qs-ico" style="background:rgba(255,59,92,.12)">🚨</div>
+      <div class="col">
+        <div class="qs-val c-red" id="qs-danger">0</div>
+        <div class="qs-key" data-i18n="home.danger">DANGER</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Scans -->
+  <div class="sec-title" data-i18n="home.recent">Recent Scans</div>
+  <div class="card" style="padding:0;overflow:hidden" id="home-recent">
+    <div class="empty" style="padding:32px">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title" data-i18n="home.noScans">No scans yet</div>
+      <div class="empty-sub" data-i18n="home.noScansHint">Scan your first Solana token above</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ════════════════════════ RESULT ════════════════════════════ -->
+<div id="vr" class="view">
+  <div class="hdr">
+    <button class="hdr-btn" onclick="goBack()" style="margin-right:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="hdr-title" style="font-size:17px" data-i18n="result.title">Scan Result</span>
+    <button class="hdr-btn" onclick="shareResult()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
+        <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Token Identity -->
+  <div class="res-hdr">
+    <div class="token-avatar" id="res-avatar">?</div>
+    <div class="res-info">
+      <div class="res-name" id="res-name">—</div>
+      <div class="res-sym" id="res-sym">—</div>
+      <div class="res-mint" id="res-mint">—</div>
+    </div>
+  </div>
+
+  <!-- Score Ring -->
+  <div class="ring-wrap">
+    <svg width="200" height="200" viewBox="0 0 200 200">
+      <defs>
+        <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop id="ring-c1" offset="0%" stop-color="#4DD4FF"/>
+          <stop id="ring-c2" offset="100%" stop-color="#9945FF"/>
+        </linearGradient>
+        <filter id="ring-glow">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(255,255,255,0.05)"
+        stroke-width="12" stroke-linecap="round"/>
+      <circle id="ring-fill" cx="100" cy="100" r="84" fill="none"
+        stroke="url(#ring-grad)" stroke-width="12" stroke-linecap="round"
+        stroke-dasharray="527.79" stroke-dashoffset="527.79"
+        transform="rotate(-90 100 100)" filter="url(#ring-glow)"
+        style="transition:stroke-dashoffset .9s cubic-bezier(0.22,1,0.36,1)"/>
+    </svg>
+    <div class="ring-score">
+      <div class="ring-num" id="ring-num">0</div>
+      <div class="ring-lbl" data-i18n="result.trustScore">TRUST SCORE</div>
+    </div>
+  </div>
+
+  <!-- Badge Row -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding-bottom:20px">
+    <span id="res-badge" class="badge"></span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt2)">
+      <span class="pulse-dot"></span>
+      <span data-i18n="result.live">Live</span>
+    </span>
+    <span id="res-confidence" class="badge badge-new" style="display:none"></span>
+  </div>
+
+  <!-- Trust Layers -->
+  <div class="sec-title" data-i18n="result.trustLayers">Trust Layers</div>
+  <div class="card" style="padding:0;overflow:hidden" id="res-trust">
+    <div style="display:flex;justify-content:center;padding:24px">
+      <div class="ld-ring" style="width:32px;height:32px;border-width:2px"></div>
+    </div>
+  </div>
+
+  <!-- Reasons -->
+  <div class="sec-title" data-i18n="result.signals">Analysis Signals</div>
+  <div class="card" id="res-reasons" style="padding:12px 18px"></div>
+
+  <!-- Market Data -->
+  <div class="sec-title" data-i18n="result.market">Market Data</div>
+  <div class="card card-glow-cyan" id="res-market" style="padding:12px 18px"></div>
+
+  <!-- Pools -->
+  <div class="sec-title" data-i18n="result.pools">Liquidity Pools</div>
+  <div style="padding:0 16px 12px" id="res-pools"></div>
+
+  <!-- Holders -->
+  <div class="sec-title" data-i18n="result.holders">Top Holders</div>
+  <div class="card" id="res-holders" style="padding:12px"></div>
+
+  <!-- Swap CTA -->
+  <div style="padding:8px 16px 16px">
+    <button class="btn btn-purple" onclick="goTo('vsw')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+      </svg>
+      <span data-i18n="result.swap">Swap This Token</span>
+    </button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ════════════════════════ LAUNCHPAD ═════════════════════════ -->
+<div id="vl" class="view">
+  <div class="hdr">
+    <span class="hdr-title" data-i18n="launch.title">Launchpad</span>
+    <div class="badge badge-new">BETA</div>
+  </div>
+
+  <!-- Trust Score Preview -->
+  <div class="card card-glow-purple" style="text-align:center;padding:24px">
+    <div style="font-size:13px;font-weight:700;color:var(--txt2);letter-spacing:.06em;
+      text-transform:uppercase;margin-bottom:12px" data-i18n="launch.yourScore">Your Trust Score Preview</div>
+    <div id="launch-score" style="font-size:64px;font-weight:900;letter-spacing:-3px;
+      background:linear-gradient(135deg,#4DD4FF,#9945FF);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent">0</div>
+    <div class="conf-bar" style="margin-top:16px">
+      <div class="conf-seg" id="ls0"></div><div class="conf-seg" id="ls1"></div>
+      <div class="conf-seg" id="ls2"></div><div class="conf-seg" id="ls3"></div>
+      <div class="conf-seg" id="ls4"></div>
+    </div>
+    <div style="font-size:12px;margin-top:8px" id="launch-badge-txt">—</div>
+  </div>
+
+  <!-- Trust Checklist -->
+  <div class="sec-title" data-i18n="launch.checklist">Trust Checklist</div>
+  <div class="card" style="padding:0 18px" id="launch-checklist"></div>
+
+  <!-- Token Form -->
+  <div class="sec-title" data-i18n="launch.details">Token Details</div>
+  <div class="card">
+    <div class="input-label" data-i18n="launch.name" style="margin-bottom:7px">Token Name</div>
+    <div class="input-wrap" style="margin:0 0 14px">
+      <input type="text" id="lt-name" placeholder="My Token"/>
+    </div>
+    <div class="input-label" data-i18n="launch.symbol" style="margin-bottom:7px">Symbol</div>
+    <div class="input-wrap" style="margin:0 0 14px">
+      <input type="text" id="lt-sym" placeholder="MTK" maxlength="8"/>
+    </div>
+    <div class="input-label" data-i18n="launch.supply" style="margin-bottom:7px">Total Supply</div>
+    <div class="input-wrap" style="margin:0">
+      <input type="number" id="lt-supply" placeholder="1000000000"/>
+    </div>
+  </div>
+
+  <div style="padding:0 16px 16px">
+    <button class="btn btn-primary" onclick="showToast(t('launch.comingSoon'))">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span data-i18n="launch.launch">Launch Token</span>
+    </button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ════════════════════════ SWAP ══════════════════════════════ -->
+<div id="vsw" class="view">
+  <div class="hdr">
+    <span class="hdr-title" data-i18n="swap.title">Swap</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="pulse-dot"></div>
+      <span style="font-size:12px;font-weight:700;color:var(--txt2)">Jupiter</span>
+    </div>
+  </div>
+
+  <!-- From -->
+  <div class="sw-box">
+    <div class="sw-row">
+      <div class="col" style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:6px;
+          letter-spacing:.06em;text-transform:uppercase" data-i18n="swap.from">From</div>
+        <input class="sw-amount" id="sw-from-amt" type="number"
+          placeholder="0.00" oninput="updateSwapQuote()"/>
+      </div>
+      <div>
+        <button class="sw-token-btn" onclick="showToast('Token selector — Coming soon 🚀')">
+          <div class="sw-token-ico"></div>
+          <span class="sw-token-sym" id="sw-from-sym">SOL</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="sw-bal">
+      <span data-i18n="swap.balance">Balance:</span>
+      <span id="sw-from-bal"> —</span>
+      <span class="sw-max" onclick="setMaxSwap()" data-i18n="swap.max">MAX</span>
+    </div>
+  </div>
+
+  <!-- Flip -->
+  <div class="sw-flip">
+    <div class="sw-flip-btn" onclick="flipSwap()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- To -->
+  <div class="sw-box">
+    <div class="sw-row">
+      <div class="col" style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:6px;
+          letter-spacing:.06em;text-transform:uppercase" data-i18n="swap.to">To</div>
+        <input class="sw-amount" id="sw-to-amt" type="number"
+          placeholder="0.00" readonly style="opacity:.7"/>
+      </div>
+      <div>
+        <button class="sw-token-btn" onclick="showToast('Token selector — Coming soon 🚀')">
+          <div class="sw-token-ico" style="background:linear-gradient(135deg,#9945FF,#4DD4FF)"></div>
+          <span class="sw-token-sym" id="sw-to-sym">USDC</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="sw-bal">
+      <span data-i18n="swap.balance">Balance:</span>
+      <span id="sw-to-bal"> —</span>
+    </div>
+  </div>
+
+  <!-- Rate / Info -->
+  <div class="sw-rate-row">
+    <span id="sw-rate">—</span>
+    <span style="color:var(--cyan);font-weight:700">
+      1% <span data-i18n="swap.fee">Platform Fee</span>
+    </span>
+  </div>
+
+  <!-- Slippage -->
+  <div class="card" style="padding:14px">
+    <div class="row" style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700" data-i18n="swap.slippage">Slippage Tolerance</div>
+      <div style="font-size:13px;font-weight:800;color:var(--cyan)" id="slip-val">0.5%</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sm btn-secondary" style="flex:1" onclick="setSlip(.5)">0.5%</button>
+      <button class="btn btn-sm btn-secondary" style="flex:1" onclick="setSlip(1)">1%</button>
+      <button class="btn btn-sm btn-secondary" style="flex:1" onclick="setSlip(2)">2%</button>
+    </div>
+  </div>
+
+  <div style="padding:4px 16px 16px">
+    <button class="btn btn-purple" onclick="doSwap()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+      <span data-i18n="swap.swapNow">Swap Now</span>
+    </button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ════════════════════════ HISTORY ═══════════════════════════ -->
+<div id="vhist" class="view">
+  <div class="hdr">
+    <button class="hdr-btn" onclick="goBack()" style="margin-right:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="hdr-title" style="font-size:17px" data-i18n="hist.title">Scan History</span>
+    <button class="hdr-btn" onclick="clearHistory()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+        <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+      </svg>
+    </button>
+  </div>
+  <div class="card" style="padding:0 18px" id="hist-list">
+    <div class="empty">
+      <div class="empty-icon">📜</div>
+      <div class="empty-title" data-i18n="hist.empty">No history</div>
+      <div class="empty-sub" data-i18n="hist.emptyHint">Your scanned tokens will appear here</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ════════════════════════ SETTINGS ══════════════════════════ -->
+<div id="vsett" class="view">
+  <div class="hdr">
+    <span class="hdr-title" data-i18n="sett.title">Settings</span>
+  </div>
+
+  <div class="sec-title" data-i18n="sett.appearance">Appearance</div>
+  <div class="card">
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">🌐</div>
+        <div>
+          <div class="sett-label" data-i18n="sett.language">Language</div>
+          <div class="sett-sub" id="sett-lang-sub">Português (BR)</div>
+        </div>
+      </div>
+      <div class="lang-pill">
+        <div class="lang-opt active" id="lang-pt" onclick="setLang('pt-BR')">PT</div>
+        <div class="lang-opt" id="lang-en" onclick="setLang('en')">EN</div>
+      </div>
+    </div>
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">🌙</div>
+        <div>
+          <div class="sett-label" data-i18n="sett.theme">Theme</div>
+          <div class="sett-sub" data-i18n="sett.dark">Dark (Always)</div>
+        </div>
+      </div>
+      <div class="badge badge-new" data-i18n="sett.default">Default</div>
+    </div>
+  </div>
+
+  <div class="sec-title" data-i18n="sett.data">Data Sources</div>
+  <div class="card">
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">⚡</div>
+        <div><div class="sett-label">Helius RPC</div>
+          <div class="sett-sub" data-i18n="sett.connected">Connected</div></div>
+      </div>
+      <div class="badge badge-safe">● ON</div>
+    </div>
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">🦅</div>
+        <div><div class="sett-label">Birdeye</div>
+          <div class="sett-sub" data-i18n="sett.connected">Connected</div></div>
+      </div>
+      <div class="badge badge-safe">● ON</div>
+    </div>
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">📊</div>
+        <div><div class="sett-label">DexScreener</div>
+          <div class="sett-sub" data-i18n="sett.connected">Connected</div></div>
+      </div>
+      <div class="badge badge-safe">● ON</div>
+    </div>
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">🌊</div>
+        <div><div class="sett-label">Meteora</div>
+          <div class="sett-sub" data-i18n="sett.connected">Connected</div></div>
+      </div>
+      <div class="badge badge-safe">● ON</div>
+    </div>
+  </div>
+
+  <div class="sec-title" data-i18n="sett.about">About</div>
+  <div class="card">
+    <div class="sett-row">
+      <div class="sett-left">
+        <div class="sett-ico">🛡️</div>
+        <div><div class="sett-label">Bags Shield</div>
+          <div class="sett-sub" data-i18n="sett.version">Version 5.0.0 • Solana Mobile</div></div>
+      </div>
+      <div class="sett-val">v5</div>
+    </div>
+    <div class="sett-row" onclick="openLink('https://bagsshield.org')" style="cursor:pointer">
+      <div class="sett-left">
+        <div class="sett-ico">🌐</div>
+        <div><div class="sett-label" data-i18n="sett.website">Website</div>
+          <div class="sett-sub">bagsshield.org</div></div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" opacity=".4">
+        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </div>
+    <div class="sett-row" onclick="openLink('https://twitter.com/bagsshield')" style="cursor:pointer">
+      <div class="sett-left">
+        <div class="sett-ico">𝕏</div>
+        <div><div class="sett-label">Twitter / X</div>
+          <div class="sett-sub">@bagsshield</div></div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" opacity=".4">
+        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </div>
+  </div>
+
+  <div style="padding:0 16px 16px">
+    <button class="btn btn-ghost" onclick="clearCache()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" opacity=".7">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.27"/>
+      </svg>
+      <span data-i18n="sett.clearCache">Clear Cache &amp; Reset</span>
+    </button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ════════════════════════ NAV BAR ═══════════════════════════ -->
+<nav id="nav">
+  <div class="ni on" id="ni-home" onclick="navTo('vhome','ni-home')">
+    <div class="ico">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
+      </svg>
+    </div>
+    <span class="lbl" data-i18n="nav.home">Home</span>
+  </div>
+  <div class="ni" id="ni-vl" onclick="navTo('vl','ni-vl')">
+    <div class="ico">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <span class="lbl" data-i18n="nav.launch">Launch</span>
+  </div>
+  <div class="ni" id="ni-vsw" onclick="navTo('vsw','ni-vsw')">
+    <div class="ico">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+      </svg>
+    </div>
+    <span class="lbl" data-i18n="nav.swap">Swap</span>
+  </div>
+  <div class="ni" id="ni-vsett" onclick="navTo('vsett','ni-vsett')">
+    <div class="ico">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </div>
+    <span class="lbl" data-i18n="nav.settings">Config</span>
+  </div>
+</nav>
+
+<!-- Overlays -->
+<div id="loading">
+  <div class="ld-ring"></div>
+  <div class="ld-msg" id="ld-msg">Scanning token...</div>
+</div>
+<div id="toast"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   i18n SYSTEM
+══════════════════════════════════════════════════════════════ */
+const STRINGS = {
+  'pt-BR': {
+    'home.label':'Endereço ou Símbolo do Token',
+    'home.scan':'Escanear Token',
+    'home.hint':'Cole qualquer <strong>endereço mint Solana</strong> para obter uma pontuação de confiança em tempo real com Helius, Birdeye &amp; DexScreener.',
+    'home.stats':'Rede ao Vivo',
+    'home.scansToday':'Scans Hoje',
+    'home.safe':'Tokens SAFE',
+    'home.memes':'Memecoins',
+    'home.danger':'PERIGO',
+    'home.recent':'Escaneados Recentemente',
+    'home.noScans':'Nenhum scan ainda',
+    'home.noScansHint':'Escaneie seu primeiro token Solana acima',
+    'result.title':'Resultado',
+    'result.trustScore':'PONTUAÇÃO',
+    'result.live':'Ao Vivo',
+    'result.trustLayers':'Camadas de Confiança',
+    'result.signals':'Sinais de Análise',
+    'result.market':'Dados de Mercado',
+    'result.pools':'Pools de Liquidez',
+    'result.holders':'Top Holders',
+    'result.swap':'Trocar Este Token',
+    'launch.title':'Launchpad',
+    'launch.yourScore':'Preview da sua Pontuação',
+    'launch.checklist':'Checklist de Confiança',
+    'launch.details':'Detalhes do Token',
+    'launch.name':'Nome do Token',
+    'launch.symbol':'Símbolo',
+    'launch.supply':'Supply Total',
+    'launch.launch':'Lançar Token',
+    'launch.comingSoon':'Em breve! 🚀',
+    'swap.title':'Swap',
+    'swap.from':'De',
+    'swap.to':'Para',
+    'swap.balance':'Saldo:',
+    'swap.max':'MAX',
+    'swap.fee':'Taxa da Plataforma',
+    'swap.slippage':'Tolerância de Slippage',
+    'swap.swapNow':'Trocar Agora',
+    'hist.title':'Histórico',
+    'hist.empty':'Sem histórico',
+    'hist.emptyHint':'Seus tokens escaneados aparecerão aqui',
+    'sett.title':'Configurações',
+    'sett.appearance':'Aparência',
+    'sett.language':'Idioma',
+    'sett.theme':'Tema',
+    'sett.dark':'Escuro (Sempre)',
+    'sett.default':'Padrão',
+    'sett.data':'Fontes de Dados',
+    'sett.connected':'Conectado',
+    'sett.about':'Sobre',
+    'sett.website':'Site',
+    'sett.version':'Versão 5.0.0 • Solana Mobile',
+    'sett.clearCache':'Limpar Cache & Resetar',
+    'nav.home':'Home',
+    'nav.launch':'Launch',
+    'nav.swap':'Swap',
+    'nav.settings':'Config',
+    'badge.safe':'SEGURO',
+    'badge.caution':'ATENÇÃO',
+    'badge.danger':'PERIGO',
+    'tl.revokeMint':'Revogar Mint Authority',
+    'tl.revokeMint.desc':'Ninguém pode criar mais tokens',
+    'tl.revokeFreeze':'Revogar Freeze Authority',
+    'tl.revokeFreeze.desc':'Ninguém pode congelar carteiras',
+    'tl.lockLp':'Liquidez Bloqueada (LP)',
+    'tl.lockLp.desc':'Liquidez não pode ser retirada',
+    'tl.immutableMeta':'Metadata Imutável',
+    'tl.immutableMeta.desc':'Nome/logo não podem ser alterados',
+    'tl.antiBotFirst':'Anti-bot Primeiro Bloco',
+    'tl.antiBotFirst.desc':'Proteção contra snipers no launch',
+    'loading.0':'Conectando ao Helius...',
+    'loading.1':'Buscando dados Birdeye...',
+    'loading.2':'Analisando DexScreener...',
+    'loading.3':'Verificando pools Meteora...',
+    'loading.4':'Calculando pontuação...',
+    'mkt.price':'Preço',
+    'mkt.mc':'Market Cap',
+    'mkt.vol24':'Volume 24h',
+    'mkt.liq':'Liquidez',
+    'mkt.h24':'Variação 24h',
+    'mkt.supply':'Supply',
+    'mkt.decimals':'Decimais',
+    'mkt.holders':'Holders',
+    'conf.high':'Alta Confiança',
+    'conf.medium':'Confiança Média',
+    'conf.low':'Baixa Confiança',
+    'err.invalid':'Endereço inválido.',
+    'err.network':'Erro de rede. Tente novamente.',
+    'err.notFound':'Token não encontrado.',
+    'share.copied':'Link copiado!',
+    'hist.cleared':'Histórico limpo',
+    'cache.cleared':'Cache limpo!',
+  },
+  'en': {
+    'home.label':'Token Address or Symbol',
+    'home.scan':'Scan Token',
+    'home.hint':'Paste any <strong>Solana mint address</strong> to get a real-time trust score powered by Helius, Birdeye &amp; DexScreener.',
+    'home.stats':'Live Network',
+    'home.scansToday':'Scans Today',
+    'home.safe':'SAFE Tokens',
+    'home.memes':'Memecoins',
+    'home.danger':'DANGER',
+    'home.recent':'Recently Scanned',
+    'home.noScans':'No scans yet',
+    'home.noScansHint':'Scan your first Solana token above',
+    'result.title':'Scan Result',
+    'result.trustScore':'TRUST SCORE',
+    'result.live':'Live',
+    'result.trustLayers':'Trust Layers',
+    'result.signals':'Analysis Signals',
+    'result.market':'Market Data',
+    'result.pools':'Liquidity Pools',
+    'result.holders':'Top Holders',
+    'result.swap':'Swap This Token',
+    'launch.title':'Launchpad',
+    'launch.yourScore':'Your Trust Score Preview',
+    'launch.checklist':'Trust Checklist',
+    'launch.details':'Token Details',
+    'launch.name':'Token Name',
+    'launch.symbol':'Symbol',
+    'launch.supply':'Total Supply',
+    'launch.launch':'Launch Token',
+    'launch.comingSoon':'Coming soon! 🚀',
+    'swap.title':'Swap',
+    'swap.from':'From',
+    'swap.to':'To',
+    'swap.balance':'Balance:',
+    'swap.max':'MAX',
+    'swap.fee':'Platform Fee',
+    'swap.slippage':'Slippage Tolerance',
+    'swap.swapNow':'Swap Now',
+    'hist.title':'History',
+    'hist.empty':'No history',
+    'hist.emptyHint':'Your scanned tokens will appear here',
+    'sett.title':'Settings',
+    'sett.appearance':'Appearance',
+    'sett.language':'Language',
+    'sett.theme':'Theme',
+    'sett.dark':'Dark (Always)',
+    'sett.default':'Default',
+    'sett.data':'Data Sources',
+    'sett.connected':'Connected',
+    'sett.about':'About',
+    'sett.website':'Website',
+    'sett.version':'Version 5.0.0 • Solana Mobile',
+    'sett.clearCache':'Clear Cache & Reset',
+    'nav.home':'Home',
+    'nav.launch':'Launch',
+    'nav.swap':'Swap',
+    'nav.settings':'Settings',
+    'badge.safe':'SAFE',
+    'badge.caution':'CAUTION',
+    'badge.danger':'DANGER',
+    'tl.revokeMint':'Revoke Mint Authority',
+    'tl.revokeMint.desc':'Nobody can mint more tokens',
+    'tl.revokeFreeze':'Revoke Freeze Authority',
+    'tl.revokeFreeze.desc':'Nobody can freeze wallets',
+    'tl.lockLp':'Lock Liquidity (LP)',
+    'tl.lockLp.desc':'Liquidity cannot be withdrawn',
+    'tl.immutableMeta':'Immutable Metadata',
+    'tl.immutableMeta.desc':'Name/logo cannot be changed',
+    'tl.antiBotFirst':'Anti-bot First Block',
+    'tl.antiBotFirst.desc':'Sniper protection at launch',
+    'loading.0':'Connecting to Helius...',
+    'loading.1':'Fetching Birdeye data...',
+    'loading.2':'Analyzing DexScreener...',
+    'loading.3':'Checking Meteora pools...',
+    'loading.4':'Calculating score...',
+    'mkt.price':'Price',
+    'mkt.mc':'Market Cap',
+    'mkt.vol24':'Volume 24h',
+    'mkt.liq':'Liquidity',
+    'mkt.h24':'Change 24h',
+    'mkt.supply':'Supply',
+    'mkt.decimals':'Decimals',
+    'mkt.holders':'Holders',
+    'conf.high':'High Confidence',
+    'conf.medium':'Medium Confidence',
+    'conf.low':'Low Confidence',
+    'err.invalid':'Invalid address.',
+    'err.network':'Network error. Try again.',
+    'err.notFound':'Token not found.',
+    'share.copied':'Link copied!',
+    'hist.cleared':'History cleared',
+    'cache.cleared':'Cache cleared!',
+  }
+};
+
+let currentLang = localStorage.getItem('bsLang') || 'pt-BR';
+
+function t(key) {
+  return STRINGS[currentLang]?.[key] || STRINGS['en'][key] || key;
+}
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  document.documentElement.lang = currentLang;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('bsLang', lang);
+  document.getElementById('lang-pt').classList.toggle('active', lang === 'pt-BR');
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.getElementById('sett-lang-sub').textContent =
+    lang === 'pt-BR' ? 'Português (BR)' : 'English (US)';
+  applyI18n();
+  renderHistoryList();
+  renderHomeRecent();
+  renderLaunchChecklist();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATE & ROUTER
+══════════════════════════════════════════════════════════════ */
+let currentView = 'vs';
+let currentNavId = 'ni-home';
+let navStack = [];
+let lastScanData = null;
+let slippage = 0.5;
+let scanHistory = [];
+let sessionStats = {scans:0, safe:0, danger:0, memes:0};
+
+try { scanHistory = JSON.parse(localStorage.getItem('bsScanHistory') || '[]'); } catch(e){}
+try { sessionStats = JSON.parse(localStorage.getItem('bsStats') || '{"scans":0,"safe":0,"danger":0,"memes":0}'); } catch(e){}
+
+function goTo(name, back) {
+  if (name === currentView) return;
+  if (!back) navStack.push(currentView);
+  const prev = document.getElementById(currentView);
+  const next = document.getElementById(name);
+  if (!next) return;
+  if (prev) { prev.classList.remove('active','anim-in','anim-back'); }
+  next.classList.remove('anim-in','anim-back');
+  void next.offsetWidth;
+  next.classList.add('active', back ? 'anim-back' : 'anim-in');
+  currentView = name;
+  const noNav = name === 'vs' || name === 'vr' || name === 'vhist';
+  const nav = document.getElementById('nav');
+  nav.style.display = noNav ? 'none' : 'flex';
+  next.style.bottom = noNav ? '0' : '';
+}
+
+function goBack() {
+  if (navStack.length > 0) {
+    const prev = navStack.pop();
+    goTo(prev, true);
+  } else {
+    navTo('vhome', 'ni-home');
+  }
+}
+
+function navTo(view, niId) {
+  navStack = [];
+  if (currentNavId) document.getElementById(currentNavId)?.classList.remove('on');
+  document.getElementById(niId)?.classList.add('on');
+  currentNavId = niId;
+  goTo(view);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TRUST LAYERS CONFIG
+══════════════════════════════════════════════════════════════ */
+const TRUST_LAYERS = [
+  {id:'revokeMint',   pts:35, ico:'🔑', key:'tl.revokeMint'},
+  {id:'revokeFreeze', pts:25, ico:'🧊', key:'tl.revokeFreeze'},
+  {id:'lockLp',       pts:25, ico:'💧', key:'tl.lockLp'},
+  {id:'immutableMeta',pts:10, ico:'📝', key:'tl.immutableMeta'},
+  {id:'antiBotFirst', pts:5,  ico:'🤖', key:'tl.antiBotFirst'},
+];
+
+/* ══════════════════════════════════════════════════════════════
+   LOADING
+══════════════════════════════════════════════════════════════ */
+const LOAD_KEYS = ['loading.0','loading.1','loading.2','loading.3','loading.4'];
+let loadInterval = null;
+
+function showLoading() {
+  const el = document.getElementById('loading');
+  const msg = document.getElementById('ld-msg');
+  el.classList.add('show');
+  let i = 0;
+  msg.textContent = t(LOAD_KEYS[0]);
+  loadInterval = setInterval(() => {
+    i = (i + 1) % LOAD_KEYS.length;
+    msg.textContent = t(LOAD_KEYS[i]);
+  }, 1800);
+}
+
+function hideLoading() {
+  clearInterval(loadInterval);
+  document.getElementById('loading').classList.remove('show');
+}
+
+function showToast(msg, ms) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms || 2800);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCAN ENGINE
+══════════════════════════════════════════════════════════════ */
+async function triggerScan() {
+  const raw = document.getElementById('mint-input').value.trim();
+  if (!raw) { showToast('⚠️ ' + t('err.invalid')); return; }
+  await doScan(raw);
+}
+
+document.getElementById('mint-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); triggerScan(); }
+});
+
+async function doScan(mint) {
+  showLoading();
+  try {
+    const res = await fetch('/api/scan?mint=' + encodeURIComponent(mint));
+    const json = await res.json();
+    hideLoading();
+    if (!json.success) {
+      showToast('❌ ' + (json.error || t('err.notFound')));
+      return;
+    }
+    lastScanData = json.response;
+    renderResult(lastScanData);
+    saveToHistory(lastScanData);
+    bumpStats(lastScanData);
+    goTo('vr');
+  } catch(err) {
+    hideLoading();
+    showToast('❌ ' + t('err.network'));
+    console.error(err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESULT RENDERER
+══════════════════════════════════════════════════════════════ */
+function renderResult(d) {
+  const score  = d.score   ?? 0;
+  const badge  = (d.badge  || 'DANGER').toUpperCase();
+  const token  = d.token   || {};
+  const market = d.market  || {};
+  const sig    = d.signals || {};
+  const pools  = d.pools   || [];
+  const actors = d.actors  || [];
+  const reasons= d.reasons || [];
+  const conf   = d.confidence ?? 0;
+
+  // Token identity
+  const sym  = token.symbol || '???';
+  const name = token.name   || sym;
+  const logo = token.logoURI || token.image || '';
+  const av   = document.getElementById('res-avatar');
+  if (logo) {
+    av.innerHTML = `<img src="${logo}" alt="${sym}"
+      onerror="this.parentElement.textContent='${sym[0]?.toUpperCase()||'?'}'"/>`;
+  } else {
+    av.textContent = sym[0]?.toUpperCase() || '?';
+  }
+  document.getElementById('res-name').textContent = name;
+  document.getElementById('res-sym').textContent  = '$' + sym;
+  document.getElementById('res-mint').textContent = d.mint || '';
+
+  // Score ring
+  const circ   = 2 * Math.PI * 84;
+  const offset = circ * (1 - score / 100);
+  const ring   = document.getElementById('ring-fill');
+  const numEl  = document.getElementById('ring-num');
+
+  let c1, c2;
+  if (badge === 'SAFE')    { c1 = '#00D68F'; c2 = '#4DD4FF'; }
+  else if (badge === 'CAUTION') { c1 = '#FFB340'; c2 = '#FF8C00'; }
+  else                     { c1 = '#FF3B5C'; c2 = '#FF6B6B'; }
+  document.getElementById('ring-c1').setAttribute('stop-color', c1);
+  document.getElementById('ring-c2').setAttribute('stop-color', c2);
+  ring.style.strokeDashoffset = offset;
+
+  numEl.textContent = '0';
+  let cur = 0;
+  const step = Math.max(score / 40, 1);
+  const ctr = setInterval(() => {
+    cur = Math.min(cur + step, score);
+    numEl.textContent = Math.round(cur);
+    if (cur >= score) clearInterval(ctr);
+  }, 22);
+
+  // Badge
+  const badgeEl = document.getElementById('res-badge');
+  badgeEl.textContent = t('badge.' + badge.toLowerCase());
+  badgeEl.className = 'badge';
+  badgeEl.classList.add(
+    badge === 'SAFE' ? 'badge-safe' : badge === 'CAUTION' ? 'badge-caution' : 'badge-danger'
+  );
+
+  // Confidence
+  const confEl = document.getElementById('res-confidence');
+  if (conf >= 0.7) {
+    confEl.textContent = t('conf.high'); confEl.style.display = 'inline-flex';
+  } else if (conf >= 0.4) {
+    confEl.textContent = t('conf.medium'); confEl.style.display = 'inline-flex';
+  } else if (conf > 0) {
+    confEl.textContent = t('conf.low'); confEl.style.display = 'inline-flex';
+  } else {
+    confEl.style.display = 'none';
+  }
+
+  // Trust Layers
+  const trustEl = document.getElementById('res-trust');
+  trustEl.innerHTML = TRUST_LAYERS.map(l => {
+    const val  = sig[l.id];
+    const pass = val === true;
+    const na   = val == null;
+    const pts  = pass ? '+' + l.pts : na ? '—' : '+0';
+    const ic   = pass ? 'tl-ico-pass' : na ? 'tl-ico-warn' : 'tl-ico-fail';
+    const pc   = pass ? 'pass' : 'fail';
+    return `<div class="tl-item">
+      <div class="tl-ico ${ic}">${l.ico}</div>
+      <div class="tl-body">
+        <div class="tl-name">${t(l.key)}</div>
+        <div class="tl-desc">${t(l.key+'.desc')}</div>
+      </div>
+      <div class="tl-pts ${pc}">${pts}</div>
+    </div>`;
+  }).join('');
+
+  // Reasons
+  const reasonsEl = document.getElementById('res-reasons');
+  if (!reasons.length) {
+    reasonsEl.innerHTML = `<div class="txt-sm" style="text-align:center;padding:8px 0">
+      ${badge === 'SAFE' ? '✅ No risk signals detected' : '⚠️ No signals available'}</div>`;
+  } else {
+    reasonsEl.innerHTML = reasons.map(r => {
+      const ico = r.startsWith('✅') ? '✅' : r.startsWith('⚠️') ? '⚠️' : r.startsWith('❌') ? '🚨' : '•';
+      const txt = r.replace(/^[✅⚠️❌🚨•\s]+/, '').trim();
+      return `<div class="reason-item">
+        <div class="reason-ico">${ico}</div>
+        <div class="reason-txt">${txt}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Market Data
+  const mktEl = document.getElementById('res-market');
+  const price  = market.price          ?? sig.price;
+  const mc     = market.marketCap      ?? sig.marketCap;
+  const vol    = market.volume24h      ?? sig.volume24h;
+  const liq    = market.liquidity      ?? sig.liquidity;
+  const h24    = market.priceChange24h ?? sig.priceChange24h;
+  const supply = market.supply         ?? sig.supply ?? token.supply;
+  const holders= sig.holderCount       ?? market.holders;
+
+  const fmtNum = v => {
+    if (v == null || isNaN(v)) return '—';
+    const n = +v;
+    if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(2) + 'K';
+    if (n > 0 && n < 0.01) return '$' + n.toExponential(2);
+    return '$' + n.toFixed(n < 1 ? 4 : 2);
+  };
+  const fmtPct = v => { if (v == null) return '—'; const n=+v; return (n>=0?'+':'') + n.toFixed(2) + '%'; };
+  const upDn   = v => +v >= 0 ? 'up' : 'dn';
+
+  mktEl.innerHTML = [
+    [t('mkt.price'),    fmtNum(price),  null],
+    [t('mkt.mc'),       fmtNum(mc),     null],
+    [t('mkt.vol24'),    fmtNum(vol),    null],
+    [t('mkt.liq'),      fmtNum(liq),    null],
+    [t('mkt.h24'),      fmtPct(h24),    h24!=null ? upDn(h24) : null],
+    [t('mkt.supply'),   supply ? (+supply).toLocaleString() : '—', null],
+    [t('mkt.decimals'), token.decimals ?? '—', null],
+    [t('mkt.holders'),  holders ? (+holders).toLocaleString() : '—', null],
+  ].map(([k,v,c]) => `<div class="mkt-row">
+    <span class="mkt-k">${k}</span>
+    <span class="mkt-v ${c||''}">${v}</span>
+  </div>`).join('');
+
+  // Pools
+  const poolsEl = document.getElementById('res-pools');
+  if (!pools.length) {
+    poolsEl.innerHTML = `<div class="card"><div class="txt-sm" style="text-align:center;padding:4px 0">—</div></div>`;
+  } else {
+    poolsEl.innerHTML = '<div class="pool-list">' +
+      pools.slice(0,5).map(p => {
+        const locked = p.lpLocked || p.locked || false;
+        const tvl    = p.liquidity || p.tvl || p.liquidityUsd;
+        return `<div class="pool-item">
+          <div class="col">
+            <div class="pool-dex">${p.dex||p.source||'DEX'}</div>
+            <div class="pool-tvl">${fmtNum(tvl)} TVL</div>
+          </div>
+          <div class="pool-lp ${locked?'locked':'open'}">
+            ${locked?'🔒 Locked':'⚠️ Open'}
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+  }
+
+  // Holders
+  const holdersEl = document.getElementById('res-holders');
+  if (actors && actors.length) {
+    holdersEl.innerHTML = '<div class="actor-chips">' +
+      actors.slice(0,8).map(a => {
+        const pct  = +(a.pct || a.percentage || 0);
+        const addr = (a.address||a.owner||'').slice(0,6) + '…' + (a.address||a.owner||'').slice(-4);
+        return `<div class="actor-chip">
+          <div class="actor-addr">${addr}</div>
+          <div class="actor-pct ${pct>10?'whale':'ok'}">${pct.toFixed(1)}%</div>
+        </div>`;
+      }).join('') + '</div>';
+  } else {
+    holdersEl.innerHTML = `<div class="txt-sm" style="text-align:center;padding:8px 0">—</div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HISTORY
+══════════════════════════════════════════════════════════════ */
+function saveToHistory(d) {
+  const sym  = d.token?.symbol || '???';
+  const name = d.token?.name   || sym;
+  const entry = {mint:d.mint, sym, name, score:d.score, badge:d.badge,
+    logo:d.token?.logoURI||'', ts:Date.now()};
+  scanHistory = scanHistory.filter(h => h.mint !== d.mint);
+  scanHistory.unshift(entry);
+  if (scanHistory.length > 50) scanHistory.length = 50;
+  localStorage.setItem('bsScanHistory', JSON.stringify(scanHistory));
+  renderHistoryList();
+  renderHomeRecent();
+}
+
+function timeAgo(ts) {
+  const m = Math.floor((Date.now()-ts)/60000);
+  if (m < 1) return currentLang === 'pt-BR' ? 'Agora mesmo' : 'Just now';
+  if (m < 60) return m + (currentLang === 'pt-BR' ? 'm atrás' : 'm ago');
+  const h = Math.floor(m/60);
+  if (h < 24) return h + (currentLang === 'pt-BR' ? 'h atrás' : 'h ago');
+  return Math.floor(h/24) + (currentLang === 'pt-BR' ? 'd atrás' : 'd ago');
+}
+
+function badgeCls(badge) {
+  return badge === 'SAFE' ? 'badge-safe' : badge === 'CAUTION' ? 'badge-caution' : 'badge-danger';
+}
+
+function histItemHTML(h, compact) {
+  const avatarHTML = h.logo
+    ? `<img src="${h.logo}" style="width:100%;height:100%;object-fit:cover"
+        onerror="this.parentElement.textContent='${h.sym?.[0]?.toUpperCase()||'?'}'">`
+    : (h.sym?.[0]?.toUpperCase() || '?');
+  const bc = badgeCls(h.badge);
+  if (compact) {
+    return `<div class="hist-item" onclick="doScan('${h.mint}')" style="padding:12px 18px">
+      <div class="hist-ico">${avatarHTML}</div>
+      <div class="hist-body">
+        <div class="hist-sym">$${h.sym} <span style="font-weight:400;color:var(--txt2);font-size:12px">· ${h.name}</span></div>
+        <div class="hist-time">${timeAgo(h.ts)}</div>
+      </div>
+      <div class="hist-right"><span class="badge ${bc}">${h.score}</span></div>
+    </div>`;
+  }
+  return `<div class="hist-item" onclick="doScan('${h.mint}')">
+    <div class="hist-ico">${avatarHTML}</div>
+    <div class="hist-body">
+      <div class="hist-sym">$${h.sym}</div>
+      <div class="hist-mint">${h.mint}</div>
+      <div class="hist-time">${timeAgo(h.ts)}</div>
+    </div>
+    <div class="hist-right">
+      <span class="badge ${bc}">${t('badge.'+h.badge.toLowerCase())}</span>
+      <span style="font-size:16px;font-weight:900">${h.score}</span>
+    </div>
+  </div>`;
+}
+
+function renderHistoryList() {
+  const el = document.getElementById('hist-list');
+  if (!scanHistory.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">📜</div>
+      <div class="empty-title">${t('hist.empty')}</div>
+      <div class="empty-sub">${t('hist.emptyHint')}</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = scanHistory.map(h => histItemHTML(h, false)).join('');
+}
+
+function renderHomeRecent() {
+  const el = document.getElementById('home-recent');
+  if (!scanHistory.length) {
+    el.innerHTML = `<div class="empty" style="padding:32px">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">${t('home.noScans')}</div>
+      <div class="empty-sub">${t('home.noScansHint')}</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = scanHistory.slice(0,3).map(h => histItemHTML(h, true)).join('');
+}
+
+function clearHistory() {
+  scanHistory = [];
+  localStorage.removeItem('bsScanHistory');
+  renderHistoryList();
+  renderHomeRecent();
+  showToast('🗑️ ' + t('hist.cleared'));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATS
+══════════════════════════════════════════════════════════════ */
+function bumpStats(d) {
+  sessionStats.scans++;
+  if (d.badge === 'SAFE')   sessionStats.safe++;
+  if (d.badge === 'DANGER') sessionStats.danger++;
+  const sym = (d.token?.symbol||'').toLowerCase();
+  const memeWords = ['doge','pepe','shib','bonk','wif','floki','meme','cat','frog'];
+  if (memeWords.some(m => sym.includes(m))) sessionStats.memes++;
+  localStorage.setItem('bsStats', JSON.stringify(sessionStats));
+  renderStats();
+}
+
+function renderStats() {
+  document.getElementById('qs-scans').textContent  = sessionStats.scans  || 0;
+  document.getElementById('qs-safe').textContent   = sessionStats.safe   || 0;
+  document.getElementById('qs-meme').textContent   = sessionStats.memes  || 0;
+  document.getElementById('qs-danger').textContent = sessionStats.danger || 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SHARE
+══════════════════════════════════════════════════════════════ */
+function shareResult() {
+  if (!lastScanData) return;
+  const mint  = lastScanData.mint;
+  const score = lastScanData.score;
+  const badge = lastScanData.badge;
+  const sym   = lastScanData.token?.symbol || '???';
+  const url   = location.origin + location.pathname + '?mint=' + mint;
+  if (navigator.share) {
+    navigator.share({title:'Bags Shield — $'+sym,
+      text:`$${sym} scored ${score}/100 — ${badge} 🛡️`, url}).catch(()=>{});
+  } else {
+    navigator.clipboard?.writeText(url)
+      .then(() => showToast('📋 ' + t('share.copied')))
+      .catch(() => showToast('📋 Link: ' + url.slice(0,40)+'...'));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LAUNCHPAD
+══════════════════════════════════════════════════════════════ */
+let launchChecks = {revokeMint:true, revokeFreeze:true, lockLp:false, immutableMeta:false, antiBotFirst:false};
+
+function renderLaunchChecklist() {
+  const el = document.getElementById('launch-checklist');
+  let total = 0;
+  el.innerHTML = TRUST_LAYERS.map(l => {
+    const done = !!launchChecks[l.id];
+    if (done) total += l.pts;
+    return `<div class="launch-check" onclick="toggleCheck('${l.id}')">
+      <div class="check-ico ${done?'done':'todo'}">${done?'✅':'⬜'}</div>
+      <div class="check-body">
+        <div class="check-name">${t(l.key)}</div>
+        <div class="check-desc">${t(l.key+'.desc')}</div>
+        <div class="check-pts">+${l.pts} pts</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('launch-score').textContent = total;
+  for (let i = 0; i < 5; i++) {
+    document.getElementById('ls'+i).classList.toggle('fill', total >= (i+1)*20);
+  }
+  const badge = total >= 80 ? 'SAFE' : total >= 50 ? 'CAUTION' : 'DANGER';
+  const badgeEl = document.getElementById('launch-badge-txt');
+  badgeEl.textContent = t('badge.'+badge.toLowerCase());
+  badgeEl.style.color = badge === 'SAFE' ? 'var(--green)' : badge === 'CAUTION' ? 'var(--amber)' : 'var(--red)';
+}
+
+function toggleCheck(id) {
+  launchChecks[id] = !launchChecks[id];
+  renderLaunchChecklist();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SWAP
+══════════════════════════════════════════════════════════════ */
+function setSlip(v) {
+  slippage = v;
+  document.getElementById('slip-val').textContent = v + '%';
+}
+
+function flipSwap() {
+  const a = document.getElementById('sw-from-sym').textContent;
+  const b = document.getElementById('sw-to-sym').textContent;
+  document.getElementById('sw-from-sym').textContent = b;
+  document.getElementById('sw-to-sym').textContent   = a;
+  document.getElementById('sw-from-amt').value = '';
+  document.getElementById('sw-to-amt').value   = '';
+  document.getElementById('sw-rate').textContent = '—';
+}
+
+function setMaxSwap() {
+  document.getElementById('sw-from-amt').value = '1';
+  updateSwapQuote();
+}
+
+let quoteTimer = null;
+function updateSwapQuote() {
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(() => {
+    const amt = parseFloat(document.getElementById('sw-from-amt').value);
+    if (!amt || amt <= 0) { document.getElementById('sw-to-amt').value=''; return; }
+    const from = document.getElementById('sw-from-sym').textContent;
+    const to   = document.getElementById('sw-to-sym').textContent;
+    const rate = from === 'SOL' ? 152.5 : 0.00656;
+    document.getElementById('sw-to-amt').value = (amt * rate).toFixed(4);
+    document.getElementById('sw-rate').textContent = `1 ${from} ≈ ${rate} ${to}`;
+  }, 400);
+}
+
+function doSwap() {
+  const amt = parseFloat(document.getElementById('sw-from-amt').value);
+  if (!amt || amt <= 0) { showToast('⚠️ Enter an amount'); return; }
+  showToast('🔗 Connect wallet to swap — Coming soon 🚀');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MISC
+══════════════════════════════════════════════════════════════ */
+function openLink(url) { window.open(url,'_blank','noopener,noreferrer'); }
+
+function clearCache() {
+  localStorage.clear();
+  scanHistory = [];
+  sessionStats = {scans:0, safe:0, danger:0, memes:0};
+  renderHistoryList();
+  renderHomeRecent();
+  renderStats();
+  showToast('🗑️ ' + t('cache.cleared'));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DEEP LINK
+══════════════════════════════════════════════════════════════ */
+function checkDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const mint = params.get('mint');
+  if (mint) { document.getElementById('mint-input').value = mint; setTimeout(() => doScan(mint), 600); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SPLASH
+══════════════════════════════════════════════════════════════ */
+function bootSplash() {
+  const prog = document.getElementById('sp-progress');
+  const status = document.getElementById('sp-status');
+  const steps  = [[20,'Loading scanner...'],[50,'Connecting APIs...'],[80,'Ready...'],[100,"Let's go!"]];
+  let i = 0;
+  const tick = () => {
+    if (i >= steps.length) {
+      setTimeout(() => {
+        // Init all panels
+        renderLaunchChecklist();
+        renderHistoryList();
+        renderHomeRecent();
+        renderStats();
+        // Apply lang
+        const lang = localStorage.getItem('bsLang') || 'pt-BR';
+        if (lang !== 'pt-BR') setLang(lang); else applyI18n();
+        // Set lang UI
+        document.getElementById('lang-pt').classList.toggle('active', lang==='pt-BR');
+        document.getElementById('lang-en').classList.toggle('active', lang==='en');
+        document.getElementById('sett-lang-sub').textContent =
+          lang==='pt-BR' ? 'Português (BR)' : 'English (US)';
+        // Boot
+        document.getElementById('vs').classList.remove('active');
+        document.getElementById('nav').style.display = 'flex';
+        currentView = 'vs';
+        goTo('vhome');
+        checkDeepLink();
+      }, 300);
+      return;
+    }
+    const [pct, msg] = steps[i++];
+    prog.style.width = pct + '%';
+    status.textContent = msg;
+    setTimeout(tick, 480);
+  };
+  setTimeout(tick, 200);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SERVICE WORKER
+══════════════════════════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nav').style.display = 'none';
+  bootSplash();
+});
+</script>
+</body>
+</html>
