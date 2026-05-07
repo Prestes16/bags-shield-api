@@ -106,6 +106,18 @@ async function applyRateLimit(req: NextRequest): Promise<{ success: true } | Nex
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+export async function OPTIONS(req: NextRequest) {
+  const res = new NextResponse(null, { status: 204 });
+  applyCorsHeaders(req, res);
+  applyNoStore(res);
+  applySecurityHeaders(res);
+  res.headers.set('Access-Control-Allow-Methods', 'POST,GET,OPTIONS');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  return res;
+}
+
+
+
 // Strict request schema - fail-closed
 const ScanRequestSchema = z
   .object({
@@ -411,8 +423,12 @@ function formatUpstreamsHeaderFromSources(sources: SourceMetaItem[]): string {
 function extractTokenFromHelius(heliusData: unknown): {
   name?: string;
   symbol?: string;
-  imageUrl?: string;
+  logoURI?: string;
   decimals?: number;
+  supply?: number;
+  mintAuthorityRevoked?: boolean;
+  freezeAuthorityRevoked?: boolean;
+  isImmutable?: boolean;
   source: 'helius';
 } | null {
   try {
@@ -423,15 +439,55 @@ function extractTokenFromHelius(heliusData: unknown): {
     const meta = content?.metadata;
     const name = typeof meta?.name === 'string' ? meta.name : undefined;
     const symbol = typeof meta?.symbol === 'string' ? meta.symbol : undefined;
-    const decimals = typeof meta?.decimals === 'number' ? meta.decimals : undefined;
-    const imageUrl =
+    const logoURI =
       (content?.files?.[0] as { uri?: string })?.uri ??
       (content?.links as { image?: string })?.image ??
       undefined;
+    // token_info from Helius DAS API
+    const tokenInfo = r.token_info as Record<string, unknown> | undefined;
+    const decimals = typeof tokenInfo?.decimals === 'number' ? tokenInfo.decimals :
+      typeof meta?.decimals === 'number' ? meta.decimals : undefined;
+    const supply = typeof tokenInfo?.supply === 'number' ? tokenInfo.supply : undefined;
+    // null or missing mint_authority means it has been revoked (safe)
+    const mintAuthorityRevoked = tokenInfo
+      ? (tokenInfo.mint_authority === null || tokenInfo.mint_authority === undefined)
+      : undefined;
+    const freezeAuthorityRevoked = tokenInfo
+      ? (tokenInfo.freeze_authority === null || tokenInfo.freeze_authority === undefined)
+      : undefined;
+    // mutable === false means metadata is immutable
+    const isImmutable = typeof r.mutable === 'boolean' ? !r.mutable : undefined;
     if (!name && !symbol) return null;
-    return { name: name ?? undefined, symbol: symbol ?? undefined, imageUrl, decimals, source: 'helius' as const };
+    return {
+      name,
+      symbol,
+      logoURI,
+      decimals,
+      supply,
+      mintAuthorityRevoked,
+      freezeAuthorityRevoked,
+      isImmutable,
+      source: 'helius' as const,
+    };
   } catch {
     return null;
+  }
+}
+
+/** Extracts priceChange24h and holderCount from Birdeye token_overview */
+function extractBirdeyeExtras(birdeyeData: unknown): { priceChange24h?: number; holderCount?: number } {
+  try {
+    if (!birdeyeData || typeof birdeyeData !== 'object') return {};
+    const d = birdeyeData as Record<string, unknown>;
+    const inner = (d.data && typeof d.data === 'object' ? d.data : d) as Record<string, unknown>;
+    const priceChange24h = typeof inner.priceChange24h === 'number' ? inner.priceChange24h :
+      typeof inner.price_change_24h === 'number' ? inner.price_change_24h : undefined;
+    const holderCount = typeof inner.holder === 'number' ? inner.holder :
+      typeof inner.holderCount === 'number' ? inner.holderCount :
+      typeof inner.holder_count === 'number' ? inner.holder_count : undefined;
+    return { priceChange24h, holderCount };
+  } catch {
+    return {};
   }
 }
 
@@ -570,6 +626,10 @@ async function runLocalScan(
   const coverageSourcesOk = enabledSources.filter((s) => s.ok).length;
   const coverageSourcesTotal = enabledSources.length;
 
+  const birdeyeExtras = birdeyeR.ok ? extractBirdeyeExtras(birdeyeR.data) : {};
+  const lpLocked = engineResult.signals.pools.some((p) => p.lpLocked === true) ||
+    (signals.lpLockSeconds !== null && signals.lpLockSeconds > 0);
+
   const responseData = {
     success: true,
     response: {
@@ -580,16 +640,31 @@ async function runLocalScan(
       confidence: engineResult.confidence,
       reasons: engineResult.reasons,
       signals: {
+        // Raw engine signals
         data_conflict: signals.dataConflict,
         sourcesOk: signals.sourcesOk,
         sourcesTotal: signals.sourcesTotal,
         mintActive: signals.mintActive,
+        // Trust layer signals (mapped for frontend display)
+        revokeMint: token?.mintAuthorityRevoked ?? null,
+        revokeFreeze: token?.freezeAuthorityRevoked ?? null,
+        lockLp: lpLocked || null,
+        immutableMeta: token?.isImmutable ?? null,
+        antiBotFirst: null, // not detectable from current sources
+        // Extra market context
+        holderCount: birdeyeExtras.holderCount ?? null,
+        priceChange24h: birdeyeExtras.priceChange24h ?? null,
+        top10Concentration: signals.top10ConcentrationPercent,
       },
       market: {
         price: signals.market.priceUsd ?? null,
         liquidity: liquidityEvidence?.liquidityUsd ?? signals.market.liquidityUsd ?? null,
         volume24h: signals.market.volume24hUsd ?? null,
         marketCap,
+        priceChange24h: birdeyeExtras.priceChange24h ?? null,
+        holders: birdeyeExtras.holderCount ?? null,
+        supply: token?.supply ?? null,
+        decimals: token?.decimals ?? null,
         sourcesUsed,
         liquidityEvidence,
       },
@@ -598,6 +673,7 @@ async function runLocalScan(
         address: p.address,
         liquidity: p.liquidity,
         lpLocked: p.lpLocked,
+        dex: p.type === 'meteora' ? 'Meteora' : p.type === 'raydium' ? 'Raydium' : 'Unknown',
         evidence: p.evidence,
       })),
       actors: {

@@ -369,7 +369,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Ne
 /* ─── ACTOR CHIPS ────────────────────────────────────────────── */
 .actor-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
 .actor-chip{background:var(--surface2);border:1px solid var(--border);
-  border-radius:8px;padding:6px 10px}
+  border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--txt2)}
+.actor-chip.ok{background:rgba(0,214,143,.1);border-color:rgba(0,214,143,.25);color:var(--green)}
+.actor-chip.danger{background:rgba(255,59,92,.1);border-color:rgba(255,59,92,.25);color:var(--red)}
+.actor-chip.note{background:rgba(77,212,255,.08);border-color:rgba(77,212,255,.2);color:var(--cyan)}
 .actor-addr{font-size:10px;font-family:monospace;color:var(--txt2);font-weight:600}
 .actor-pct{font-size:12px;font-weight:800;margin-top:2px}
 .actor-pct.whale{color:var(--red)}
@@ -1053,6 +1056,11 @@ const STRINGS = {
     'tl.immutableMeta.desc':'Nome/logo não podem ser alterados',
     'tl.antiBotFirst':'Anti-bot Primeiro Bloco',
     'tl.antiBotFirst.desc':'Proteção contra snipers no launch',
+    'actor.holders':'Holders',
+    'actor.botDetected':'Bot Detectado',
+    'actor.noBot':'Sem Bots',
+    'actor.washDetected':'Wash Trading',
+    'actor.noWash':'Sem Wash',
     'loading.0':'Conectando ao Helius...',
     'loading.1':'Buscando dados Birdeye...',
     'loading.2':'Analisando DexScreener...',
@@ -1146,6 +1154,11 @@ const STRINGS = {
     'tl.immutableMeta.desc':'Name/logo cannot be changed',
     'tl.antiBotFirst':'Anti-bot First Block',
     'tl.antiBotFirst.desc':'Sniper protection at launch',
+    'actor.holders':'Holders',
+    'actor.botDetected':'Bot Detected',
+    'actor.noBot':'No Bots',
+    'actor.washDetected':'Wash Trading',
+    'actor.noWash':'No Wash',
     'loading.0':'Connecting to Helius...',
     'loading.1':'Fetching Birdeye data...',
     'loading.2':'Analyzing DexScreener...',
@@ -1334,7 +1347,7 @@ function renderResult(d) {
   const market = d.market  || {};
   const sig    = d.signals || {};
   const pools  = d.pools   || [];
-  const actors = d.actors  || [];
+  const actors = d.actors  || {};
   const reasons= d.reasons || [];
   const conf   = d.confidence ?? 0;
 
@@ -1488,20 +1501,32 @@ function renderResult(d) {
       }).join('') + '</div>';
   }
 
-  // Holders
+  // Bot / Wash detection
   const holdersEl = document.getElementById('res-holders');
-  if (actors && actors.length) {
-    holdersEl.innerHTML = '<div class="actor-chips">' +
-      actors.slice(0,8).map(a => {
-        const pct  = +(a.pct || a.percentage || 0);
-        const addr = (a.address||a.owner||'').slice(0,6) + '…' + (a.address||a.owner||'').slice(-4);
-        return `<div class="actor-chip">
-          <div class="actor-addr">${addr}</div>
-          <div class="actor-pct ${pct>10?'whale':'ok'}">${pct.toFixed(1)}%</div>
-        </div>`;
-      }).join('') + '</div>';
-  } else {
-    holdersEl.innerHTML = `<div class="txt-sm" style="text-align:center;padding:8px 0">—</div>`;
+  {
+    const botLikely  = actors.botLikely  ?? null;
+    const washLikely = actors.washLikely ?? null;
+    const notes      = actors.notes      || [];
+    const holdersFmt = holders != null ? (+holders).toLocaleString() : '—';
+    const chips = [];
+
+    if (botLikely === true)
+      chips.push(`<div class="actor-chip danger">🤖 ${t('actor.botDetected')}</div>`);
+    else if (botLikely === false)
+      chips.push(`<div class="actor-chip ok">🤖 ${t('actor.noBot')}</div>`);
+
+    if (washLikely === true)
+      chips.push(`<div class="actor-chip danger">🔄 ${t('actor.washDetected')}</div>`);
+    else if (washLikely === false)
+      chips.push(`<div class="actor-chip ok">🔄 ${t('actor.noWash')}</div>`);
+
+    if (notes.length)
+      notes.slice(0,3).forEach(n => chips.push(`<div class="actor-chip note">ℹ️ ${n}</div>`));
+
+    holdersEl.innerHTML = chips.length
+      ? `<div style="font-size:12px;color:var(--txt2);margin-bottom:8px">${t('actor.holders')}: <strong>${holdersFmt}</strong></div>` +
+        '<div class="actor-chips">' + chips.join('') + '</div>'
+      : `<div class="txt-sm" style="text-align:center;padding:8px 0;color:var(--txt2)">${t('actor.holders')}: <strong>${holdersFmt}</strong></div>`;
   }
 }
 
