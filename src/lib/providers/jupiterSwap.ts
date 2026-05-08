@@ -4,12 +4,14 @@
  */
 import { fetchGuard } from './fetchGuard';
 import { circuitAllow, circuitFailure, circuitSuccess } from './circuitBreaker';
+import { getExistingFeeCollectorTokenAccount } from '@/lib/solana/fees';
 
 const CB_KEY = 'jupiter:swap';
 const BASE = 'https://lite-api.jup.ag/swap/v1';
+const NATIVE_SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 export interface JupiterSwapParams {
-  quoteResponse: unknown;
+  quoteResponse: any;
   userPublicKey: string;
   wrapAndUnwrapSol?: boolean;
   dynamicComputeUnitLimit?: boolean;
@@ -31,12 +33,47 @@ export async function fetchJupiterSwap(params: JupiterSwapParams): Promise<Jupit
   }
 
   const url = `${BASE}/swap`;
+
+  const inputMint = String(params.quoteResponse?.inputMint ?? '');
+  const outputMint = String(params.quoteResponse?.outputMint ?? '');
+
+  const feeMintCandidates =
+    inputMint === NATIVE_SOL_MINT
+      ? [outputMint, inputMint]
+      : [inputMint, outputMint];
+
+  let feeAccount: string | undefined;
+  let feeMintUsed: string | undefined;
+
+  for (const mint of feeMintCandidates) {
+    if (!mint) continue;
+    const acc = (await getExistingFeeCollectorTokenAccount(mint)) ?? undefined;
+    if (acc) {
+      feeAccount = acc;
+      feeMintUsed = mint;
+      break;
+    }
+  }
+
+  let quoteResponse = params.quoteResponse;
+
+  if (!feeAccount) {
+    const { platformFee, platformFeeBps, feeBps, ...rest } = params.quoteResponse ?? {};
+    quoteResponse = rest;
+    console.warn(
+      `[fees] No compatible fee collector token account for pair ${inputMint} -> ${outputMint}; stripping platform fee and proceeding without app fee.`
+    );
+  } else {
+    console.info(`[fees] Using feeAccount for mint ${feeMintUsed}`);
+  }
+
   const payload: any = {
-    quoteResponse: params.quoteResponse,
+    quoteResponse,
     userPublicKey: params.userPublicKey,
     wrapAndUnwrapSol: params.wrapAndUnwrapSol ?? true,
     dynamicComputeUnitLimit: params.dynamicComputeUnitLimit ?? true,
     asLegacyTransaction: params.asLegacyTransaction ?? false,
+    feeAccount,
   };
 
   if (params.prioritizationFeeLamports !== undefined) {
@@ -63,4 +100,3 @@ export async function fetchJupiterSwap(params: JupiterSwapParams): Promise<Jupit
     quality: r.timedOut ? ['TIMEOUT'] : ['DEGRADED'],
   };
 }
-

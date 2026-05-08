@@ -16,6 +16,7 @@ export interface JupiterQuoteParams {
   outputMint: string;
   amount: string;
   slippageBps?: number;
+  platformFeeBps?: number;
 }
 
 export interface JupiterQuoteResult {
@@ -27,12 +28,13 @@ export interface JupiterQuoteResult {
 }
 
 export async function fetchJupiterQuote(params: JupiterQuoteParams): Promise<JupiterQuoteResult> {
-  const { inputMint, outputMint, amount, slippageBps = 50 } = params;
+  const { inputMint, outputMint, amount, slippageBps = 50, platformFeeBps } = params;
   const cacheKeyStr = cacheKey(PROVIDER, 'quote', {
     inputMint,
     outputMint,
     amount: amount.slice(0, 20),
     slippage: String(slippageBps),
+    feeBps: String(platformFeeBps ?? 0),
   });
   const ttl = getTtlMs('short');
 
@@ -51,6 +53,12 @@ export async function fetchJupiterQuote(params: JupiterQuoteParams): Promise<Jup
     amount,
     slippageBps: String(slippageBps),
   });
+
+  if (platformFeeBps && platformFeeBps > 0) {
+    search.set('platformFeeBps', String(platformFeeBps));
+    search.set('instructionVersion', 'V2');
+  }
+
   const url = `${BASE}/quote?${search.toString()}`;
 
   const result = await fetchGuard<unknown>(url, {

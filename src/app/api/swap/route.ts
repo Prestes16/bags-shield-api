@@ -19,6 +19,8 @@ export async function OPTIONS(req: NextRequest) {
 
   // Preflight precisa CORS pra navegador liberar o POST.
   applyCorsHeaders(req, res);
+  res.headers.set('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type,Authorization,solana-client,x-solana-client');
   applyNoStore(res);
   applySecurityHeaders(res);
   res.headers.set('X-Request-Id', requestId);

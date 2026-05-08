@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getOrGenerateRequestId, applyCorsHeaders, applyNoStore, applySecurityHeaders } from '@/lib/security';
 import { fetchJupiterQuote } from '@/lib/providers';
+import { APP_FEE_BPS, getExistingFeeCollectorTokenAccount } from '@/lib/solana/fees';
 import { checkRateLimitByIp, getClientIp } from '@/lib/security/rateLimit';
 import { LaunchpadValidator } from '@/lib/security/validate';
 
@@ -80,11 +81,42 @@ export async function GET(req: NextRequest) {
   }
 
   const { inputMint, outputMint, amount, slippageBps } = parsed.data;
+
+  let platformFeeBps: number | undefined;
+  try {
+    const NATIVE_SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const feeMintCandidates =
+      inputMint === NATIVE_SOL_MINT
+        ? [outputMint, inputMint]
+        : [inputMint, outputMint];
+
+    let feeMintUsed: string | undefined;
+
+    for (const mint of feeMintCandidates) {
+      if (!mint) continue;
+      const feeAccount = await getExistingFeeCollectorTokenAccount(mint);
+      if (feeAccount) {
+        platformFeeBps = APP_FEE_BPS;
+        feeMintUsed = mint;
+        break;
+      }
+    }
+
+    if (platformFeeBps) {
+      console.info(`[fees] Quote eligible with fee collector token account for mint ${feeMintUsed}; platform fee enabled (${APP_FEE_BPS} bps).`);
+    } else {
+      console.warn(`[fees] Missing compatible fee collector token account for pair ${inputMint} -> ${outputMint}; quote will proceed without app fee.`);
+    }
+  } catch (e) {
+    console.warn(`[fees] Could not resolve compatible fee collector token account for pair ${inputMint} -> ${outputMint}; quote will proceed without app fee.`, e);
+  }
+
   const result = await fetchJupiterQuote({
     inputMint: inputMint!,
     outputMint: outputMint!,
     amount: amount!,
     slippageBps,
+    platformFeeBps,
   });
 
   if (!result.ok) {

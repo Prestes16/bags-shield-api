@@ -2,13 +2,14 @@
  * GET /api/status - Status endpoint para smoke checks
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { applyCorsHeaders, handlePreflight } from '@/src/lib/security/cors';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET() {
-  return NextResponse.json(
+export async function GET(req: NextRequest) {
+  const res = NextResponse.json(
     {
       success: true,
       response: {
@@ -21,4 +22,10 @@ export async function GET() {
       headers: { 'Cache-Control': 'no-store' },
     },
   );
+
+  return applyCorsHeaders(req, res) as NextResponse;
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return handlePreflight(req, ['GET', 'OPTIONS']);
 }
