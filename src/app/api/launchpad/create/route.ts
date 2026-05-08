@@ -19,6 +19,11 @@ import {
   getMinimumBalanceForRentExemptMint,
   AuthorityType,
 } from "@solana/spl-token";
+import {
+  createCreateMetadataAccountV3Instruction,
+  PROGRAM_ID as METADATA_PROGRAM_ID,
+} from "@metaplex-foundation/mpl-token-metadata";
+import { getLaunchFee, getTreasuryWallet } from "@/lib/solana/fees";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -229,6 +234,68 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // 7. Collect launch fee -> treasury (best-effort)
+  const treasuryStr = getTreasuryWallet();
+  const allLayersActive =
+    Object.values(trustLayers).every(Boolean) &&
+    Object.keys(trustLayers).length >= 5;
+  if (treasuryStr) {
+    try {
+      const treasury = new PublicKey(treasuryStr);
+      const fee = getLaunchFee(allLayersActive);
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: creator,
+          toPubkey: treasury,
+          lamports: fee,
+        })
+      );
+    } catch (e) {
+      console.warn("[launchpad/create] Treasury fee skipped:", e);
+    }
+  }
+
+  // 8. Metaplex on-chain metadata (name, symbol, uri)
+  try {
+    const [metadataPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        METADATA_PROGRAM_ID.toBuffer(),
+        mint.toBuffer(),
+      ],
+      METADATA_PROGRAM_ID
+    );
+    const metadataUri = String(body?.imageUrl ?? body?.image ?? "").trim();
+    tx.add(
+      createCreateMetadataAccountV3Instruction(
+        {
+          metadata: metadataPDA,
+          mint,
+          mintAuthority: creator,
+          payer: creator,
+          updateAuthority: creator,
+        },
+        {
+          createMetadataAccountArgsV3: {
+            data: {
+              name,
+              symbol,
+              uri: metadataUri,
+              sellerFeeBasisPoints: 0,
+              creators: null,
+              collection: null,
+              uses: null,
+            },
+            isMutable: !trustLayers?.immutableMeta,
+            collectionDetails: null,
+          },
+        }
+      )
+    );
+  } catch (e) {
+    console.warn("[launchpad/create] Metadata instruction skipped:", e);
+  }
+
   // Partial-sign with mint keypair (creator signs in wallet)
   try {
     tx.partialSign(mintKeypair);
@@ -281,6 +348,39 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Bags.fm fee share registration (fire-and-forget, do not block the response)
+  const bagsApiKey = process.env.BAGS_API_KEY;
+  if (bagsApiKey && walletStr) {
+    (async () => {
+      try {
+        await fetch(
+          "https://public-api-v2.bags.fm/api/v1/fee-share/create-config",
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": bagsApiKey,
+            },
+            body: JSON.stringify({
+              launchWallet: walletStr,
+              feeShareWallet: treasuryStr ?? walletStr,
+            }),
+            signal: AbortSignal.timeout(5000),
+          }
+        );
+      } catch (e) {
+        console.warn("[launchpad/create] Bags fee-share config skipped:", e);
+      }
+    })();
+  }
+
+  const fees = {
+    launchFeeLamports: Number(getLaunchFee(allLayersActive)),
+    shieldTier: allLayersActive,
+    treasuryConfigured: Boolean(treasuryStr),
+    bagsFeeshareEnrolled: Boolean(bagsApiKey),
+  };
+
   return jsonNoStore({
     success: true,
     response: {
@@ -291,6 +391,7 @@ export async function POST(req: NextRequest) {
       supply: Number(supplyBig),
       simulated: false,
       message: "Sign the transaction in your wallet to deploy the token on-chain.",
+      fees,
       submitted: {
         name,
         symbol,

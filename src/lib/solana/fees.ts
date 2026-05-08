@@ -30,3 +30,20 @@ export async function getExistingFeeCollectorTokenAccount(mint: string): Promise
   const info = await conn.getAccountInfo(new PublicKey(ata));
   return info ? ata : null;
 }
+
+// Bags Shield launch fees
+export const LAUNCH_FEE_LAMPORTS = BigInt(
+  (process.env.LAUNCH_FEE_LAMPORTS ?? '20000000').trim()
+); // 0.02 SOL default
+
+export const SHIELD_TIER_EXTRA_LAMPORTS = BigInt(
+  (process.env.SHIELD_TIER_FEE_LAMPORTS ?? '30000000').trim()
+); // +0.03 SOL when all trust layers are active
+
+export function getLaunchFee(allLayersActive: boolean): bigint {
+  return LAUNCH_FEE_LAMPORTS + (allLayersActive ? SHIELD_TIER_EXTRA_LAMPORTS : 0n);
+}
+
+export function getTreasuryWallet(): string | null {
+  return (process.env.TREASURY_WALLET_ADDRESS ?? '').trim() || null;
+}

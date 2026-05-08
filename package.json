@@ -28,6 +28,7 @@
     "node": "20.x"
   },
   "dependencies": {
+    "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@solana-mobile/wallet-adapter-mobile": "^2.2.5",
