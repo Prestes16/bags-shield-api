@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   Connection,
-  Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
@@ -56,6 +55,7 @@ interface CreateBody {
   slippageBps?: number;
   tip?: number | null;
   wallet?: string;
+  mintPublicKey?: string;
 }
 
 function getRpcUrl(): string {
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
   const name = String(body?.name || "").trim();
   const symbol = String(body?.symbol || "").trim().toUpperCase();
   const walletStr = String(body?.wallet || "").trim();
+  const mintPublicKeyStr = String(body?.mintPublicKey || "").trim();
   const trustLayers = body?.trustLayers || {};
 
   // --- Validations ---
@@ -102,6 +103,12 @@ export async function POST(req: NextRequest) {
       400
     );
   }
+  if (!mintPublicKeyStr || mintPublicKeyStr.length < 32 || mintPublicKeyStr.length > 44) {
+    return jsonNoStore(
+      { success: false, error: "MISSING_MINT", message: "mintPublicKey is required (client must generate the mint keypair)" },
+      400
+    );
+  }
 
   let creator: PublicKey;
   try {
@@ -109,6 +116,16 @@ export async function POST(req: NextRequest) {
   } catch {
     return jsonNoStore(
       { success: false, error: "INVALID_WALLET", message: "Invalid wallet pubkey" },
+      400
+    );
+  }
+
+  let mint: PublicKey;
+  try {
+    mint = new PublicKey(mintPublicKeyStr);
+  } catch {
+    return jsonNoStore(
+      { success: false, error: "INVALID_MINT", message: "Invalid mintPublicKey" },
       400
     );
   }
@@ -128,15 +145,10 @@ export async function POST(req: NextRequest) {
 
   // --- Build transaction ---
   let connection: Connection;
-  let blockhash: string;
-  let lastValidBlockHeight: number;
   let mintRent: number;
 
   try {
     connection = new Connection(getRpcUrl(), "confirmed");
-    const latest = await connection.getLatestBlockhash("confirmed");
-    blockhash = latest.blockhash;
-    lastValidBlockHeight = latest.lastValidBlockHeight;
     mintRent = await getMinimumBalanceForRentExemptMint(connection);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -150,15 +162,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const mintKeypair = Keypair.generate();
-  const mint = mintKeypair.publicKey;
   const ata = getAssociatedTokenAddressSync(mint, creator, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 
   const decimals = DEFAULT_DECIMALS;
   const mintAmount = supplyBig * BigInt(10 ** decimals);
 
+  // No recentBlockhash: the client will set it right before signing to avoid expiry.
   const tx = new Transaction({
-    recentBlockhash: blockhash,
     feePayer: creator,
   });
 
@@ -296,17 +306,7 @@ export async function POST(req: NextRequest) {
     console.warn("[launchpad/create] Metadata instruction skipped:", e);
   }
 
-  // Partial-sign with mint keypair (creator signs in wallet)
-  try {
-    tx.partialSign(mintKeypair);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return jsonNoStore(
-      { success: false, error: "SIGN_ERROR", message: msg },
-      500
-    );
-  }
-
+  // Mint keypair is held by the client — it will partial-sign there before submitting.
   const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
   const transactionBase64 = Buffer.from(serialized).toString("base64");
 
@@ -386,7 +386,6 @@ export async function POST(req: NextRequest) {
     response: {
       mint: mint.toBase58(),
       transaction: transactionBase64,
-      lastValidBlockHeight,
       decimals,
       supply: Number(supplyBig),
       simulated: false,
