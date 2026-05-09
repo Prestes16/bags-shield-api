@@ -167,8 +167,14 @@ export async function POST(req: NextRequest) {
   const decimals = DEFAULT_DECIMALS;
   const mintAmount = supplyBig * BigInt(10 ** decimals);
 
-  // No recentBlockhash: the client will set it right before signing to avoid expiry.
+  // Placeholder blockhash — the client overrides it with a fresh one right before signing.
+  // web3.js Transaction.serialize() requires a recentBlockhash to compile the message,
+  // but since the client (which holds the mint keypair and the wallet) will set a fresh
+  // blockhash + partial-sign + sign, the server placeholder never reaches the chain.
+  const PLACEHOLDER_BLOCKHASH = "11111111111111111111111111111111";
+
   const tx = new Transaction({
+    recentBlockhash: PLACEHOLDER_BLOCKHASH,
     feePayer: creator,
   });
 
