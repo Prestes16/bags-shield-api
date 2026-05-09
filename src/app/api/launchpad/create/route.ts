@@ -222,56 +222,7 @@ export async function POST(req: NextRequest) {
   // 4. Mint full supply to creator
   tx.add(createMintToInstruction(mint, ata, creator, mintAmount, [], TOKEN_PROGRAM_ID));
 
-  // 5. Trust layer: revoke mint authority
-  if (trustLayers?.revokeMint) {
-    tx.add(
-      createSetAuthorityInstruction(
-        mint,
-        creator,
-        AuthorityType.MintTokens,
-        null,
-        [],
-        TOKEN_PROGRAM_ID
-      )
-    );
-  }
-
-  // 6. Trust layer: revoke freeze authority
-  if (trustLayers?.revokeFreeze) {
-    tx.add(
-      createSetAuthorityInstruction(
-        mint,
-        creator,
-        AuthorityType.FreezeAccount,
-        null,
-        [],
-        TOKEN_PROGRAM_ID
-      )
-    );
-  }
-
-  // 7. Collect launch fee -> treasury (best-effort)
-  const treasuryStr = getTreasuryWallet();
-  const allLayersActive =
-    Object.values(trustLayers).every(Boolean) &&
-    Object.keys(trustLayers).length >= 5;
-  if (treasuryStr) {
-    try {
-      const treasury = new PublicKey(treasuryStr);
-      const fee = getLaunchFee(allLayersActive);
-      tx.add(
-        SystemProgram.transfer({
-          fromPubkey: creator,
-          toPubkey: treasury,
-          lamports: fee,
-        })
-      );
-    } catch (e) {
-      console.warn("[launchpad/create] Treasury fee skipped:", e);
-    }
-  }
-
-  // 8. Metaplex on-chain metadata (name, symbol, uri)
+  // 5. Metaplex on-chain metadata (name, symbol, uri) — MUST be before revoking mint authority
   try {
     const [metadataPDA] = PublicKey.findProgramAddressSync(
       [
@@ -310,6 +261,55 @@ export async function POST(req: NextRequest) {
     );
   } catch (e) {
     console.warn("[launchpad/create] Metadata instruction skipped:", e);
+  }
+
+  // 6. Trust layer: revoke mint authority
+  if (trustLayers?.revokeMint) {
+    tx.add(
+      createSetAuthorityInstruction(
+        mint,
+        creator,
+        AuthorityType.MintTokens,
+        null,
+        [],
+        TOKEN_PROGRAM_ID
+      )
+    );
+  }
+
+  // 7. Trust layer: revoke freeze authority
+  if (trustLayers?.revokeFreeze) {
+    tx.add(
+      createSetAuthorityInstruction(
+        mint,
+        creator,
+        AuthorityType.FreezeAccount,
+        null,
+        [],
+        TOKEN_PROGRAM_ID
+      )
+    );
+  }
+
+  // 8. Collect launch fee -> treasury (best-effort)
+  const treasuryStr = getTreasuryWallet();
+  const allLayersActive =
+    Object.values(trustLayers).every(Boolean) &&
+    Object.keys(trustLayers).length >= 5;
+  if (treasuryStr) {
+    try {
+      const treasury = new PublicKey(treasuryStr);
+      const fee = getLaunchFee(allLayersActive);
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: creator,
+          toPubkey: treasury,
+          lamports: fee,
+        })
+      );
+    } catch (e) {
+      console.warn("[launchpad/create] Treasury fee skipped:", e);
+    }
   }
 
   // Mint keypair is held by the client — it will partial-sign there before submitting.
