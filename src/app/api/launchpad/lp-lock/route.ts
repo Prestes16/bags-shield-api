@@ -22,7 +22,7 @@ function json(body: unknown, status = 200) {
     headers: {
       "cache-control": "no-store",
       "access-control-allow-origin": "*",
-      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-methods": "GET, POST, OPTIONS",
       "access-control-allow-headers": "content-type",
     },
   });
@@ -63,8 +63,9 @@ function isRateLimited(ip: string): boolean {
 interface LpLockBody {
   mint?: string;
   wallet?: string;
-  action?: "check" | "generate_tx" | "confirm";
+  action?: "check" | "generate_tx" | "confirm" | "withdraw" | "extend";
   txSignature?: string;
+  additionalDays?: number;
 }
 
 export async function POST(req: NextRequest) {
@@ -282,11 +283,121 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // ── WITHDRAW ──────────────────────────────────────────────────────
+    if (action === "withdraw") {
+      const record = await getLpLockStatus(mint);
+      if (!record || record.status !== "locked") {
+        return json({
+          success: false,
+          mint,
+          status: record?.status ?? "not_requested",
+          error: "NOT_LOCKED",
+          message: "No active lock found for this mint",
+        });
+      }
+
+      const lockUntil = new Date(
+        new Date(record.createdAt).getTime() +
+          record.lockDays * 24 * 60 * 60 * 1000
+      );
+      const daysRemaining = Math.max(
+        0,
+        Math.ceil((lockUntil.getTime() - Date.now()) / 86_400_000)
+      );
+
+      if (daysRemaining > 0) {
+        return json({
+          success: false,
+          mint,
+          status: "locked",
+          error: "LOCK_NOT_EXPIRED",
+          lockUntil: lockUntil.toISOString(),
+          daysRemaining,
+          canWithdraw: false,
+          canExtend: true,
+          message: `Lock expires in ${daysRemaining} days`,
+        });
+      }
+
+      const escrowStr =
+        process.env.LP_LOCK_ESCROW_ADDRESS ||
+        process.env.TREASURY_WALLET_ADDRESS;
+      if (!escrowStr) {
+        return json({ success: false, error: "NO_ESCROW", message: "Escrow not configured" });
+      }
+
+      const creator = new PublicKey(wallet);
+      const tx = new Transaction({ feePayer: creator });
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: creator,
+          toPubkey: new PublicKey(escrowStr),
+          lamports: 100_000,
+        })
+      );
+
+      const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+
+      return json({
+        success: true,
+        mint,
+        status: "locked",
+        transaction: Buffer.from(serialized).toString("base64"),
+        lockUntil: lockUntil.toISOString(),
+        daysRemaining: 0,
+        canWithdraw: true,
+        canExtend: false,
+        message: "Sign to release your LP",
+      });
+    }
+
+    // ── EXTEND ───────────────────────────────────────────────────────
+    if (action === "extend") {
+      const additionalDays = Number(body.additionalDays ?? 0);
+      if (additionalDays < 7 || additionalDays > 365) {
+        return json({ success: false, error: "INVALID_DAYS", message: "additionalDays must be 7..365" }, 400);
+      }
+
+      const record = await getLpLockStatus(mint);
+      if (!record || record.status !== "locked") {
+        return json({ success: false, mint, status: record?.status ?? "not_requested", error: "NOT_LOCKED", message: "No active lock to extend" });
+      }
+
+      const escrowStr = process.env.LP_LOCK_ESCROW_ADDRESS || process.env.TREASURY_WALLET_ADDRESS;
+      if (!escrowStr) {
+        return json({ success: false, error: "NO_ESCROW", message: "Escrow not configured" });
+      }
+
+      const creator = new PublicKey(wallet);
+      const tx = new Transaction({ feePayer: creator });
+      tx.add(SystemProgram.transfer({ fromPubkey: creator, toPubkey: new PublicKey(escrowStr), lamports: 500_000 }));
+
+      const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+      const newLockDays = record.lockDays + additionalDays;
+      const newLockUntil = new Date(new Date(record.createdAt).getTime() + newLockDays * 24 * 60 * 60 * 1000);
+      const daysRemaining = Math.max(0, Math.ceil((newLockUntil.getTime() - Date.now()) / 86_400_000));
+
+      await updateLpLockStatus(mint, "locked", { lockDays: newLockDays });
+
+      return json({
+        success: true,
+        mint,
+        status: "locked",
+        transaction: Buffer.from(serialized).toString("base64"),
+        lockUntil: newLockUntil.toISOString(),
+        daysRemaining,
+        canWithdraw: false,
+        canExtend: true,
+        message: `Lock extended by ${additionalDays} days`,
+      });
+    }
+
     return json(
       {
         success: false,
         error: "INVALID_ACTION",
-        message: 'action must be "check", "generate_tx", or "confirm"',
+        message:
+          'action must be "check", "generate_tx", "confirm", "withdraw", or "extend"',
       },
       400
     );
@@ -305,8 +416,81 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       "access-control-allow-origin": "*",
-      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-methods": "GET, POST, OPTIONS",
       "access-control-allow-headers": "content-type",
     },
   });
+}
+
+// ── GET handler — list all locks for a wallet ────────────────────────────
+
+function supabaseHeaders(): Record<string, string> | null {
+  const url = process.env.SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return {
+    apikey: key,
+    authorization: `Bearer ${key}`,
+    "content-type": "application/json",
+  };
+}
+
+export async function GET(req: NextRequest) {
+  const wallet = req.nextUrl.searchParams.get("wallet")?.trim() ?? "";
+  if (!wallet || !isValidBase58(wallet)) {
+    return json(
+      { success: false, error: "INVALID_WALLET", message: "wallet query param required" },
+      400
+    );
+  }
+
+  const base = process.env.SUPABASE_URL;
+  const headers = supabaseHeaders();
+  if (!base || !headers) {
+    return json({ success: true, locks: [] });
+  }
+
+  try {
+    const url = `${base.replace(/\/+$/, "")}/rest/v1/lp_lock_status?wallet=eq.${wallet}&order=created_at.desc&limit=50`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      return json({ success: true, locks: [] });
+    }
+
+    const rows = (await res.json()) as Array<Record<string, unknown>>;
+    const locks = rows.map((r) => {
+      const lockDays = Number(r.lock_days ?? 0);
+      const createdAt = String(r.created_at ?? "");
+      const lockUntil = createdAt
+        ? new Date(new Date(createdAt).getTime() + lockDays * 86_400_000)
+        : null;
+      const daysRemaining = lockUntil
+        ? Math.max(0, Math.ceil((lockUntil.getTime() - Date.now()) / 86_400_000))
+        : 0;
+      const status = String(r.status ?? "not_requested");
+
+      return {
+        mint: String(r.mint ?? ""),
+        wallet: String(r.wallet ?? ""),
+        lockDays,
+        status,
+        poolAddress: r.pool_address ? String(r.pool_address) : null,
+        poolType: r.pool_type ? String(r.pool_type) : null,
+        lockTxSignature: r.lock_tx_signature ? String(r.lock_tx_signature) : null,
+        lockerProgram: r.locker_program ? String(r.locker_program) : null,
+        lockedLiquidityUsd: r.locked_liquidity_usd ? Number(r.locked_liquidity_usd) : null,
+        createdAt,
+        updatedAt: String(r.updated_at ?? ""),
+        lockUntil: lockUntil?.toISOString() ?? null,
+        daysRemaining,
+        canWithdraw: daysRemaining === 0 && status === "locked",
+        canExtend: status === "locked",
+      };
+    });
+
+    return json({ success: true, locks });
+  } catch {
+    return json({ success: true, locks: [] });
+  }
 }
