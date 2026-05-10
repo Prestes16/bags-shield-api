@@ -3,30 +3,8 @@
  *
  * Required Supabase tables:
  *
- * CREATE TABLE IF NOT EXISTS users (
- *   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
- *   display_name TEXT,
- *   email TEXT,
- *   avatar_url TEXT,
- *   created_at TIMESTAMPTZ DEFAULT NOW()
- * );
- *
- * CREATE TABLE IF NOT EXISTS oauth_accounts (
- *   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
- *   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
- *   provider TEXT NOT NULL,
- *   provider_sub TEXT NOT NULL,
- *   created_at TIMESTAMPTZ DEFAULT NOW(),
- *   UNIQUE(provider, provider_sub)
- * );
- *
- * CREATE TABLE IF NOT EXISTS linked_wallets (
- *   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
- *   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
- *   address TEXT NOT NULL UNIQUE,
- *   verified_at TIMESTAMPTZ DEFAULT NOW(),
- *   created_at TIMESTAMPTZ DEFAULT NOW()
- * );
+ * Tables: auth_users, oauth_accounts, linked_wallets
+ * (auth_users is separate from the payment `users` table)
  */
 
 function getSupabase(): { url: string; headers: Record<string, string> } | null {
@@ -61,7 +39,7 @@ export async function findOrCreateUserByOAuth(
   const rows = (await existing.json()) as Array<{ user_id: string }>;
   if (rows.length > 0) {
     // Update profile
-    await fetch(`${sb.url}/users?id=eq.${rows[0].user_id}`, {
+    await fetch(`${sb.url}/auth_users?id=eq.${rows[0].user_id}`, {
       method: "PATCH",
       headers: { ...sb.headers, prefer: "return=minimal" },
       body: JSON.stringify({
@@ -76,7 +54,7 @@ export async function findOrCreateUserByOAuth(
   // 2. Check if user exists by email (link existing account)
   if (profile.email) {
     const byEmail = await fetch(
-      `${sb.url}/users?email=eq.${encodeURIComponent(profile.email)}&select=id&limit=1`,
+      `${sb.url}/auth_users?email=eq.${encodeURIComponent(profile.email)}&select=id&limit=1`,
       { headers: sb.headers }
     );
     const emailRows = (await byEmail.json()) as Array<{ id: string }>;
@@ -95,7 +73,7 @@ export async function findOrCreateUserByOAuth(
   }
 
   // 3. Create new user + oauth_account
-  const createRes = await fetch(`${sb.url}/users`, {
+  const createRes = await fetch(`${sb.url}/auth_users`, {
     method: "POST",
     headers: { ...sb.headers, prefer: "return=representation" },
     body: JSON.stringify({
@@ -136,7 +114,7 @@ export async function findOrCreateUserByWallet(
   }
 
   // Create new user + link wallet
-  const createRes = await fetch(`${sb.url}/users`, {
+  const createRes = await fetch(`${sb.url}/auth_users`, {
     method: "POST",
     headers: { ...sb.headers, prefer: "return=representation" },
     body: JSON.stringify({ display_name: `${address.slice(0, 4)}...${address.slice(-4)}` }),
@@ -193,7 +171,7 @@ export async function getUserProfile(userId: string): Promise<{
 
   // Fetch user
   const userRes = await fetch(
-    `${sb.url}/users?id=eq.${userId}&select=id,display_name,email,avatar_url&limit=1`,
+    `${sb.url}/auth_users?id=eq.${userId}&select=id,display_name,email,avatar_url&limit=1`,
     { headers: sb.headers }
   );
   const users = (await userRes.json()) as Array<{
