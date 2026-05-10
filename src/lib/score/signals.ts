@@ -13,10 +13,12 @@ export interface MarketSignals {
 }
 
 export interface PoolSignals {
-  type: 'meteora' | 'raydium' | 'unknown';
+  type: 'meteora' | 'raydium' | 'orca' | 'unknown';
   address: string;
   liquidity: number;
   lpLocked: boolean | null;
+  /** Locker program identifier e.g. 'orca-native', 'streamflow' */
+  lockerProgram?: string | null;
   evidence: Record<string, unknown>;
 }
 

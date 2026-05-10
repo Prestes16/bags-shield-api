@@ -1,5 +1,5 @@
 ﻿/**
- * Build ScoreSignals from provider results (Helius, Birdeye, DexScreener, Meteora).
+ * Build ScoreSignals from provider results (Helius, Birdeye, DexScreener, Meteora, Orca).
  * Normalizes and cross-checks; sets dataConflict when price/volume diverge.
  */
 
@@ -9,6 +9,7 @@ import type { HeliusSourceResult } from '@/lib/providers/helius';
 import type { BirdeyeSourceResult } from '@/lib/providers/birdeye';
 import type { DexScreenerSourceResult } from '@/lib/providers/dexscreener';
 import type { MeteoraSourceResult } from '@/lib/providers/meteora';
+import type { OrcaLockCheckResult } from '@/lib/providers/orca';
 
 const PRICE_DIVERGENCE_THRESHOLD = 0.25; // 25% diff â†’ conflict
 const VOLUME_DIVERGENCE_THRESHOLD = 0.5; // 50% diff â†’ conflict
@@ -122,6 +123,8 @@ export interface ProviderResults {
   birdeye: BirdeyeSourceResult;
   dexscreener: DexScreenerSourceResult;
   meteora: MeteoraSourceResult;
+  /** Optional — undefined when Orca check was skipped or not yet wired */
+  orca?: OrcaLockCheckResult;
 }
 
 export function collectSignals(mint: string, results: ProviderResults): ScoreSignals {
@@ -222,6 +225,34 @@ export function collectSignals(mint: string, results: ProviderResults): ScoreSig
   dsPools.forEach((p) => poolMap.set(p.address, p));
   signals.pools = Array.from(poolMap.values()).slice(0, 30);
 
+  // Orca LP lock enrichment
+  const orca = results.orca;
+  if (orca?.ok && orca.locked !== null) {
+    // Mark all Orca pools in the pool list as locked/unlocked
+    for (const pool of signals.pools) {
+      // DexScreener pools don't have a reliable type tag yet - mark all if Orca confirms
+      if (pool.lpLocked === null) {
+        pool.lpLocked = orca.locked;
+      }
+    }
+
+    // If any lock is confirmed, surface the lock seconds (unknown duration = 1 day sentinel)
+    if (orca.locked && signals.lpLockSeconds === null) {
+      // We don't have expiry from PDA check yet; flag as locked with unknown duration
+      signals.lpLockSeconds = -1; // -1 = locked, duration unknown
+    }
+
+    // If DexScreener provided a concrete locked USD amount, store in evidence
+    if (orca.lockedLiquidityUsd !== null) {
+      (signals.evidence as Record<string, unknown>).orcaLockedUsd = orca.lockedLiquidityUsd;
+    }
+    (signals.evidence as Record<string, unknown>).orcaLock = {
+      locked: orca.locked,
+      lockerProgram: orca.lockerProgram,
+      lockedPositions: orca.lockedPositions,
+      totalPositions: orca.totalPositions,
+    };
+  }
+
   return signals;
 }
-

@@ -20,6 +20,7 @@ import {
   fetchMeteoraPairsForMint,
   type SourceMetaItem,
 } from '@/lib/providers';
+import { checkOrcaLpLock } from '@/lib/providers/orca';
 import { collectSignals, runEngine } from '@/lib/score';
 
 // Rate limiting - simple in-memory store (use Redis in production)
@@ -655,6 +656,10 @@ async function runLocalScan(
     fetchMeteoraPairsForMint(mint),
   ]);
 
+  // Orca LP lock check — runs after DexScreener so it has pool addresses.
+  // Fail-safe: never throws, never blocks the main scan result.
+  const orcaR = await checkOrcaLpLock(dexscreenerR.data).catch(() => undefined);
+
   const fetchMs = Date.now() - fetchStart;
 
   const sources: SourceMetaItem[] = [
@@ -712,6 +717,7 @@ async function runLocalScan(
     birdeye: birdeyeR,
     dexscreener: dexscreenerR,
     meteora: meteoraR,
+    orca: orcaR,
   });
   const engineResult = runEngine(signals);
   const computeMs = Date.now() - computeStart;
@@ -728,8 +734,20 @@ async function runLocalScan(
   const coverageSourcesTotal = enabledSources.length;
 
   const birdeyeExtras = birdeyeR.ok ? extractBirdeyeExtras(birdeyeR.data) : {};
-  const lpLocked = engineResult.signals.pools.some((p) => p.lpLocked === true) ||
-    (signals.lpLockSeconds !== null && signals.lpLockSeconds > 0);
+  const lpLocked =
+    engineResult.signals.pools.some((p) => p.lpLocked === true) ||
+    (signals.lpLockSeconds !== null && signals.lpLockSeconds !== 0) ||
+    (orcaR?.locked === true);
+
+  const orcaLockMeta = orcaR?.ok
+    ? {
+        locked: orcaR.locked,
+        lockerProgram: orcaR.lockerProgram,
+        lockedPositions: orcaR.lockedPositions,
+        totalPositions: orcaR.totalPositions,
+        lockedLiquidityUsd: orcaR.lockedLiquidityUsd,
+      }
+    : null;
 
   const responseData = {
     success: true,
@@ -774,9 +792,11 @@ async function runLocalScan(
         address: p.address,
         liquidity: p.liquidity,
         lpLocked: p.lpLocked,
-        dex: p.type === 'meteora' ? 'Meteora' : p.type === 'raydium' ? 'Raydium' : 'Unknown',
+        lockerProgram: p.lockerProgram ?? null,
+        dex: p.type === 'meteora' ? 'Meteora' : p.type === 'raydium' ? 'Raydium' : p.type === 'orca' ? 'Orca' : 'Unknown',
         evidence: p.evidence,
       })),
+      orcaLock: orcaLockMeta,
       actors: {
         botLikely: engineResult.signals.actors.botLikely,
         washLikely: engineResult.signals.actors.washLikely,
