@@ -43,10 +43,30 @@ export async function GET(req: NextRequest) {
       avatarUrl: profile.avatarUrl ?? undefined,
     });
 
+    // Fetch recent scans and launches
+    let recentScans: unknown[] = [];
+    let launches: unknown[] = [];
+    const sbUrl = process.env.SUPABASE_URL;
+    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    if (sbUrl && sbKey) {
+      const sbBase = sbUrl.replace(/\/+$/, "") + "/rest/v1";
+      const sbHeaders = { apikey: sbKey, authorization: `Bearer ${sbKey}`, "content-type": "application/json" };
+      try {
+        const [scansRes, launchesRes] = await Promise.all([
+          fetch(`${sbBase}/user_scans?user_id=eq.${profile.userId}&order=scanned_at.desc&limit=10`, { headers: sbHeaders }),
+          fetch(`${sbBase}/user_launches?user_id=eq.${profile.userId}&order=created_at.desc&limit=50`, { headers: sbHeaders }),
+        ]);
+        if (scansRes.ok) recentScans = await scansRes.json();
+        if (launchesRes.ok) launches = await launchesRes.json();
+      } catch {}
+    }
+
     return json({
       success: true,
       user: profile,
       token: newToken,
+      recentScans,
+      launches,
     });
   } catch (e) {
     console.error("[auth/me]", e);

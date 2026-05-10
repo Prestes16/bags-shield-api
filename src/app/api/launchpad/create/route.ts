@@ -24,6 +24,7 @@ import {
 } from "@metaplex-foundation/mpl-token-metadata";
 import { getLaunchFee, getTreasuryWallet } from "@/lib/solana/fees";
 import { updateLpLockStatus } from "@/lib/lp-lock/service";
+import { verifyToken } from "@/lib/auth/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -393,6 +394,39 @@ export async function POST(req: NextRequest) {
         );
       } catch (e) {
         console.warn("[launchpad/create] Bags fee-share config skipped:", e);
+      }
+    })();
+  }
+
+  // Persist launch for authenticated users (fire-and-forget)
+  const authHeader = req.headers.get("authorization") ?? "";
+  const authToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (authToken) {
+    (async () => {
+      try {
+        const payload = await verifyToken(authToken);
+        if (!payload?.userId) return;
+        const sbUrl = process.env.SUPABASE_URL;
+        const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+        if (!sbUrl || !sbKey) return;
+        await fetch(`${sbUrl.replace(/\/+$/, "")}/rest/v1/user_launches`, {
+          method: "POST",
+          headers: {
+            apikey: sbKey,
+            authorization: `Bearer ${sbKey}`,
+            "content-type": "application/json",
+            prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            user_id: payload.userId,
+            mint: mint.toBase58(),
+            name,
+            symbol,
+            created_at: new Date().toISOString(),
+          }),
+        });
+      } catch (e) {
+        console.warn("[launchpad/create] user_launches persist failed:", e);
       }
     })();
   }

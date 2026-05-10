@@ -22,6 +22,7 @@ import {
 } from '@/lib/providers';
 import { checkOrcaLpLock } from '@/lib/providers/orca';
 import { collectSignals, runEngine } from '@/lib/score';
+import { verifyToken } from '@/lib/auth/jwt';
 
 // Rate limiting - simple in-memory store (use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -832,6 +833,39 @@ async function runLocalScan(
   } else {
     const meta = responseData.meta as Record<string, unknown>;
     (meta.evidence as Record<string, unknown>) = { integrity: { status: 'disabled', reason: 'internal' } };
+  }
+
+  // Persist scan for authenticated users (fire-and-forget)
+  const authHeader = req.headers.get('authorization') ?? '';
+  const authToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (authToken) {
+    (async () => {
+      try {
+        const payload = await verifyToken(authToken);
+        if (!payload?.userId) return;
+        const sbUrl = process.env.SUPABASE_URL;
+        const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+        if (!sbUrl || !sbKey) return;
+        await fetch(`${sbUrl.replace(/\/+$/, '')}/rest/v1/user_scans`, {
+          method: 'POST',
+          headers: {
+            apikey: sbKey,
+            authorization: `Bearer ${sbKey}`,
+            'content-type': 'application/json',
+            prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            user_id: payload.userId,
+            mint,
+            score: engineResult.score,
+            risk_level: engineResult.badge,
+            scanned_at: new Date().toISOString(),
+          }),
+        });
+      } catch (e) {
+        SafeLogger.warn('user_scans persist failed', { requestId });
+      }
+    })();
   }
 
   const finalResponse = jsonSafe(200, responseData, { 'x-request-id': requestId }, upsHeader);
