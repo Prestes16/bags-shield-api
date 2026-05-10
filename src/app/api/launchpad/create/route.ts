@@ -23,6 +23,7 @@ import {
   PROGRAM_ID as METADATA_PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
 import { getLaunchFee, getTreasuryWallet } from "@/lib/solana/fees";
+import { updateLpLockStatus } from "@/lib/lp-lock/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -354,6 +355,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Initialize LP lock tracking if lockLp requested (fire-and-forget)
+  if (trustLayers?.lockLp && body?.lpDuration) {
+    (async () => {
+      try {
+        await updateLpLockStatus(mint.toBase58(), "awaiting_pool", {
+          wallet: walletStr,
+          lockDays: Number(body.lpDuration),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.warn("[launchpad/create] lp_lock_status init failed:", e);
+      }
+    })();
+  }
+
   // Bags.fm fee share registration (fire-and-forget, do not block the response)
   const bagsApiKey = process.env.BAGS_API_KEY;
   if (bagsApiKey && walletStr) {
@@ -412,6 +429,11 @@ export async function POST(req: NextRequest) {
     transaction: transactionBase64,
     txSignature: null,
     message: "Sign the transaction in your wallet",
+    lpLockScheduled: trustLayers?.lockLp === true ? {
+      status: "awaiting_pool" as const,
+      lockDays: body?.lpDuration ?? null,
+      message: "LP lock will execute automatically when pool is created",
+    } : null,
   });
 }
 
