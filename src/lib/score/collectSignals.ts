@@ -72,7 +72,15 @@ function extractBirdeyeVolume24h(data: unknown): number | null {
   return safeNumber(v);
 }
 
-function extractDexScreenerPairs(data: unknown): Array<{ liquidity?: number; priceUsd?: number; volume?: number }> {
+interface DexPairRaw {
+  liquidity?: number;
+  priceUsd?: number;
+  volume?: number;
+  dexId?: string;
+  pairAddress?: string;
+}
+
+function extractDexScreenerPairs(data: unknown): DexPairRaw[] {
   if (!data || typeof data !== 'object') return [];
   const d = data as Record<string, unknown>;
   const pairs = d.pairs ?? d;
@@ -81,6 +89,8 @@ function extractDexScreenerPairs(data: unknown): Array<{ liquidity?: number; pri
     liquidity: safeNumber(pickLiquidityUsd(p)) ?? undefined,
     priceUsd: safeNumber(p.priceUsd ?? p.price) ?? undefined,
     volume: safeNumber(pickVolume24h(p)) ?? undefined,
+    dexId: typeof p.dexId === 'string' ? p.dexId : typeof p.dex_id === 'string' ? p.dex_id : undefined,
+    pairAddress: typeof p.pairAddress === 'string' ? p.pairAddress : typeof p.pair_address === 'string' ? p.pair_address : undefined,
   }));
 }
 
@@ -96,26 +106,55 @@ function extractDexScreenerAggregates(pairs: Array<{ liquidity?: number; priceUs
   return { liquidity: liquidity ?? null, priceUsd, volume24h };
 }
 
-function extractMeteoraPools(data: unknown[], mint: string): PoolSignals[] {
+/** Map DexScreener dexId to our pool type + a direct explorer URL */
+function dexIdToTypeAndUrl(dexId: string | undefined, address: string): {
+  type: PoolSignals['type'];
+  url: string | null;
+} {
+  const id = (dexId ?? '').toLowerCase();
+  if (id === 'orca' || id.includes('orca')) {
+    return { type: 'orca', url: address ? `https://www.orca.so/pools?address=${address}` : null };
+  }
+  if (id === 'meteora' || id.includes('meteora') || id === 'meteora-dlmm') {
+    return { type: 'meteora', url: address ? `https://app.meteora.ag/pools/${address}` : null };
+  }
+  if (id === 'raydium' || id.includes('raydium')) {
+    return { type: 'raydium', url: address ? `https://raydium.io/liquidity/increase/?ammId=${address}` : null };
+  }
+  return { type: 'unknown', url: null };
+}
+
+function extractMeteoraPools(data: unknown[]): PoolSignals[] {
   if (!Array.isArray(data)) return [];
-  return data.slice(0, 20).map((p: Record<string, unknown>) => ({
-    type: 'meteora' as const,
-    address: String(p.address ?? p.pair_address ?? ''),
-    liquidity: safeNumber(p.liquidity ?? p.liquidity_usd) ?? 0,
-    lpLocked: null,
-    evidence: {},
-  }));
+  return data.map((p: Record<string, unknown>) => {
+    const address = String(p.address ?? p.pair_address ?? '');
+    return {
+      type: 'meteora' as const,
+      address,
+      liquidity: safeNumber(p.liquidity ?? p.liquidity_usd) ?? 0,
+      lpLocked: null,
+      url: address ? `https://app.meteora.ag/pools/${address}` : null,
+      evidence: {},
+    };
+  });
 }
 
 function extractDexScreenerPools(data: unknown): PoolSignals[] {
   const pairs = extractDexScreenerPairs(data);
-  return pairs.slice(0, 20).map((p, i) => ({
-    type: 'unknown' as const,
-    address: `pair-${i}`,
-    liquidity: p.liquidity ?? 0,
-    lpLocked: null,
-    evidence: {},
-  }));
+  return pairs
+    .filter((p) => p.pairAddress && p.pairAddress.length >= 32) // skip fake/missing addresses
+    .map((p) => {
+      const address = p.pairAddress!;
+      const { type, url } = dexIdToTypeAndUrl(p.dexId, address);
+      return {
+        type,
+        address,
+        liquidity: p.liquidity ?? 0,
+        lpLocked: null,
+        url,
+        evidence: {},
+      };
+    });
 }
 
 export interface ProviderResults {
@@ -218,12 +257,18 @@ export function collectSignals(mint: string, results: ProviderResults): ScoreSig
   signals.dataConflict = dataConflict;
 
   const meteoraPools =
-    results.meteora.ok && Array.isArray(results.meteora.data) ? extractMeteoraPools(results.meteora.data, mint) : [];
+    results.meteora.ok && Array.isArray(results.meteora.data) ? extractMeteoraPools(results.meteora.data) : [];
   const dsPools = results.dexscreener.ok ? extractDexScreenerPools(results.dexscreener.data) : [];
+
+  // Merge: DexScreener first (may cover Orca/Raydium), then Meteora enriches/adds.
+  // Meteora entries take precedence for their addresses (more accurate liquidity).
+  // Deduplicate by address, then take top 3 by liquidity.
   const poolMap = new Map<string, PoolSignals>();
-  meteoraPools.forEach((p) => poolMap.set(p.address, p));
-  dsPools.forEach((p) => poolMap.set(p.address, p));
-  signals.pools = Array.from(poolMap.values()).slice(0, 30);
+  dsPools.forEach((p) => { if (p.address) poolMap.set(p.address, p); });
+  meteoraPools.forEach((p) => { if (p.address) poolMap.set(p.address, p); }); // overrides DS for same address
+  signals.pools = Array.from(poolMap.values())
+    .sort((a, b) => b.liquidity - a.liquidity)
+    .slice(0, 3);
 
   // Orca LP lock enrichment
   const orca = results.orca;

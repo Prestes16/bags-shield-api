@@ -650,12 +650,23 @@ async function runLocalScan(
   const mint = data.mint;
   const fetchStart = Date.now();
 
-  const [heliusR, birdeyeR, dexscreenerR, meteoraR] = await Promise.all([
+  // ── API Economy Mode ─────────────────────────────────────────────────────
+  // DexScreener + Meteora are free — always call in parallel.
+  // Helius is paid (on-chain only, no alternative) — always call.
+  // Birdeye is paid — only call if DexScreener has no price data.
+  const [heliusR, dexscreenerR, meteoraR] = await Promise.all([
     fetchHeliusAsset(mint),
-    fetchBirdeyeTokenOverview(mint),
     fetchDexScreenerTokenPairs(mint),
     fetchMeteoraPairsForMint(mint),
   ]);
+
+  // Only hit Birdeye when DexScreener returned no price (saves credits)
+  const dsPairsRaw = (dexscreenerR.data as Record<string, unknown>)?.pairs;
+  const dsHasPrice = Array.isArray(dsPairsRaw) && dsPairsRaw.length > 0 &&
+    dsPairsRaw.some((p: Record<string, unknown>) => p?.priceUsd != null);
+  const birdeyeR = dsHasPrice
+    ? { ok: false, latencyMs: 0, data: undefined, quality: ['SKIPPED_ECONOMY'], error: 'Skipped: DexScreener has price' }
+    : await fetchBirdeyeTokenOverview(mint);
 
   // Orca LP lock check — runs after DexScreener so it has pool addresses.
   // Fail-safe: never throws, never blocks the main scan result.
@@ -794,7 +805,8 @@ async function runLocalScan(
         liquidity: p.liquidity,
         lpLocked: p.lpLocked,
         lockerProgram: p.lockerProgram ?? null,
-        dex: p.type === 'meteora' ? 'Meteora' : p.type === 'raydium' ? 'Raydium' : p.type === 'orca' ? 'Orca' : 'Unknown',
+        dex: p.type === 'meteora' ? 'Meteora' : p.type === 'raydium' ? 'Raydium' : p.type === 'orca' ? 'Orca' : 'DEX',
+        url: p.url ?? null,
         evidence: p.evidence,
       })),
       orcaLock: orcaLockMeta,

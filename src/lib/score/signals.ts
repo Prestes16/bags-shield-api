@@ -19,6 +19,8 @@ export interface PoolSignals {
   lpLocked: boolean | null;
   /** Locker program identifier e.g. 'orca-native', 'streamflow' */
   lockerProgram?: string | null;
+  /** Direct link to view pool on its DEX */
+  url?: string | null;
   evidence: Record<string, unknown>;
 }
 
