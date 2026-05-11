@@ -75,6 +75,7 @@ interface LaunchRow {
   mint: string;
   name: string | null;
   symbol: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -83,12 +84,14 @@ interface DexPair {
   baseToken?: { address?: string };
   volume?: { h24?: number };
   liquidity?: { usd?: number };
+  info?: { imageUrl?: string };
 }
 
 interface EnrichedLaunch {
   mint: string;
   name: string | null;
   symbol: string | null;
+  image_url: string | null;
   created_at: string;
   score: number | null;
   risk_level: string | null;
@@ -110,6 +113,9 @@ async function enrichWithMarketData(
     liquidityUsd: null,
     verified: false,
   }));
+
+  // Track DexScreener images keyed by mint address
+  const dexImageMap = new Map<string, string>();
 
   // Batch DexScreener (max 30 addresses per call)
   const mints = launches.map((l) => l.mint);
@@ -145,6 +151,11 @@ async function enrichWithMarketData(
           const liq = pair.liquidity?.usd ?? 0;
           if (!existing || liq > existing.liquidityUsd) {
             batchMap.set(addr, { volume24h: vol, liquidityUsd: liq });
+          }
+          // Capture image from DexScreener if available
+          const img = pair.info?.imageUrl;
+          if (img && !dexImageMap.has(addr)) {
+            dexImageMap.set(addr, img);
           }
         }
         setCache(cacheKey, batchMap);
@@ -193,6 +204,10 @@ async function enrichWithMarketData(
       r.risk_level = sc.risk_level;
     }
     r.verified = (r.score ?? 0) >= 90;
+    // Use stored image_url; fall back to DexScreener image if none
+    if (!r.image_url) {
+      r.image_url = dexImageMap.get(r.mint) ?? null;
+    }
   }
 
   return results;
@@ -224,7 +239,7 @@ export async function GET(req: NextRequest) {
   try {
     // Fetch launches from Supabase (recent 100 to have enough for all filters)
     const res = await fetch(
-      `${sb.base}/user_launches?order=created_at.desc&limit=100`,
+      `${sb.base}/user_launches?select=mint,name,symbol,image_url,created_at&order=created_at.desc&limit=100`,
       { headers: sb.headers }
     );
     if (!res.ok) {
