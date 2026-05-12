@@ -3,11 +3,19 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
 export const APP_FEE_BPS = Number((process.env.APP_FEE_BPS ?? '50').trim() || '50'); // 0.50%
 
-// Usa || em vez de ?? para que string vazia tambem caia no fallback (evita new PublicKey("") no build)
-const _FEE_COLLECTOR_RAW =
-  (process.env.APP_FEE_COLLECTOR_OWNER ?? '').trim() ||
-  '7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi';
-export const APP_FEE_COLLECTOR_OWNER = new PublicKey(_FEE_COLLECTOR_RAW);
+// Fallback hardcoded — garante que nunca vai ser string vazia ou undefined
+const FALLBACK_FEE_COLLECTOR = '7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi';
+
+function buildFeeCollector(): PublicKey {
+  const raw = (process.env.APP_FEE_COLLECTOR_OWNER ?? '').trim() || FALLBACK_FEE_COLLECTOR;
+  try {
+    return new PublicKey(raw);
+  } catch {
+    return new PublicKey(FALLBACK_FEE_COLLECTOR);
+  }
+}
+
+export const APP_FEE_COLLECTOR_OWNER: PublicKey = buildFeeCollector();
 
 export function getSolanaRpcUrl(): string {
   const rpc = (process.env.SOLANA_RPC_URL ?? '').trim();
