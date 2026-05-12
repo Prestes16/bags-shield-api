@@ -1,10 +1,13 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
-export const APP_FEE_BPS = Number((process.env.APP_FEE_BPS ?? '50').trim()); // 0.50%
-export const APP_FEE_COLLECTOR_OWNER = new PublicKey(
-  (process.env.APP_FEE_COLLECTOR_OWNER ?? '7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi').trim(),
-);
+export const APP_FEE_BPS = Number((process.env.APP_FEE_BPS ?? '50').trim() || '50'); // 0.50%
+
+// Usa || em vez de ?? para que string vazia tambem caia no fallback (evita new PublicKey("") no build)
+const _FEE_COLLECTOR_RAW =
+  (process.env.APP_FEE_COLLECTOR_OWNER ?? '').trim() ||
+  '7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi';
+export const APP_FEE_COLLECTOR_OWNER = new PublicKey(_FEE_COLLECTOR_RAW);
 
 export function getSolanaRpcUrl(): string {
   const rpc = (process.env.SOLANA_RPC_URL ?? '').trim();
@@ -33,11 +36,11 @@ export async function getExistingFeeCollectorTokenAccount(mint: string): Promise
 
 // Bags Shield launch fees
 export const LAUNCH_FEE_LAMPORTS = BigInt(
-  (process.env.LAUNCH_FEE_LAMPORTS ?? '20000000').trim()
+  (process.env.LAUNCH_FEE_LAMPORTS ?? '20000000').trim() || '20000000'
 ); // 0.02 SOL default
 
 export const SHIELD_TIER_EXTRA_LAMPORTS = BigInt(
-  (process.env.SHIELD_TIER_FEE_LAMPORTS ?? '30000000').trim()
+  (process.env.SHIELD_TIER_FEE_LAMPORTS ?? '30000000').trim() || '30000000'
 ); // +0.03 SOL when all trust layers are active
 
 export function getLaunchFee(allLayersActive: boolean): bigint {
