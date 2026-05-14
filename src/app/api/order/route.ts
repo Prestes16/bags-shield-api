@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     outputMint,
     amount,
     slippageBps: String(slippageBps),
-    userPublicKey,
+    taker: userPublicKey, // Jupiter Swap V2 usa 'taker', não 'userPublicKey'
   });
   if (platformFeeBps && feeAccount) {
     params.set('platformFeeBps', String(platformFeeBps));
