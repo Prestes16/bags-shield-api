@@ -13,7 +13,7 @@ import { APP_FEE_BPS, getExistingFeeCollectorTokenAccount } from '@/lib/solana/f
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const JUP_V2_BASE = 'https://api.jup.ag/swap/v2';
+const JUP_V2_BASE = 'https://api.jup.ag/ultra/v1';
 const NATIVE_SOL  = 'So11111111111111111111111111111111111111112';
 const RATE_LIMIT  = { windowMs: 60_000, max: 30 };
 
