@@ -59,4 +59,37 @@ function getAllowedOrigin(req: NextRequest): string {
 /**
  * Apply CORS headers to response
  */
-expor
+export function applyCorsHeaders(
+  req: NextRequest,
+  res: Response
+): Response {
+  const allowedOrigin = getAllowedOrigin(req);
+  res.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+  res.headers.set("Access-Control-Expose-Headers", "X-Request-Id");
+  return res;
+}
+
+/**
+ * Handle OPTIONS preflight request
+ */
+export function handlePreflight(
+  req: NextRequest,
+  allowedMethods: string[] = ["POST"],
+  allowedHeaders: string[] = [
+    "Content-Type",
+    "Authorization",
+    "x-api-key",
+    "X-Request-Id",
+    "Idempotency-Key",
+  ]
+): NextResponse {
+  const res = new NextResponse(null, { status: 204 });
+  applyCorsHeaders(req, res);
+  res.headers.set("Access-Control-Allow-Methods", allowedMethods.join(","));
+  res.headers.set(
+    "Access-Control-Allow-Headers",
+    allowedHeaders.join(",")
+  );
+  res.headers.set("Cache-Control", "no-store");
+  return res;
+}
