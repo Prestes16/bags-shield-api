@@ -1,7 +1,7 @@
 /**
  * GET /api/market/summary?mint=...
  * Proxy para BAGS_SHIELD_API_BASE. Mint é opcional:
- *  - Sem mint: retorna sumário geral de mercado (SOL price via Jupiter)
+ *  - Sem mint: retorna sumário geral de mercado (SOL price via CoinGecko)
  *  - Com mint: proxy para upstream ou stub local
  */
 
@@ -45,17 +45,19 @@ function jsonResponse(
   return response;
 }
 
-const SOL_MINT = 'So11111111111111111111111111111111111111112';
-
+/**
+ * Busca preço do SOL via CoinGecko free API.
+ * Retorna null em caso de falha (não quebra a rota).
+ */
 async function fetchSolMarketData(): Promise<{ solPrice: number; volume24h: number | null } | null> {
   try {
     const res = await fetch(
-      `https://api.jup.ag/price/v2?ids=${SOL_MINT}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(4000) },
+      'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd',
+      { cache: 'no-store', signal: AbortSignal.timeout(5000) },
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const price = data?.data?.[SOL_MINT]?.price;
+    const price = data?.solana?.usd;
     if (!price) return null;
     return { solPrice: Number(price), volume24h: null };
   } catch {
@@ -68,7 +70,9 @@ export async function GET(request: NextRequest) {
   const mint = request.nextUrl.searchParams.get('mint')?.trim();
   const base = process.env.BAGS_SHIELD_API_BASE?.trim();
 
+  // --- Sem mint: retorna sumário geral de mercado ---
   if (!mint) {
+    // Tenta upstream se configurado
     if (base) {
       try {
         const url = `${base.replace(/\/$/, '')}/api/market/summary`;
@@ -85,9 +89,10 @@ export async function GET(request: NextRequest) {
             requestId,
           );
         }
-      } catch (_e) { /* fallback */ }
+      } catch { /* cai pro fallback */ }
     }
 
+    // Fallback: busca SOL price via CoinGecko
     const solData = await fetchSolMarketData();
     return jsonResponse(
       request,
@@ -97,6 +102,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // --- Com mint: comportamento original (proxy ou stub) ---
   if (!base) {
     return jsonResponse(
       request,
