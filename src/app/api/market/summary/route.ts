@@ -45,13 +45,8 @@ function jsonResponse(
   return response;
 }
 
-// Mint address do SOL (wrapped) para preço via Jupiter
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
-/**
- * Busca preço do SOL via Jupiter Price API v2.
- * Retorna null em caso de falha (não quebra a rota).
- */
 async function fetchSolMarketData(): Promise<{ solPrice: number; volume24h: number | null } | null> {
   try {
     const res = await fetch(
@@ -73,9 +68,7 @@ export async function GET(request: NextRequest) {
   const mint = request.nextUrl.searchParams.get('mint')?.trim();
   const base = process.env.BAGS_SHIELD_API_BASE?.trim();
 
-  // --- Sem mint: retorna sumário geral de mercado ---
   if (!mint) {
-    // Tenta upstream se configurado
     if (base) {
       try {
         const url = `${base.replace(/\/$/, '')}/api/market/summary`;
@@ -85,4 +78,63 @@ export async function GET(request: NextRequest) {
         });
         const data = await upstreamRes.json().catch(() => null);
         if (upstreamRes.ok && data) {
-   
+          return jsonResponse(
+            request,
+            { success: true, response: data.response ?? data },
+            200,
+            requestId,
+          );
+        }
+      } catch (_e) { /* fallback */ }
+    }
+
+    const solData = await fetchSolMarketData();
+    return jsonResponse(
+      request,
+      { success: true, response: solData ?? { note: 'market data unavailable' } },
+      200,
+      requestId,
+    );
+  }
+
+  if (!base) {
+    return jsonResponse(
+      request,
+      { success: true, response: { mint, note: 'stub market summary (local)' } },
+      200,
+      requestId,
+    );
+  }
+
+  const url = `${base.replace(/\/$/, '')}/api/market/summary?mint=${encodeURIComponent(mint)}`;
+
+  try {
+    const upstreamRes = await fetch(url, { cache: 'no-store' });
+    const data = await upstreamRes.json().catch(() => null);
+
+    if (data && typeof data.success !== 'undefined') {
+      return jsonResponse(
+        request,
+        upstreamRes.ok
+          ? { success: true, response: data.response ?? data }
+          : { success: false, error: data.error ?? 'Market summary failed' },
+        upstreamRes.ok ? 200 : upstreamRes.status,
+        requestId,
+      );
+    }
+
+    return jsonResponse(
+      request,
+      { success: false, error: 'Invalid response from API' },
+      502,
+      requestId,
+    );
+  } catch {
+    return jsonResponse(
+      request,
+      { success: false, error: 'Market summary proxy unavailable.' },
+      502,
+      requestId,
+    );
+  }
+}
