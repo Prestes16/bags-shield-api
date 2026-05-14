@@ -1,7 +1,8 @@
 /**
  * GET /api/market/summary?mint=...
- * Proxy para BAGS_SHIELD_API_BASE. Sempre retorna JSON.
- * Network errors -> 502 com mensagem generica (sem vazar target URL).
+ * Proxy para BAGS_SHIELD_API_BASE. Mint é opcional:
+ *  - Sem mint: retorna sumário geral de mercado (SOL price via Jupiter)
+ *  - Com mint: proxy para upstream ou stub local
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -48,7 +49,7 @@ function jsonResponse(
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 /**
- * Busca preço do SOL e volume via Jupiter Price API v2.
+ * Busca preço do SOL via Jupiter Price API v2.
  * Retorna null em caso de falha (não quebra a rota).
  */
 async function fetchSolMarketData(): Promise<{ solPrice: number; volume24h: number | null } | null> {
@@ -70,16 +71,18 @@ async function fetchSolMarketData(): Promise<{ solPrice: number; volume24h: numb
 export async function GET(request: NextRequest) {
   const requestId = getOrGenerateRequestId(request.headers);
   const mint = request.nextUrl.searchParams.get('mint')?.trim();
-
   const base = process.env.BAGS_SHIELD_API_BASE?.trim();
 
-  // --- Sem mint: retorna sumário geral de mercado (SOL price) ---
+  // --- Sem mint: retorna sumário geral de mercado ---
   if (!mint) {
     // Tenta upstream se configurado
     if (base) {
       try {
         const url = `${base.replace(/\/$/, '')}/api/market/summary`;
-        const upstreamRes = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+        const upstreamRes = await fetch(url, {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(4000),
+        });
         const data = await upstreamRes.json().catch(() => null);
         if (upstreamRes.ok && data) {
-          return jsonResponse(request, { success: true, resp
+   
