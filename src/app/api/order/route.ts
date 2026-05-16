@@ -98,7 +98,12 @@ export async function GET(req: NextRequest) {
     const data = await upstream.json();
     const latencyMs = Date.now() - t0;
 
-    if (!upstream.ok) return fail(data?.error ?? `Jupiter order error (${upstream.status})`, 502);
+    // 4xx do Jupiter = sem rota / token inválido (cliente); 5xx = problema no upstream
+    if (!upstream.ok) {
+      const clientError = upstream.status >= 400 && upstream.status < 500;
+      const errMsg = data?.error ?? `Jupiter order error (${upstream.status})`;
+      return fail(errMsg, clientError ? 422 : 502);
+    }
 
     const res = NextResponse.json(
       { success: true, response: data, meta: { requestId, latencyMs } },
