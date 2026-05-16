@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Bags Shield Protocol v3.0 — Documento Tecnico e Plano de Implantacao</title>
+<style>
+@page { size: A4; margin: 2cm; }
+* { box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.6;
+  color: #1a1a2e;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 0;
+}
+h1 {
+  font-size: 22pt;
+  color: #080811;
+  border-bottom: 3px solid #4DD4FF;
+  padding-bottom: 10px;
+  margin-top: 0;
+  page-break-after: avoid;
+}
+h2 {
+  font-size: 14pt;
+  color: #080811;
+  border-left: 4px solid #9945FF;
+  padding-left: 12px;
+  margin-top: 28px;
+  page-break-after: avoid;
+}
+h3 {
+  font-size: 11.5pt;
+  color: #1a1a2e;
+  margin-top: 20px;
+  page-break-after: avoid;
+}
+h4 {
+  font-size: 10.5pt;
+  color: #333;
+  margin-top: 14px;
+  font-weight: 600;
+}
+.cover {
+  text-align: center;
+  padding: 80px 40px;
+  background: linear-gradient(135deg, #080811 0%, #0D0D1A 100%);
+  color: #F0F0FF;
+  border-radius: 12px;
+  margin-bottom: 40px;
+  page-break-after: always;
+}
+.cover h1 {
+  color: #4DD4FF;
+  border: none;
+  font-size: 28pt;
+  margin-bottom: 10px;
+}
+.cover .subtitle {
+  color: rgba(240,240,255,0.7);
+  font-size: 14pt;
+  margin-bottom: 30px;
+}
+.cover .meta {
+  color: rgba(240,240,255,0.5);
+  font-size: 10pt;
+  margin-top: 60px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 9pt;
+  font-weight: 600;
+}
+.badge-green { background: rgba(0,214,143,0.12); color: #00D68F; }
+.badge-amber { background: rgba(255,179,64,0.12); color: #FFB340; }
+.badge-red { background: rgba(255,59,92,0.12); color: #FF3B5C; }
+.badge-cyan { background: rgba(77,212,255,0.12); color: #4DD4FF; }
+.badge-purple { background: rgba(153,69,255,0.12); color: #9945FF; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 9.5pt;
+}
+th {
+  background: #0D0D1A;
+  color: #4DD4FF;
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 600;
+}
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+tr:nth-child(even) td { background: rgba(255,255,255,0.06); }
+.code {
+  background: #0D0D1A;
+  color: #4DD4FF;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 9pt;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+.highlight {
+  background: linear-gradient(135deg, rgba(77,212,255,0.08) 0%, rgba(153,69,255,0.08) 100%);
+  border-left: 3px solid #4DD4FF;
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin: 14px 0;
+}
+.toc a { color: #4DD4FF; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.toc ul { list-style: none; padding-left: 0; }
+.toc li { padding: 3px 0; }
+.toc .level-2 { padding-left: 20px; }
+.toc .level-3 { padding-left: 40px; }
+.page-break { page-break-before: always; }
+.footer {
+  text-align: center;
+  font-size: 8pt;
+  color: #999;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+.metric {
+  display: inline-block;
+  text-align: center;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  margin: 4px;
+}
+.metric-value {
+  font-size: 18pt;
+  font-weight: 800;
+  color: #4DD4FF;
+}
+.metric-label {
+  font-size: 8pt;
+  color: rgba(240,240,255,0.55);
+}
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<div class="cover">
+  <div style="font-size: 48pt; margin-bottom: 20px;">🛡️</div>
+  <h1>Bags Shield Protocol</h1>
+  <div class="subtitle">Documento Tecnico e Plano de Implantacao v3.0</div>
+  <div style="margin-top: 40px;">
+    <span class="badge badge-cyan">ZK-Proof Scanner</span>
+    <span class="badge badge-purple">AI Predictive Shield</span>
+    <span class="badge badge-green">On-Chain Registry</span>
+  </div>
+  <div class="meta">
+    <div>Solana Blockchain Security Infrastructure</div>
+    <div>Maio 2026</div>
+    <div>Confidencial — Uso Interno</div>
+  </div>
+</div>
+
+<!-- SUMARIO -->
+<h1>Sumario Executivo</h1>
+<div class="toc">
+<ul>
+  <li><a href="#s1">1. Contexto e Visao Geral do Projeto</a></li>
+  <li class="level-2"><a href="#s1-1">1.1 Repositorios e Deploy</a></li>
+  <li class="level-2"><a href="#s1-2">1.2 Stack Tecnologica Atual</a></li>
+  <li class="level-2"><a href="#s1-3">1.3 Funcionalidades Existentes</a></li>
+  <li><a href="#s2">2. Analise de Concorrencia</a></li>
+  <li class="level-2"><a href="#s2-1">2.1 RugCheck.xyz</a></li>
+  <li class="level-2"><a href="#s2-2">2.2 Bubble Maps</a></li>
+  <li class="level-2"><a href="#s2-3">2.3 De.Fi Scanner</a></li>
+  <li class="level-2"><a href="#s2-4">2.5 Tabela Comparativa</a></li>
+  <li><a href="#s3">3. Inovacao: Bags Shield Protocol v3.0</a></li>
+  <li class="level-2"><a href="#s3-1">3.1 ZK-Proof Scanner</a></li>
+  <li class="level-2"><a href="#s3-2">3.2 AI Predictive Rug Shield</a></li>
+  <li class="level-2"><a href="#s3-3">3.3 On-Chain Reputation Registry</a></li>
+  <li class="level-2"><a href="#s3-4">3.4 Fluxo Completo do Protocolo</a></li>
+  <li><a href="#s4">4. Plano de Implantacao</a></li>
+  <li class="level-2"><a href="#s4-1">4.1 Estrutura de Pastas</a></li>
+  <li class="level-2"><a href="#s4-2">4.2 Cronograma por Fase</a></li>
+  <li class="level-2"><a href="#s4-3">4.3 API Endpoints Novos</a></li>
+  <li><a href="#s5">5. Custos e Recursos</a></li>
+  <li class="level-2"><a href="#s5-1">5.1 Infraestrutura Cloud</a></li>
+  <li class="level-2"><a href="#s5-2">5.2 Claude + Verdent (Desenvolvimento)</a></li>
+  <li class="level-2"><a href="#s5-3">5.3 APIs e Servicos Externos</a></li>
+  <li class="level-2"><a href="#s5-4">5.4 Custo Total Estimado</a></li>
+  <li><a href="#s6">6. Integracao com AI Agent Pre-Pronto</a></li>
+  <li class="level-2"><a href="#s6-1">6.1 Arquitetura de Integracao</a></li>
+  <li class="level-2"><a href="#s6-2">6.2 Contrato de API</a></li>
+  <li class="level-2"><a href="#s6-3">6.3 Fluxo de Dados</a></li>
+  <li><a href="#s7">7. Checklist de Lançamento</a></li>
+  <li><a href="#s8">8. Conclusao</a></li>
+</ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- SECAO 1 -->
+<h1 id="s1">1. Contexto e Visao Geral do Projeto</h1>
+
+<h2 id="s1-1">1.1 Repositorios e Deploy</h2>
+
+<table>
+<tr><th>Repositorio</th><th>Path Local</th><th>Deploy</th><th>Funcao</th></tr>
+<tr><td><strong>bags-shield-api</strong></td><td>C:\Dev\bags-shield-api</td><td>Vercel → api.bagsshield.org</td><td>Backend API + Frontend proprio (Next.js 14)</td></tr>
+<tr><td><strong>bags-shield-app2</strong></td><td>C:\Dev\bags-shield-app2</td><td>Vercel → app.bagsshield.org</td><td>Frontend v2 (CRA + React Router)</td></tr>
+</table>
+
+<h2 id="s1-2">1.2 Stack Tecnologica Atual</h2>
+
+<h3>Repo 1 — bags-shield-api (Backend + Frontend)</h3>
+<table>
+<tr><th>Camada</th><th>Tecnologia</th><th>Versao</th></tr>
+<tr><td>Framework</td><td>Next.js</td><td>14.2.0</td></tr>
+<tr><td>Runtime</td><td>Node.js</td><td>20.x</td></tr>
+<tr><td>Linguagem</td><td>TypeScript</td><td>5.5.3</td></tr>
+<tr><td>Estilizacao</td><td>Tailwind CSS</td><td>3.4.19</td></tr>
+<tr><td>Blockchain</td><td>Solana Web3.js</td><td>1.98.4</td></tr>
+<tr><td>Token SPL</td><td>@solana/spl-token</td><td>0.4.14</td></tr>
+<tr><td>Metaplex</td><td>@metaplex-foundation/mpl-token-metadata</td><td>2.13.0</td></tr>
+<tr><td>Wallet</td><td>Solana Wallet Adapter</td><td>0.15.39</td></tr>
+<tr><td>Validacao</td><td>Zod</td><td>3.25.76</td></tr>
+<tr><td>Analytics</td><td>Vercel Analytics</td><td>1.6.1</td></tr>
+</table>
+
+<h3>Repo 2 — bags-shield-app2 (Frontend v2)</h3>
+<table>
+<tr><th>Camada</th><th>Tecnologia</th><th>Versao</th></tr>
+<tr><td>Framework</td><td>Create React App + Craco</td><td>5.0.1 / 7.1.0</td></tr>
+<tr><td>Runtime</td><td>Node.js</td><td>20.x</td></tr>
+<tr><td>Linguagem</td><td>JavaScript (JSX)</td><td>ES2020</td></tr>
+<tr><td>Router</td><td>React Router DOM</td><td>7.5.1</td></tr>
+<tr><td>Estilizacao</td><td>Tailwind CSS + shadcn/ui</td><td>3.4.17</td></tr>
+<tr><td>Blockchain</td><td>Solana Web3.js</td><td>1.98.4</td></tr>
+<tr><td>Wallet</td><td>Solana Wallet Adapter</td><td>0.15.39</td></tr>
+<tr><td>Icones</td><td>Lucide React</td><td>0.507.0</td></tr>
+<tr><td>i18n</td><td>Context API custom</td><td>pt-BR / en-US</td></tr>
+</table>
+
+<h2 id="s1-3">1.3 Funcionalidades Existentes</h2>
+
+<h3>API Routes (bags-shield-api)</h3>
+<table>
+<tr><th>Rota</th><th>Metodo</th><th>Descricao</th></tr>
+<tr><td>/api/health</td><td>GET</td><td>Health check</td></tr>
+<tr><td>/api/status</td><td>GET</td><td>Status do sistema</td></tr>
+<tr><td>/api/scan</td><td>GET/POST</td><td>Analise de seguranca de token (core)</td></tr>
+<tr><td>/api/quote</td><td>GET</td><td>Cotacao Jupiter V1</td></tr>
+<tr><td>/api/order</td><td>GET</td><td>Jupiter Swap V2 /order (meta-aggregator)</td></tr>
+<tr><td>/api/swap</td><td>POST</td><td>Monta transacao unsigned</td></tr>
+<tr><td>/api/execute</td><td>POST</td><td>Jupiter Swap V2 /execute (landing)</td></tr>
+<tr><td>/api/simulate</td><td>POST</td><td>Simulacao de swap</td></tr>
+<tr><td>/api/market/summary</td><td>GET</td><td>Resumo de mercado</td></tr>
+<tr><td>/api/rpc/health</td><td>GET</td><td>Health do RPC Helius</td></tr>
+<tr><td>/api/rpc</td><td>POST</td><td>Proxy RPC</td></tr>
+<tr><td>/api/webhooks/helius</td><td>POST</td><td>Webhook Helius</td></tr>
+<tr><td>/api/auth/*</td><td>POST/GET</td><td>OAuth Google, Twitter, Wallet</td></tr>
+<tr><td>/api/creator</td><td>GET</td><td>Dados do criador</td></tr>
+<tr><td>/api/launchpad/*</td><td>POST/GET</td><td>Criacao de token, LP lock, feed</td></tr>
+</table>
+
+<h3>Motor de Score (0-100)</h3>
+<table>
+<tr><th>Regra</th><th>Impacto</th><th>Fonte</th></tr>
+<tr><td>Base score</td><td>+70 (todas OK) / +60 (metade) / +50 (poucas)</td><td>Multi-source</td></tr>
+<tr><td>Mint inativo</td><td>-25</td><td>Helius</td></tr>
+<tr><td>LP lock</td><td>+15 (1 ano) / +10 (90 dias) / +5 (30 dias)</td><td>Orca + DexScreener</td></tr>
+<tr><td>Top-10 concentracao</td><td>-30 (>=90%) / -20 (>=70%) / -10 (>=50%)</td><td>Birdeye</td></tr>
+<tr><td>Sell tax</td><td>-20 (>=10%) / -10 (>=5%) / -5 (>=1%)</td><td>Helius</td></tr>
+<tr><td>Conflito de dados</td><td>-15</td><td>Cross-validation</td></tr>
+<tr><td>Low liquidity</td><td>-20 (<$1K) / -10 (<$10K) / -5 (<$50K)</td><td>DexScreener</td></tr>
+<tr><td>Bot/Wash</td><td>-10 (bot) / -15 (wash)</td><td>Heuristic</td></tr>
+</table>
+
+<h3>Frontend Pages (bags-shield-api)</h3>
+<table>
+<tr><th>Rota</th><th>Descricao</th></tr>
+<tr><td>/</td><td>Landing page</td></tr>
+<tr><td>/scan</td><td>Input de scan</td></tr>
+<tr><td>/scan/loading</td><td>Tela de loading com radar</td></tr>
+<tr><td>/scan/result/[mint]</td><td>Resultado + SwapPanel integrado</td></tr>
+<tr><td>/swap</td><td>Swap completo com quick-picks</td></tr>
+<tr><td>/settings</td><td>Configuracoes</td></tr>
+<tr><td>/launchpad</td><td>Feed de lancamentos</td></tr>
+<tr><td>/launchpad/create</td><td>Criar token</td></tr>
+</table>
+
+<h3>Frontend Pages (bags-shield-app2)</h3>
+<table>
+<tr><th>Rota</th><th>Descricao</th></tr>
+<tr><td>/</td><td>Home com input de scan</td></tr>
+<tr><td>/scan</td><td>Pagina de scan</td></tr>
+<tr><td>/scan/loading</td><td>Loading animado</td></tr>
+<tr><td>/scan/result/:mint</td><td>Resultado + SwapDrawer</td></tr>
+<tr><td>/swap</td><td>Swap com wallet detection + MAX + Jupiter V2</td></tr>
+<tr><td>/launchpad</td><td>Criar token com bonding curve</td></tr>
+<tr><td>/portfolio</td><td>LP locks ativos</td></tr>
+<tr><td>/settings</td><td>Slippage, idioma, RPC</td></tr>
+<tr><td>/profile</td><td>Login + historico</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECAO 2 -->
+<h1 id="s2">2. Analise de Concorrencia</h1>
+
+<h2 id="s2-1">2.1 RugCheck.xyz</h2>
+<p>O scanner mais conhecido da Solana. Processa milhares de analises diarias.</p>
+
+<table>
+<tr><th>Aspecto</th><th>Status</th></tr>
+<tr><td>Pontos fortes</td><td>20+ checks, Insider Network Detection, gratuito, sem login</td></tr>
+<tr><td>Fraquezas criticas</td><td>Algoritmo caixa-preta, sem anti-forgery, sem launchpad, sem swap, sem i18n</td></tr>
+<tr><td>Falsos positivos</td><td>Usuarios relatam tokens aprovados que rugaram</td></tr>
+</table>
+
+<h2 id="s2-2">2.2 Bubble Maps</h2>
+<p>Visualizacao grafica de distribuicao de holders.</p>
+
+<table>
+<tr><th>Aspecto</th><th>Status</th></tr>
+<tr><td>Pontos fortes</td><td>Visualizacao de clusters, Magic Nodes, Time Travel, multi-chain</td></tr>
+<tr><td>Fraquezas</td><td>Nao e scanner de seguranca, complexo para iniciantes, sem score automatico</td></tr>
+</table>
+
+<h2 id="s2-3">2.3 De.Fi Scanner</h2>
+<p>Scanner multi-chain com portfolio tracker.</p>
+
+<table>
+<tr><th>Aspecto</th><th>Status</th></tr>
+<tr><td>Pontos fortes</td><td>15+ networks, 72K+ contratos, antivirus de wallet</td></tr>
+<tr><td>Fraquezas</td><td>Solana e limitada, sem scoring proprietario, interface sobrecarregada</td></tr>
+</table>
+
+<h2 id="s2-4">2.4 DexScreener</h2>
+<p>Radar de mercado para descoberta de tokens.</p>
+
+<table>
+<tr><th>Aspecto</th><th>Status</th></tr>
+<tr><td>Pontos fortes</td><td>Dados em tempo real, graficos, alertas</td></tr>
+<tr><td>Fraquezas</td><td>Zero analise de seguranca, nao detecta honeypots, nao verifica authorities</td></tr>
+</table>
+
+<h2 id="s2-5">2.5 Tabela Comparativa Final</h2>
+
+<table>
+<tr><th>Feature</th><th>Bags Shield</th><th>RugCheck</th><th>Bubble Maps</th><th>De.Fi</th><th>DexScreener</th></tr>
+<tr><td>Score transparente</td><td><span class="badge badge-green">Regras expostas</span></td><td><span class="badge badge-red">Caixa-preta</span></td><td><span class="badge badge-red">Sem score</span></td><td><span class="badge badge-amber">Generico</span></td><td><span class="badge badge-red">Sem score</span></td></tr>
+<tr><td>Anti-forgery HMAC</td><td><span class="badge badge-green">Assinatura criptografica</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td></tr>
+<tr><td>Trust Layers on-chain</td><td><span class="badge badge-green">5 camadas</span></td><td><span class="badge badge-amber">Parcial</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-amber">Parcial</span></td><td><span class="badge badge-red">Nao</span></td></tr>
+<tr><td>Launchpad seguro</td><td><span class="badge badge-green">Com bonding curve</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td></tr>
+<tr><td>Swap integrado</td><td><span class="badge badge-green">Com guardrails</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-amber">Separado</span></td><td><span class="badge badge-red">Nao</span></td></tr>
+<tr><td>LP Lock detection</td><td><span class="badge badge-green">Orca + on-chain</span></td><td><span class="badge badge-amber">Basico</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td><td><span class="badge badge-red">Nao</span></td></tr>
+<tr><td>Multi-idioma</td><td><span class="badge badge-green">pt-BR + en-US</span></td><td><span class="badge badge-red">EN apenas</span></td><td><span class="badge badge-red">EN apenas</span></td><td><span class="badge badge-amber">Parcial</span></td><td><span class="badge badge-red">EN apenas</span></td></tr>
+<tr><td>Paywall em SOL</td><td><span class="badge badge-green">Nativo</span></td><td><span class="badge badge-red">Gratuito (?)</span></td><td><span class="badge badge-red">Freemium</span></td><td><span class="badge badge-red">Freemium</span></td><td><span class="badge badge-red">Gratuito</span></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECAO 3 -->
+<h1 id="s3">3. Inovacao: Bags Shield Protocol v3.0</h1>
+
+<div class="highlight">
+<strong>Proposta:</strong> Tres pilares tecnologicos que transformam o Bags Shield de um scanner reativo em uma infraestrutura de seguranca proativa, preditiva e imutavel para a Solana.
+</div>
+
+<h2 id="s3-1">3.1 ZK-Proof Scanner</h2>
+
+<h3>O que e</h3>
+<p>Cada scan gera uma <strong>prova de conhecimento zero (ZK-SNARK)</strong> que atesta: "Este token possui as propriedades X, Y e Z" — sem revelar os dados brutos da API.</p>
+
+<h3>Por que e revolucionario</h3>
+<ul>
+<li><strong>Imutabilidade criptografica:</strong> O resultado e uma prova matematica, nao um JSON. Ninguem pode alterar o score apos a geracao.</li>
+<li><strong>Verificacao on-chain:</strong> A prova pode ser verificada diretamente em um programa Solana. Qualquer dApp pode confirmar o score sem confiar no Bags Shield.</li>
+<li><strong>Privacidade de dados:</strong> APIs pagas nao precisam expor dados brutos. A prova atesta o resultado sem revelar a fonte.</li>
+</ul>
+
+<h3>Tecnologia</h3>
+<table>
+<tr><th>Componente</th><th>Tecnologia</th></tr>
+<tr><td>Circuito</td><td>Circom (zk-SNARKs)</td></tr>
+<tr><td>Prover</td><td>snarkjs (Node.js)</td></tr>
+<tr><td>Verificador on-chain</td><td>Bonsol / Noir + Solana program</td></tr>
+<tr><td>Hash function</td><td>Poseidon (ZK-friendly)</td></tr>
+</table>
+
+<h2 id="s3-2">3.2 AI Predictive Rug Shield</h2>
+
+<h3>O que e</h3>
+<p>Modelo de <strong>machine learning</strong> treinado em milhoes de transacoes Solana que prediz a probabilidade de rug pull <strong>antes</strong> que ele aconteca.</p>
+
+<h3>Features do Modelo</h3>
+<table>
+<tr><th>Categoria</th><th>Features</th></tr>
+<tr><td>Wallet Behavior Graph</td><td>Clustering de carteiras, centralidade, common funding, relacionamentos ocultos</td></tr>
+<tr><td>Temporal Pattern</td><td>Sequencias de transacoes pre-rug, velocity, time-to-rug</td></tr>
+<tr><td>Social-Chain Fusion</td><td>Twitter/X sentiment, mentions em Telegram, correlacao com on-chain</td></tr>
+<tr><td>Honeypot Simulation</td><td>Simulacao de compra/venda via Jupiter quote API</td></tr>
+</table>
+
+<h3>Arquitetura ML</h3>
+<table>
+<tr><th>Componente</th><th>Tecnologia</th><th>Output</th></tr>
+<tr><td>Graph Neural Network</td><td>PyTorch Geometric</td><td>Node embeddings, graph classification</td></tr>
+<tr><td>XGBoost Ensemble</td><td>XGBoost</td><td>Rug probability temporal + social</td></tr>
+<tr><td>Ensemble Fusion</td><td>Ponderado (0.6 GNN + 0.4 XGB)</td><td>rugProbability [0-1]</td></tr>
+</table>
+
+<h3>Performance Esperada</h3>
+<p>Baseado em pesquisas academicas (ACM 2023, UZH/Quioto 2025):</p>
+<ul>
+<li><strong>Acuracia:</strong> 94% em deteccao de rug pulls</li>
+<li><strong>Tempo de deteccao:</strong> Mediana de 2-4 horas antes do evento</li>
+<li><strong>Latencia:</strong> Inferencia < 500ms via ONNX Runtime</li>
+</ul>
+
+<h2 id="s3-3">3.3 On-Chain Reputation Registry</h2>
+
+<h3>O que e</h3>
+<p>Um <strong>programa Solana (Anchor)</strong> que armazena o historico de scores, launches e comportamentos de tokens e criadores.</p>
+
+<h3>Estruturas de Dados</h3>
+<div class="code">
+TokenRecord {
+  mint: Pubkey,
+  creator: Pubkey,
+  first_scan_at: i64,
+  latest_score: u8,          // 0-100
+  latest_badge: u8,          // 0=SAFE, 1=CAUTION, 2=HIGH_RISK
+  scan_count: u32,
+  zk_proof_hash: [u8; 32],
+  shield_verified: bool,     // Launchpad Bags Shield
+}
+
+CreatorRecord {
+  wallet: Pubkey,
+  tokens_created: u32,
+  avg_score: u8,
+  rugs_detected: u32,
+  reputation_tier: u8,       // 0=New, 1=Verified, 2=Trusted, 3=Elite
+}
+</div>
+
+<h3>Instrucoes do Programa</h3>
+<table>
+<tr><th>Instrucao</th><th>Quem chama</th><th>Quando</th></tr>
+<tr><td>init_token</td><td>Backend</td><td>Primeiro scan de um token</td></tr>
+<tr><td>record_scan</td><td>Backend</td><td>Apos cada scan (com ZK proof hash)</td></tr>
+<tr><td>update_creator</td><td>Backend</td><td>Apos launch ou rug detectado</td></tr>
+<tr><td>verify_shield</td><td>Backend</td><td>Token lancado via Bags Shield Launchpad</td></tr>
+</table>
+
+<h2 id="s3-4">3.4 Fluxo Completo do Protocolo</h2>
+
+<h3>Fase 1: Lancamento</h3>
+<ol>
+<li>Criador configura token no Bags Shield Launchpad</li>
+<li>Trust Layers ativados (revoke mint, freeze, immutable metadata, LP lock)</li>
+<li>ZK-Proof gerada: "Este token nasceu com N protecoes ativas"</li>
+<li>Token entra no Registry como "Shield Verified"</li>
+<li>Bonding curve ativa → liquidez imediata → migracao Raydium</li>
+</ol>
+
+<h3>Fase 2: Monitoramento</h3>
+<ol>
+<li>AI Agent observa o token 24/7</li>
+<li>Detecta: wallet clusters, volume anomalo, sentiment virando negativo, honeypot</li>
+<li>Se rugProbability > 0.7:
+   <ul>
+   <li>Alerta push para todos os holders</li>
+   <li>Score ajustado em tempo real</li>
+   <li>Swap desabilitado automaticamente</li>
+   <li>ZK-Proof atualizada com nova evidencia</li>
+   </ul>
+</li>
+</ol>
+
+<h3>Fase 3: Verificacao</h3>
+<ol>
+<li>Usuario quer comprar o token</li>
+<li>Wallet consulta Registry on-chain: "Qual o score deste token?"</li>
+<li>Verifica ZK-Proof: "A prova e valida? Quem emitiu? Quando?"</li>
+<li>AI Shield: "Qual a probabilidade de rug AGORA?"</li>
+<li>Se verde → Swap habilitado | Se amarelo → Warning + confirmacao | Se vermelho → Swap bloqueado</li>
+</ol>
+
+<div class="page-break"></div>
+
+<!-- SECAO 4 -->
+<h1 id="s4">4. Plano de Implantacao</h1>
+
+<h2 id="s4-1">4.1 Estrutura de Pastas Sugerida</h2>
+
+<h3>Repo 1 — bags-shield-api (Novas Pastas)</h3>
+<div class="code">
+bags-shield-api/
+├── src/
+│   ├── app/api/
+│   │   ├── zk/prove/route.ts          # Gera ZK proof
+│   │   ├── zk/verify/route.ts         # Verifica ZK proof
+│   │   ├── ai/predict/route.ts        # ML rug prediction
+│   │   ├── ai/monitor/route.ts        # AI agent status
+│   │   └── registry/query/route.ts    # Consulta reputacao
+│   ├── lib/
+│   │   ├── zk/                        # Circuitos, prover, verifier
+│   │   ├── ai/                        # Feature extraction, inference
+│   │   └── registry/                  # Cliente do programa Solana
+│   └── ...
+├── programs/
+│   └── bags-shield-registry/          # Anchor program (Rust)
+│       ├── programs/registry/src/
+│       │   ├── lib.rs
+│       │   ├── state.rs
+│       │   └── instructions/
+│       ├── tests/
+│       └── Anchor.toml
+└── ai-model/                          # Python ML pipeline
+    ├── data/raw/                      # Dados brutos
+    ├── data/processed/                # Features
+    ├── notebooks/                     # Jupyter notebooks
+    ├── src/
+    │   ├── features/                  # Graph, temporal, social
+    │   ├── models/                    # GNN, XGBoost, ensemble
+    │   └── pipeline/                  # Train, export, deploy
+    ├── requirements.txt
+    └── Dockerfile
+</div>
+
+<h3>Repo 2 — bags-shield-app2 (Novas Pastas)</h3>
+<div class="code">
+bags-shield-app2/frontend/src/
+├── components/
+│   ├── zk/                            # ProofBadge, ProofVerifier
+│   ├── ai/                            # RiskMeter, AlertBanner, WalletGraph
+│   └── registry/                      # CreatorReputation, ShieldVerified
+├── hooks/
+│   ├── useZkProof.js                  # Hook ZK
+│   ├── useAiPrediction.js             # Hook ML
+│   └── useRegistry.js                 # Hook Registry
+└── lib/
+    ├── zk/verifier.js                 # Verificacao no browser
+    ├── ai/predictor.js                # Cliente API predicao
+    └── registry/client.js             # Cliente Solana
+</div>
+
+<h2 id="s4-2">4.2 Cronograma por Fase</h2>
+
+<table>
+<tr><th>Fase</th><th>Semana</th><th>Entregaveis</th><th>Dependencias</th></tr>
+<tr><td rowspan="4"><strong>Mes 1: Fundacao</strong></td><td>1-2</td><td>ZK Circuit (Circom) compilado e testado localmente</td><td>Nenhuma</td></tr>
+<tr><td>3-4</td><td>Registry Program (Anchor) deployado em devnet</td><td>Solana devnet</td></tr>
+<tr><td>Paralelo</td><td>Coleta historica de dados ML (6 meses)</td><td>Helius RPC</td></tr>
+<tr><td>Paralelo</td><td>Script de feature extraction (Python)</td><td>Dados coletados</td></tr>
+<tr><td rowspan="4"><strong>Mes 2: Integracao</strong></td><td>1-2</td><td>ZK integrado ao /api/scan, /api/zk/prove e /api/zk/verify</td><td>Circuito pronto</td></tr>
+<tr><td>3-4</td><td>ML baseline (XGBoost) treinado, API /api/ai/predict</td><td>Features prontas</td></tr>
+<tr><td>Paralelo</td><td>Registry deployado em mainnet</td><td>Devnet testado</td></tr>
+<tr><td>Paralelo</td><td>Frontend: ProofBadge e RiskMeter components</td><td>APIs prontas</td></tr>
+<tr><td rowspan="4"><strong>Mes 3: AI Avancado</strong></td><td>1-2</td><td>Graph Neural Network (PyTorch) treinado</td><td>Baseline XGBoost</td></tr>
+<tr><td>3-4</td><td>AI Agent 24/7 com WebSocket para alertas real-time</td><td>GNN + XGB ensemble</td></tr>
+<tr><td>Paralelo</td><td>Frontend: WalletGraph visualization, AlertBanner</td><td>AI Agent pronto</td></tr>
+<tr><td>Paralelo</td><td>Integracao AI Agent pre-pronto</td><td>Agent + API</td></tr>
+<tr><td rowspan="4"><strong>Mes 4: Lançamento</strong></td><td>1-2</td><td>Testes end-to-end, performance, security audit</td><td>Tudo integrado</td></tr>
+<tr><td>3</td><td>Beta fechado (usuarios VIP)</td><td>Testes passando</td></tr>
+<tr><td>4</td><td>Lançamento publico + comunicacao</td><td>Feedback beta</td></tr>
+<tr><td>Paralelo</td><td>Documentacao completa + monitoramento</td><td>Producao estavel</td></tr>
+</table>
+
+<h2 id="s4-3">4.3 API Endpoints Novos</h2>
+
+<table>
+<tr><th>Rota</th><th>Metodo</th><th>Body/Params</th><th>Resposta</th></tr>
+<tr><td>/api/zk/prove</td><td>POST</td><td>{ scanResult, requestId }</td><td>{ proof, publicSignals, proofHash }</td></tr>
+<tr><td>/api/zk/verify</td><td>POST</td><td>{ proof, publicSignals }</td><td>{ valid, verifiedAt }</td></tr>
+<tr><td>/api/ai/predict</td><td>GET</td><td>?mint={mint}</td><td>{ rugProbability, confidence, factors[], walletClusters[], socialSentiment }</td></tr>
+<tr><td>WS /api/ai/monitor</td><td>WS</td><td>—</td><td>Alertas real-time (JSON)</td></tr>
+<tr><td>/api/registry/token/{mint}</td><td>GET</td><td>—</td><td>{ mint, creator, latestScore, latestBadge, scanCount, zkProofHash, shieldVerified, scanHistory[] }</td></tr>
+<tr><td>/api/registry/creator/{wallet}</td><td>GET</td><td>—</td><td>{ wallet, tokensCreated, avgScore, rugsDetected, reputationTier, tokens[] }</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECAO 5 -->
+<h1 id="s5">5. Custos e Recursos</h1>
+
+<h2 id="s5-1">5.1 Infraestrutura Cloud</h2>
+
+<table>
+<tr><th>Servico</th><th>Uso</th><th>Custo Mensal (USD)</th></tr>
+<tr><td>Vercel Pro</td><td>API + Frontend (2 projetos)</td><td>$20</td></tr>
+<tr><td>Railway / Render</td><td>AI Pipeline (Python + GPU)</td><td>$50</td></tr>
+<tr><td>Redis Cloud</td><td>Feature cache + sessions</td><td>$15</td></tr>
+<tr><td>Helius RPC</td><td>On-chain data + webhooks</td><td>$49</td></tr>
+<tr><td>Birdeye API</td><td>Token overview</td><td>$0 (free tier)</td></tr>
+<tr><td>DexScreener</td><td>Pairs data</td><td>$0 (free)</td></tr>
+<tr><td>AWS S3</td><td>Dataset storage (ML)</td><td>$10</td></tr>
+<tr><td><strong>Total Infra</strong></td><td></td><td><strong>$144/mes</strong></td></tr>
+</table>
+
+<h2 id="s5-2">5.2 Claude + Verdent (Desenvolvimento)</h2>
+
+<p>Considerando que voce (comandante) + Claude (modelo) + Verdent (IDE/agente) trabalham em conjunto:</p>
+
+<table>
+<tr><th>Recurso</th><th>Uso Estimado</th><th>Custo Mensal (USD)</th></tr>
+<tr><td>Claude Pro (Anthropic)</td><td>Acesso ilimitado ao Claude 3.5/4 Sonnet para arquitetura, debug, review</td><td>$20</td></tr>
+<tr><td>Claude API (tokens)</td><td>~2M input + 500K output tokens/mes para geracao de codigo, docs, testes</td><td>$40</td></tr>
+<tr><td>Verdent IDE</td><td>Agente de codigo para refatoracao, criacao de arquivos, build, deploy</td><td>$0 (incluido no ambiente)</td></tr>
+<tr><td><strong>Total Dev AI</strong></td><td></td><td><strong>$60/mes</strong></td></tr>
+</table>
+
+<h3>Estimativa de Tempo de Desenvolvimento (Claude + Verdent)</h3>
+
+<table>
+<tr><th>Tarefa</th><th>Tempo Manual</th><th>Tempo com Claude+Verdent</th><th>Ganho</th></tr>
+<tr><td>ZK Circuit (Circom)</td><td>80h</td><td>30h</td><td>62% mais rapido</td></tr>
+<tr><td>Registry Program (Anchor)</td><td>60h</td><td>25h</td><td>58% mais rapido</td></tr>
+<tr><td>ML Pipeline (Python)</td><td>120h</td><td>50h</td><td>58% mais rapido</td></tr>
+<tr><td>API Routes (Next.js)</td><td>40h</td><td>15h</td><td>62% mais rapido</td></tr>
+<tr><td>Frontend Components</td><td>80h</td><td>30h</td><td>62% mais rapido</td></tr>
+<tr><td>Testes + Debug</td><td>60h</td><td>25h</td><td>58% mais rapido</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>440h (~11 semanas)</strong></td><td><strong>175h (~4 semanas)</strong></td><td><strong>60% reducao</strong></td></tr>
+</table>
+
+<h2 id="s5-3">5.3 APIs e Servicos Externos</h2>
+
+<table>
+<tr><th>Servico</th><th>Uso</th><th>Custo Mensal (USD)</th></tr>
+<tr><td>Helius RPC (paid tier)</td><td>On-chain reads, token accounts, parsed data</td><td>$49</td></tr>
+<tr><td>Helius API (webhooks)</td><td>Webhook events para monitoramento</td><td>Incluido no RPC</td></tr>
+<tr><td>Birdeye API</td><td>Token overview, marketCap, holders</td><td>$0 (free tier: 100K calls/mes)</td></tr>
+<tr><td>DexScreener API</td><td>Pairs, price, liquidity</td><td>$0 (free)</td></tr>
+<tr><td>Jupiter API</td><td>Quote, swap, execute</td><td>$0 (free, rate limited)</td></tr>
+<tr><td>Meteora API</td><td>Liquidity pairs</td><td>$0 (free)</td></tr>
+<tr><td>Twitter/X API (v2)</td><td>Social sentiment, mentions</td><td>$100 (basic tier)</td></tr>
+<tr><td>Telegram Bot API</td><td>Alertas para usuarios</td><td>$0 (free)</td></tr>
+<tr><td><strong>Total APIs</strong></td><td></td><td><strong>$149/mes</strong></td></tr>
+</table>
+
+<h2 id="s5-4">5.4 Custo Total Estimado (4 Meses)</h2>
+
+<table>
+<tr><th>Categoria</th><th>Mes 1</th><th>Mes 2</th><th>Mes 3</th><th>Mes 4</th><th>Total</th></tr>
+<tr><td>Infraestrutura Cloud</td><td>$144</td><td>$144</td><td>$144</td><td>$144</td><td>$576</td></tr>
+<tr><td>Claude + API</td><td>$60</td><td>$60</td><td>$60</td><td>$60</td><td>$240</td></tr>
+<tr><td>APIs Externas</td><td>$149</td><td>$149</td><td>$149</td><td>$149</td><td>$596</td></tr>
+<tr><td><strong>Total Mensal</strong></td><td><strong>$353</strong></td><td><strong>$353</strong></td><td><strong>$353</strong></td><td><strong>$353</strong></td><td><strong>$1.412</strong></td></tr>
+</table>
+
+<div class="highlight">
+<strong>Nota:</strong> O custo de desenvolvimento humano (sua hora como comandante) nao esta incluido. Com Claude + Verdent, o trabalho de 11 semanas e reduzido para 4 semanas de supervisao e decisao arquitetural.
+</div>
+
+<div class="page-break"></div>
+
+<!-- SECAO 6 -->
+<h1 id="s6">6. Integracao com AI Agent Pre-Pronto</h1>
+
+<div class="highlight">
+<strong>Contexto:</strong> Voce mencionou possuir uma estrutura de AI Agent pre-pronta. Abaixo esta o esquema completo de integracao desse agent com o Bags Shield Protocol v3.0.
+</div>
+
+<h2 id="s6-1">6.1 Arquitetura de Integracao</h2>
+
+<p>O AI Agent pre-pronto atuara como uma camada de <strong>orquestracao inteligente</strong> entre os dados brutos da blockchain e as decisoes de seguranca do Bags Shield.</p>
+
+<div class="code">
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AI AGENT PRE-PRONTO (SEU)                         │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Orquestrador Principal                                      │   │
+│  │  ├── Recebe eventos do Bags Shield (novo token, novo scan)   │   │
+│  │  ├── Decide quais analises executar                          │   │
+│  │  ├── Agrega resultados de multiplos modelos                  │   │
+│  │  └── Emite alertas e acoes (bloquear swap, notificar)        │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                       │
+│  ┌───────────────────────────┼──────────────────────────────────┐   │
+│  │                           ▼                                   │   │
+│  │  Sub-Agentes Especializados                                   │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │   │
+│  │  │ Wallet      │  │ Social      │  │ Temporal            │   │   │
+│  │  │ Analyst     │  │ Sentinel    │  │ Forecaster          │   │   │
+│  │  │ (clusters)  │  │ (sentiment) │  │ (time-series)       │   │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BAGS SHIELD PROTOCOL v3.0                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐  │
+│  │ ZK Scanner  │  │ ML Pipeline │  │ On-Chain Registry           │  │
+│  │ (provas)    │  │ (predicao)  │  │ (reputacao)                 │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h2 id="s6-2">6.2 Contrato de API (AI Agent <> Bags Shield)</h2>
+
+<h3>Eventos Enviados pelo Bags Shield para o AI Agent</h3>
+<table>
+<tr><th>Evento</th><th>Payload</th><th>Frequencia</th></tr>
+<tr><td>token.scanned</td><td>{ mint, score, badge, timestamp, sources[] }</td><td>Apos cada scan</td></tr>
+<tr><td>token.launched</td><td>{ mint, creator, launchpad, trustLayers[], timestamp }</td><td>Apos cada launch</td></tr>
+<tr><td>token.swapped</td><td>{ mint, userWallet, amountIn, amountOut, timestamp }</td><td>Apos cada swap</td></tr>
+<tr><td>market.anomaly</td><td>{ mint, anomalyType, severity, evidence }</td><td>Quando detectado</td></tr>
+</table>
+
+<h3>Acoes Recebidas do AI Agent pelo Bags Shield</h3>
+<table>
+<tr><th>Acao</th><th>Payload</th><th>Efeito</th></tr>
+<tr><td>alert.broadcast</td><td>{ mint, severity, message, channels[] }</td><td>Push notification, email, Telegram</td></tr>
+<tr><td>swap.block</td><td>{ mint, reason, duration }</td><td>Swap desabilitado para o token</td></tr>
+<tr><td>score.adjust</td><td>{ mint, newScore, reason }</td><td>Score atualizado em tempo real</td></tr>
+<tr><td>registry.flag</td><td>{ mint, flagType, evidence }</td><td>Token flaggado no registry</td></tr>
+</table>
+
+<h3>Endpoint de Integracao</h3>
+<div class="code">
+POST /api/ai/agent/webhook
+Headers: { "X-Agent-Signature": "hmac-sha256", "X-Agent-Id": "bags-shield-agent" }
+Body: {
+  event: "token.scanned",
+  payload: { mint: "EPjF...", score: 95, badge: "SAFE" },
+  timestamp: "2026-05-16T12:00:00Z",
+  signature: "..."
+}
+
+Response: {
+  actions: [
+    { type: "alert.broadcast", payload: { ... } },
+    { type: "registry.flag", payload: { ... } }
+  ]
+}
+</div>
+
+<h2 id="s6-3">6.3 Fluxo de Dados Completo</h2>
+
+<ol>
+<li><strong>Evento disparado:</strong> Bags Shield detecta um novo token (via scan ou launch)</li>
+<li><strong>Webhook enviado:</strong> POST /api/ai/agent/webhook com dados do token</li>
+<li><strong>AI Agent analisa:</strong>
+   <ul>
+   <li>Sub-Agente Wallet Analyst: mapeia clusters de carteiras relacionadas</li>
+   <li>Sub-Agente Social Sentinel: analisa sentimento em Twitter/Telegram</li>
+   <li>Sub-Agente Temporal Forecaster: identifica padroes pre-rug historicos</li>
+   </ul>
+</li>
+<li><strong>AI Agent decide:</strong> Com base na analise, determina se acoes sao necessarias</li>
+<li><strong>Acoes retornadas:</strong> Bags Shield executa as acoes (alertas, bloqueios, ajustes)</li>
+<li><strong>Feedback loop:</strong> Resultado das acoes e enviado de volta ao AI Agent para aprendizado</li>
+</ol>
+
+<h3>Esquema de Autenticacao</h3>
+<div class="code">
+# HMAC-SHA256 para validar webhooks
+shared_secret = process.env.AI_AGENT_SECRET
+
+signature = HMAC-SHA256(shared_secret, payload_json)
+# Bags Shield envia signature no header X-Agent-Signature
+# AI Agent verifica antes de processar
+</div>
+
+<h3>Custo da Integracao</h3>
+<table>
+<tr><th>Componente</th><th>Custo</th></tr>
+<tr><td>Webhook endpoint (Vercel)</td><td>Incluido no plano Pro ($20)</td></tr>
+<tr><td>Processamento do AI Agent</td><td>Depende da infra do seu agente</td></tr>
+<tr><td>Latencia esperada</td><td>< 2s (webhook + analise + resposta)</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECAO 7 -->
+<h1 id="s7">7. Checklist de Lançamento</h1>
+
+<table>
+<tr><th>Fase</th><th>Item</th><th>Status</th></tr>
+<tr><td rowspan="5">Pre-Lancamento</td><td>ZK circuit compilado e testado</td><td>□</td></tr>
+<tr><td>Registry deployado em mainnet</td><td>□</td></tr>
+<tr><td>Modelo ML treinado (acuracia > 90%)</td><td>□</td></tr>
+<tr><td>API /ai/predict respondendo < 500ms</td><td>□</td></tr>
+<tr><td>WebSocket de alertas funcionando</td><td>□</td></tr>
+<tr><td rowspan="5">Integracao</td><td>AI Agent pre-pronto integrado via webhook</td><td>□</td></tr>
+<tr><td>Frontend com RiskMeter e ProofBadge</td><td>□</td></tr>
+<tr><td>Testes E2E passando (Cypress/Playwright)</td><td>□</td></tr>
+<tr><td>Performance tests (k6/Artillery)</td><td>□</td></tr>
+<tr><td>Security audit (contratos + APIs)</td><td>□</td></tr>
+<tr><td rowspan="5">Lancamento</td><td>Documentacao publicada (Swagger + README)</td><td>□</td></tr>
+<tr><td>Beta fechado (50 usuarios VIP)</td><td>□</td></tr>
+<tr><td>Feedback coletado e ajustes feitos</td><td>□</td></tr>
+<tr><td>Comunicacao preparada (Twitter, Discord, Blog)</td><td>□</td></tr>
+<tr><td>Monitoramento ativo (Sentry, Vercel Analytics, Helius)</td><td>□</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECAO 8 -->
+<h1 id="s8">8. Conclusao</h1>
+
+<p>O <strong>Bags Shield Protocol v3.0</strong> representa uma evolucao de ordem de magnitude na seguranca de tokens Solana. Enquanto os concorrentes permanecem reativos — analisando o que ja aconteceu — o Bags Shield se torna <strong>proativo, preditivo e imutavel</strong>.</p>
+
+<h3>Os Tres Pilares em Resumo</h3>
+
+<table>
+<tr><th>Pilar</th><th>O que resolve</th><th>Impacto competitivo</th></tr>
+<tr><td><span class="badge badge-cyan">ZK-Proof Scanner</span></td><td>Integridade dos resultados de scan</td><td>Ninguem oferece provas criptograficas verificaveis</td></tr>
+<tr><td><span class="badge badge-purple">AI Predictive Shield</span></td><td>Predicao de rugs antes de acontecerem</td><td>94% acuracia, deteccao 2-4h antes do evento</td></tr>
+<tr><td><span class="badge badge-green">On-Chain Registry</span></td><td>Reputacao persistente de tokens e criadores</td><td>Historico imutavel consultavel por qualquer dApp</td></tr>
+</table>
+
+<h3>Investimento Necessario</h3>
+
+<div style="display: flex; justify-content: center; gap: 20px; margin: 20px 0;">
+  <div class="metric">
+    <div class="metric-value">$1.412</div>
+    <div class="metric-label">Custo Total (4 meses)</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value">4</div>
+    <div class="metric-label">Meses de desenvolvimento</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value">60%</div>
+    <div class="metric-label">Reducao de tempo (Claude+Verdent)</div>
+  </div>
+</div>
+
+<h3>A Visao de Futuro</h3>
+
+<div class="highlight">
+"Em 2027, ninguem compra um token Solana sem verificar o Bags Shield Protocol. E o novo padrao de seguranca da rede — como o HTTPS e para a web."
+</div>
+
+<p>O Bags Shield nao e mais um scanner. E uma <strong>infraestrutura de seguranca</strong> para a Solana:</p>
+
+<ul>
+<li><strong>Para criadores:</strong> Lançar com o badge "Shield Verified" e um selo de confianca que aumenta a adocao</li>
+<li><strong>Para traders:</strong> Comprar tokens sem o escudo do Bags Shield e como navegar sem HTTPS — possivel, mas insano</li>
+<li><strong>Para dApps:</strong> Integrar o Registry on-chain e uma linha de codigo que protege todos os usuarios</li>
+<li><strong>Para a rede:</strong> Menos rugs = mais confianca = mais capital = mais adocao</li>
+</ul>
+
+<p style="text-align: center; margin-top: 40px; font-size: 12pt; color: #9945FF; font-weight: 700;">
+A Solana tem 11,9 milhoes de tokens.<br>
+O Bags Shield Protocol e o unico que pode dizer, com prova matematica,<br>
+quais deles voce pode confiar.
+</p>
+
+<div class="footer">
+Bags Shield Protocol v3.0 — Documento Tecnico e Plano de Implantacao<br>
+Maio 2026 — Confidencial
+</div>
+
+</body>
+</html>

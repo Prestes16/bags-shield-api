@@ -1,7 +1,7 @@
 /**
  * GET /api/market/summary?mint=...
  * Proxy para BAGS_SHIELD_API_BASE. Mint é opcional:
- *  - Sem mint: retorna sumário geral de mercado (SOL price via CoinGecko)
+ *  - Sem mint: retorna sumário geral de mercado (SOL price via Jupiter)
  *  - Com mint: proxy para upstream ou stub local
  */
 
@@ -45,19 +45,22 @@ function jsonResponse(
   return response;
 }
 
+// Mint address do SOL (wrapped) para preço via Jupiter
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
+
 /**
- * Busca preço do SOL via CoinGecko free API.
+ * Busca preço do SOL via Jupiter Price API v2.
  * Retorna null em caso de falha (não quebra a rota).
  */
 async function fetchSolMarketData(): Promise<{ solPrice: number; volume24h: number | null } | null> {
   try {
     const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd',
-      { cache: 'no-store', signal: AbortSignal.timeout(5000) },
+      `https://api.jup.ag/price/v2?ids=${SOL_MINT}`,
+      { cache: 'no-store', signal: AbortSignal.timeout(4000) },
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const price = data?.solana?.usd;
+    const price = data?.data?.[SOL_MINT]?.price;
     if (!price) return null;
     return { solPrice: Number(price), volume24h: null };
   } catch {
@@ -92,7 +95,7 @@ export async function GET(request: NextRequest) {
       } catch { /* cai pro fallback */ }
     }
 
-    // Fallback: busca SOL price via CoinGecko
+    // Fallback: busca SOL price direto do Jupiter
     const solData = await fetchSolMarketData();
     return jsonResponse(
       request,
