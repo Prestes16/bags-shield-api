@@ -56,4 +56,6 @@ export function getLaunchFee(allLayersActive: boolean): bigint {
   return LAUNCH_FEE_LAMPORTS + (allLayersActive ? SHIELD_TIER_EXTRA_LAMPORTS : 0n);
 }
 
-export function getTreasuryWallet(): string | nu
+export function getTreasuryWallet(): string | null {
+  return (process.env.TREASURY_WALLET_ADDRESS ?? '').trim() || 'HfcPmtJEMABWtrZmURT3n7EmhQUHCX6hs6Vf51uoNpdL';
+}
