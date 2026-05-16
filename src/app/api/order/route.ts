@@ -67,15 +67,22 @@ export async function GET(req: NextRequest) {
   const { inputMint, outputMint, amount, slippageBps, userPublicKey } = parsed.data;
 
   // Resolve fee account para fee collection (50 bps)
+  // Jupiter Ultra V2 cobra fees no token de SAÍDA — feeAccount deve ser a ATA
+  // do fee collector para o outputMint. Se não houver ATA para o output, skip.
   let platformFeeBps: number | undefined;
   let feeAccount: string | undefined;
   try {
-    const mints = inputMint === NATIVE_SOL ? [outputMint, inputMint] : [inputMint, outputMint];
-    for (const mint of mints) {
-      const acc = await getExistingFeeCollectorTokenAccount(mint);
-      if (acc) { feeAccount = acc; platformFeeBps = APP_FEE_BPS; break; }
+    const acc = await getExistingFeeCollectorTokenAccount(outputMint);
+    if (acc) {
+      feeAccount = acc;
+      platformFeeBps = APP_FEE_BPS;
+      console.log(`[order] fee: ${platformFeeBps}bps → ${feeAccount} (outputMint: ${outputMint})`);
+    } else {
+      console.log(`[order] sem ATA para outputMint ${outputMint} — swap sem fee`);
     }
-  } catch { /* sem fee se não resolver */ }
+  } catch (e: any) {
+    console.warn('[order] fee resolve falhou (SOLANA_RPC_URL configurado?):', e?.message);
+  }
 
   const params = new URLSearchParams({
     inputMint,
