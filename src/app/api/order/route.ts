@@ -5,10 +5,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { PublicKey } from '@solana/web3.js';
 import { getOrGenerateRequestId, applyCorsHeaders, applyNoStore, applySecurityHeaders } from '@/lib/security';
 import { checkRateLimitByIp, getClientIp } from '@/lib/security/rateLimit';
 import { LaunchpadValidator } from '@/lib/security/validate';
-import { APP_FEE_BPS, getExistingFeeCollectorTokenAccount } from '@/lib/solana/fees';
+import { APP_FEE_BPS, getReferralTokenAccount } from '@/lib/solana/fees';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,21 +68,22 @@ export async function GET(req: NextRequest) {
   const { inputMint, outputMint, amount, slippageBps, userPublicKey } = parsed.data;
 
   // Resolve fee account para fee collection (50 bps)
-  // Jupiter Ultra V2 cobra fees no token de SAÍDA — feeAccount deve ser a ATA
-  // do fee collector para o outputMint. Se não houver ATA para o output, skip.
+  // Jupiter Ultra V2 EXIGE referral token account PDAs — ATAs padrão são silenciosamente ignoradas.
+  // O JUPITER_REFERRAL_ACCOUNT deve ser criado via setup-jupiter-referral.mjs e salvo no Vercel.
   let platformFeeBps: number | undefined;
   let feeAccount: string | undefined;
-  try {
-    const acc = await getExistingFeeCollectorTokenAccount(outputMint);
-    if (acc) {
-      feeAccount = acc;
+  const referralAccountEnv = (process.env.JUPITER_REFERRAL_ACCOUNT ?? '').trim();
+  if (referralAccountEnv) {
+    try {
+      const referralAccount = new PublicKey(referralAccountEnv);
+      feeAccount = getReferralTokenAccount(referralAccount, outputMint);
       platformFeeBps = APP_FEE_BPS;
       console.log(`[order] fee: ${platformFeeBps}bps → ${feeAccount} (outputMint: ${outputMint})`);
-    } else {
-      console.log(`[order] sem ATA para outputMint ${outputMint} — swap sem fee`);
+    } catch (e: any) {
+      console.warn('[order] invalid JUPITER_REFERRAL_ACCOUNT — swap sem fee:', e?.message);
     }
-  } catch (e: any) {
-    console.warn('[order] fee resolve falhou (SOLANA_RPC_URL configurado?):', e?.message);
+  } else {
+    console.warn('[order] JUPITER_REFERRAL_ACCOUNT não configurado — swap sem fee');
   }
 
   const params = new URLSearchParams({

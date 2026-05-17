@@ -1,6 +1,24 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
+// ── Jupiter Referral Program ──────────────────────────────────────────────────
+// Jupiter Ultra requires referral program PDAs — standard ATAs are silently ignored.
+const REFERRAL_PROGRAM_ID = new PublicKey('REFER4ZgmyYx9c6He5XfaTMiGfdLwRnkV4RPp9t9iF3');
+
+/**
+ * Derives the referral token account PDA for a given mint.
+ * This is the account that must be passed as `feeAccount` in Jupiter Ultra orders.
+ * The referral account must be initialized on-chain first (run setup-jupiter-referral.mjs).
+ */
+export function getReferralTokenAccount(referralAccountPubkey: PublicKey, mint: string): string {
+  const mintPk = new PublicKey(mint);
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from('referral_ata'), referralAccountPubkey.toBuffer(), mintPk.toBuffer()],
+    REFERRAL_PROGRAM_ID,
+  );
+  return pda.toBase58();
+}
+
 export const APP_FEE_BPS = Number((process.env.APP_FEE_BPS ?? '50').trim() || '50'); // 0.50%
 
 // Fallback hardcoded — garante que nunca vai ser string vazia ou undefined
