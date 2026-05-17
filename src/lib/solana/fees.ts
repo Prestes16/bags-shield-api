@@ -4,8 +4,7 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 export const APP_FEE_BPS = Number((process.env.APP_FEE_BPS ?? '50').trim() || '50'); // 0.50%
 
 // Fallback hardcoded — garante que nunca vai ser string vazia ou undefined
-// Endereço atualizado — recebe fees em USDC (ATA deve existir na chain)
-const FALLBACK_FEE_COLLECTOR = 'HfcPmtJEMABWtrZmURT3n7EmhQUHCX6hs6Vf51uoNpdL';
+const FALLBACK_FEE_COLLECTOR = '7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi';
 
 function buildFeeCollector(): PublicKey {
   const raw = (process.env.APP_FEE_COLLECTOR_OWNER ?? '').trim() || FALLBACK_FEE_COLLECTOR;
@@ -57,5 +56,5 @@ export function getLaunchFee(allLayersActive: boolean): bigint {
 }
 
 export function getTreasuryWallet(): string | null {
-  return (process.env.TREASURY_WALLET_ADDRESS ?? '').trim() || 'HfcPmtJEMABWtrZmURT3n7EmhQUHCX6hs6Vf51uoNpdL';
+  return (process.env.TREASURY_WALLET_ADDRESS ?? '').trim() || '7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi';
 }

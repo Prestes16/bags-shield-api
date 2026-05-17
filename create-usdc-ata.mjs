@@ -30,7 +30,7 @@ import { readFileSync, existsSync } from 'fs';
 import bs58 from 'bs58';
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const FEE_COLLECTOR = new PublicKey('HfcPmtJEMABWtrZmURT3n7EmhQUHCX6hs6Vf51uoNpdL');
+const FEE_COLLECTOR = new PublicKey('7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi');
 const USDC_MINT     = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 const RPC_URL       = process.env.SOLANA_RPC_URL
   || 'https://mainnet.helius-rpc.com/?api-key=a6eb98dd-5471-4849-b03f-6cf777f11f09';
