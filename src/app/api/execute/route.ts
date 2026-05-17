@@ -12,13 +12,12 @@ import { checkRateLimitByIp, getClientIp } from '@/lib/security/rateLimit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const JUP_V2_BASE = 'https://api.jup.ag/swap/v2';
+const JUP_V2_BASE = 'https://api.jup.ag/ultra/v1';
 const RATE_LIMIT  = { windowMs: 60_000, max: 15 };
-const TRADING_ENABLED = (process.env.BETA_TRADING_ENABLED ?? '').trim().toLowerCase() === 'true';
 
 const ExecuteSchema = z.object({
   signedTransaction:    z.string().min(10).max(8192),  // base64 tx assinada
-  requestId:            z.string().uuid(),
+  requestId:            z.string().min(1).max(256),   // Jupiter Ultra requestId (não é UUID)
   lastValidBlockHeight: z.string().optional(),
 }).strict();
 
@@ -48,7 +47,6 @@ export async function POST(req: NextRequest) {
   };
 
   if (!allowed) return fail(`Rate limit. Retry in ${Math.ceil((resetAt - Date.now()) / 1000)}s`, 429, 'RATE_LIMIT');
-  if (!TRADING_ENABLED) return fail('Trading is disabled (set BETA_TRADING_ENABLED=true)', 503, 'TRADING_DISABLED');
 
   let body: unknown;
   try { body = await req.json(); } catch { return fail('Invalid JSON body'); }
