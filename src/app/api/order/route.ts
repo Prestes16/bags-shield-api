@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       const referralAccount = new PublicKey(referralAccountEnv);
       feeAccount = getReferralTokenAccount(referralAccount, outputMint);
       platformFeeBps = APP_FEE_BPS;
-      console.log(`[order] fee: ${platformFeeBps}bps → ${feeAccount} (outputMint: ${outputMint})`);
+      console.log(`[order] fee: ${platformFeeBps}bps \u2192 ${feeAccount} (outputMint: ${outputMint})`);
     } catch (e: any) {
       console.warn('[order] invalid JUPITER_REFERRAL_ACCOUNT — swap sem fee:', e?.message);
     }
