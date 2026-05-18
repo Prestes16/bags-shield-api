@@ -117,7 +117,7 @@ export const tokenDraftSchema = z
       .min(0, 'Decimais deve ser >= 0')
       .max(18, 'Decimais deve ser <= 18'),
 
-    description: z.string().max(200, 'DescriÃ§Ã£o deve ter no mÃ¡ximo 200 caracteres').optional(),
+    description: z.string().max(1000, 'DescriÃ§Ã£o deve ter no mÃ¡ximo 1000 caracteres').optional(),
 
     /** URL real (http/https/ipfs/ar). NÃO aceita data: (use imagePreviewUrl para preview) */
     imageUrl: z
@@ -209,6 +209,154 @@ export const launchConfigDraftSchema = z
     },
   );
 
+const optionalTrimmedString = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().trim().optional(),
+);
+
+const optionalPublicUriSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z
+    .string()
+    .trim()
+    .refine(
+      (value) => {
+        try {
+          const url = new URL(value);
+          return ['http:', 'https:', 'ipfs:', 'ar:'].includes(url.protocol);
+        } catch {
+          return false;
+        }
+      },
+      { message: 'URL deve usar http://, https://, ipfs:// ou ar://' },
+    )
+    .optional(),
+);
+
+const bagsSymbolSchema = z
+  .string()
+  .min(1, 'SÃ­mbolo do token Ã© obrigatÃ³rio')
+  .max(11, 'SÃ­mbolo do token deve ter no mÃ¡ximo 10 caracteres sem $')
+  .transform((value) => value.replace(/^\$+/, '').trim().toUpperCase())
+  .refine((value) => value.length >= 1 && value.length <= 10, {
+    message: 'SÃ­mbolo do token deve ter 1-10 caracteres',
+  });
+
+/**
+ * Contract used by POST /api/launchpad/token-info for Bags Launch v2.
+ */
+export const bagsTokenInfoRequestSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Nome do token Ã© obrigatÃ³rio').max(32, 'Nome do token deve ter no mÃ¡ximo 32 caracteres'),
+    symbol: bagsSymbolSchema,
+    description: z
+      .string()
+      .trim()
+      .min(1, 'DescriÃ§Ã£o do token Ã© obrigatÃ³ria')
+      .max(1000, 'DescriÃ§Ã£o deve ter no mÃ¡ximo 1000 caracteres'),
+    imageUrl: optionalPublicUriSchema,
+    metadataUrl: optionalPublicUriSchema,
+    telegram: optionalTrimmedString,
+    twitter: optionalTrimmedString,
+    website: optionalTrimmedString,
+    telegramHandle: optionalTrimmedString,
+    twitterHandle: optionalTrimmedString,
+    websiteUrl: optionalTrimmedString,
+  })
+  .strict()
+  .refine((data) => Boolean(data.imageUrl || data.metadataUrl), {
+    message: 'imageUrl ou metadataUrl Ã© obrigatÃ³rio para criar metadata real na Bags',
+    path: ['imageUrl'],
+  });
+
+/**
+ * Contract used by POST /api/launchpad/create-config for Bags fee-share config.
+ */
+export const bagsFeeShareConfigRequestSchema = z
+  .object({
+    payer: solanaAddressSchema,
+    baseMint: solanaAddressSchema,
+    claimersArray: z.array(solanaAddressSchema).min(1, 'claimersArray deve ter ao menos um claimer'),
+    basisPointsArray: z
+      .array(z.number().int('basisPointsArray deve conter inteiros').min(0).max(10000))
+      .min(1, 'basisPointsArray deve ter ao menos um valor'),
+    bagsConfigType: optionalTrimmedString,
+    partner: solanaAddressSchema.optional(),
+    partnerConfig: solanaAddressSchema.optional(),
+    additionalLookupTables: z.array(solanaAddressSchema).optional(),
+    tipWallet: solanaAddressSchema.optional(),
+    tipLamports: z.number().int('tipLamports deve ser inteiro').nonnegative('tipLamports deve ser >= 0').optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.claimersArray.length !== data.basisPointsArray.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['basisPointsArray'],
+        message: 'claimersArray e basisPointsArray devem ter o mesmo tamanho',
+      });
+    }
+
+    const totalBps = data.basisPointsArray.reduce((total, value) => total + value, 0);
+    if (totalBps !== 10000) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['basisPointsArray'],
+        message: 'A soma de basisPointsArray deve ser exatamente 10000',
+      });
+    }
+
+    if (!data.claimersArray.includes(data.payer)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['claimersArray'],
+        message: 'A wallet creator/payer deve estar explicitamente em claimersArray',
+      });
+    }
+
+    if (data.tipWallet && (!data.tipLamports || data.tipLamports <= 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tipLamports'],
+        message: 'tipLamports deve ser > 0 quando tipWallet Ã© fornecido',
+      });
+    }
+  });
+
+/**
+ * Contract used by POST /api/launchpad/create-launch-transaction.
+ */
+export const bagsCreateLaunchTransactionRequestSchema = z
+  .object({
+    ipfs: optionalTrimmedString,
+    metadataUrl: optionalTrimmedString,
+    tokenMint: solanaAddressSchema,
+    wallet: solanaAddressSchema,
+    initialBuyLamports: z
+      .number()
+      .int('initialBuyLamports deve ser inteiro')
+      .nonnegative('initialBuyLamports deve ser >= 0')
+      .default(0),
+    configKey: solanaAddressSchema,
+    tipWallet: solanaAddressSchema.optional(),
+    tipLamports: z.number().int('tipLamports deve ser inteiro').nonnegative('tipLamports deve ser >= 0').optional(),
+  })
+  .strict()
+  .refine((data) => Boolean(data.ipfs || data.metadataUrl), {
+    message: 'ipfs ou metadataUrl Ã© obrigatÃ³rio',
+    path: ['ipfs'],
+  });
+
+/**
+ * Contract used by POST /api/launchpad/send. It only broadcasts a user-signed tx.
+ */
+export const launchpadSendRequestSchema = z
+  .object({
+    signedTransaction: z.string().min(32, 'signedTransaction Ã© obrigatÃ³ria').max(100000),
+    encoding: z.enum(['base64', 'base58']).default('base64'),
+  })
+  .strict();
+
 /**
  * Schema para PreflightReport
  */
@@ -292,7 +440,6 @@ export function validateLaunchpadInput<T>(
 
   return { ok: false, issues };
 }
-
 
 
 

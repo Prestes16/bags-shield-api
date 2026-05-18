@@ -1,249 +1,298 @@
 /**
- * Bags API client helpers for Launchpad
+ * Server-side Bags API client for Launchpad v2.
+ *
+ * Never import this from client components. It reads BAGS_API_KEY from env and
+ * returns sanitized errors so upstream details do not leak secrets.
  */
 
 import { getBagsBase, getBagsApiKey, getBagsTimeoutMs } from "@/lib/env";
-import type { BagsResult } from "@/lib/bags";
 
-/**
- * Request to create a launch transaction via Bags API.
- * Docs: POST /token-launch/create-launch-transaction
- */
-interface BagsCreateLaunchTxRequest {
-  /** IPFS URI for the token metadata (from create-token-info step) */
-  ipfs: string;
-  /** The token mint address (base58) */
+export type BagsErrorCode =
+  | "BAGS_NOT_CONFIGURED"
+  | "UPSTREAM_REQUEST_FAILED"
+  | "UPSTREAM_BAD_RESPONSE"
+  | "UPSTREAM_RATE_LIMITED"
+  | "UPSTREAM_UNEXPECTED_ERROR";
+
+export interface BagsError {
+  code: BagsErrorCode | string;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+export interface BagsSuccess<T> {
+  success: true;
+  response: T;
+}
+
+export interface BagsFailure {
+  success: false;
+  error: BagsError;
+}
+
+export type BagsResult<T> = BagsSuccess<T> | BagsFailure;
+
+export interface BagsTokenInfoRequest {
+  name: string;
+  symbol: string;
+  description: string;
+  imageUrl?: string;
+  metadataUrl?: string;
+  telegram?: string;
+  twitter?: string;
+  website?: string;
+}
+
+export interface BagsTokenInfoResponse {
   tokenMint: string;
-  /** Creator wallet address (base58) */
-  wallet: string;
-  /** Amount in lamports to use as initial buy */
-  initialBuyLamports?: number;
-  /** Config key returned from fee-share/config registration (optional) */
-  configKey?: string;
-  /** Tip wallet for Bags (optional) */
-  tipWallet?: string;
-  /** Tip amount in lamports (optional) */
-  tipLamports?: number;
-}
-
-interface BagsCreateLaunchTxResponse {
-  tx: string;
-  configKey: string;
-}
-
-/**
- * Create a launch transaction via Bags API.
- * Docs: POST /token-launch/create-launch-transaction
- */
-export async function createLaunchConfig(
-  req: BagsCreateLaunchTxRequest
-): Promise<BagsResult<BagsCreateLaunchTxResponse>> {
-  const base = getBagsBase();
-  const apiKey = getBagsApiKey();
-
-  if (!base || !apiKey) {
-    return {
-      success: false,
-      error: {
-        code: "BAGS_NOT_CONFIGURED",
-        details: {
-          base,
-          hasApiKey: Boolean(apiKey),
-        },
-      },
-    };
-  }
-
-  const url = base + "/token-launch/create-launch-transaction";
-  const timeoutMs = getBagsTimeoutMs();
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  let res: Response;
-
-  try {
-    const headers: Record<string, string> = {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      Authorization: `Bearer ${apiKey}`,
-    };
-
-    res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(req),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    clearTimeout(timeout);
-    return {
-      success: false,
-      error: {
-        code: "UPSTREAM_REQUEST_FAILED",
-        details: {
-          message: err instanceof Error ? err.message : String(err),
-          url,
-        },
-      },
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  const text = await res.text();
-  let json: any = null;
-
-  if (text) {
-    try {
-      json = JSON.parse(text);
-    } catch {
-      // keep as text
-    }
-  }
-
-  if (!res.ok) {
-    const code =
-      res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE";
-
-    return {
-      success: false,
-      error: {
-        code,
-        details: {
-          status: res.status,
-          statusText: res.statusText,
-          url,
-          body: json ?? text,
-        },
-      },
-    };
-  }
-
-  if (
-    json &&
-    typeof json === "object" &&
-    json.success === false &&
-    json.error
-  ) {
-    return {
-      success: false,
-      error: {
-        code: json.error.code ?? "UPSTREAM_BAD_RESPONSE",
-        details: json.error,
-      },
-    };
-  }
-
-  return {
-    success: true,
-    response: (json ?? (text as any)) as BagsCreateLaunchTxResponse,
+  tokenMetadata?: string;
+  tokenLaunch?: {
+    tokenMint?: string;
+    uri?: string;
+    [key: string]: unknown;
   };
+  [key: string]: unknown;
 }
 
-// ---------------------------------------------------------------------------
-// Fee-share config registration
-// ---------------------------------------------------------------------------
-
-interface BagsRegisterFeeShareRequest {
-  /** The wallet that is launching the token */
-  launchWallet: string;
-  /** The wallet that receives the fee-share royalties (defaults to launchWallet) */
-  feeShareWallet?: string;
-  /** Optional tip wallet */
+export interface BagsFeeShareConfigRequest {
+  payer: string;
+  baseMint: string;
+  claimersArray: string[];
+  basisPointsArray: number[];
+  partner?: string;
+  partnerConfig?: string;
+  additionalLookupTables?: string[];
+  bagsConfigType?: string;
   tipWallet?: string;
-  /** Optional tip in lamports */
   tipLamports?: number;
 }
 
-interface BagsRegisterFeeShareResponse {
-  configKey: string;
-  tx: string | null;
+export interface BagsFeeShareConfigResponse {
+  needsCreation?: boolean;
+  feeShareAuthority?: string;
+  meteoraConfigKey?: string;
+  configKey?: string;
+  transactions?: Array<{
+    blockhash?: { blockhash: string; lastValidBlockHeight: number };
+    transaction: string;
+  }>;
+  bundles?: Array<
+    Array<{
+      blockhash?: { blockhash: string; lastValidBlockHeight: number };
+      transaction: string;
+    }>
+  >;
+  [key: string]: unknown;
 }
 
-/**
- * Register a fee-share config with Bags API.
- * Docs: POST /fee-share/config
- * Gives the creator wallet 1% royalties from trades on Bags.fm.
- */
-export async function registerFeeShare(
-  req: BagsRegisterFeeShareRequest
-): Promise<BagsResult<BagsRegisterFeeShareResponse>> {
+export interface BagsCreateLaunchTransactionRequest {
+  ipfs: string;
+  tokenMint: string;
+  wallet: string;
+  initialBuyLamports: number;
+  configKey: string;
+  tipWallet?: string;
+  tipLamports?: number;
+}
+
+export type BagsCreateLaunchTransactionResponse = string;
+
+function sanitizeUpstreamError(value: unknown): string {
+  if (!value) return "Bags API request failed";
+  if (typeof value === "string") return value.slice(0, 500);
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const message = record.message ?? record.error ?? record.code;
+    if (typeof message === "string") return message.slice(0, 500);
+  }
+  return "Bags API request failed";
+}
+
+function getConfig(): BagsResult<{ base: string; apiKey: string; timeoutMs: number }> {
   const base = getBagsBase();
   const apiKey = getBagsApiKey();
+  const timeoutMs = getBagsTimeoutMs();
 
   if (!base || !apiKey) {
     return {
       success: false,
       error: {
         code: "BAGS_NOT_CONFIGURED",
-        details: { base, hasApiKey: Boolean(apiKey) },
+        message: "Bags API is not configured on the server",
+        details: { hasBase: Boolean(base), hasApiKey: Boolean(apiKey) },
       },
     };
   }
 
-  const url = base + "/fee-share/config";
-  const timeoutMs = getBagsTimeoutMs();
+  return { success: true, response: { base, apiKey, timeoutMs } };
+}
 
+async function readJsonOrText(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function bagsJsonFetch<T>(path: string, body: unknown): Promise<BagsResult<T>> {
+  const config = getConfig();
+  if ("error" in config) return { success: false, error: config.error };
+
+  const { base, apiKey, timeoutMs } = config.response;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  let res: Response;
-
   try {
-    res = await fetch(url, {
+    const res = await fetch(`${base}${path}`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-api-key": apiKey,
-        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(req),
+      body: JSON.stringify(body),
       signal: controller.signal,
+      cache: "no-store",
     });
-  } catch (err) {
-    clearTimeout(timeout);
+
+    const data = await readJsonOrText(res);
+    const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: {
+          code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
+          message: sanitizeUpstreamError(record?.error ?? record?.message ?? data),
+          details: { status: res.status, statusText: res.statusText },
+        },
+      };
+    }
+
+    if (record?.success === false) {
+      return {
+        success: false,
+        error: {
+          code: "UPSTREAM_BAD_RESPONSE",
+          message: sanitizeUpstreamError(record.error),
+        },
+      };
+    }
+
+    return {
+      success: true,
+      response: (record && "response" in record ? record.response : data) as T,
+    };
+  } catch (error) {
     return {
       success: false,
       error: {
         code: "UPSTREAM_REQUEST_FAILED",
-        details: {
-          message: err instanceof Error ? err.message : String(err),
-          url,
-        },
+        message: error instanceof Error && error.name === "AbortError"
+          ? "Bags API request timed out"
+          : "Bags API request failed",
       },
     };
   } finally {
     clearTimeout(timeout);
   }
+}
 
-  const text = await res.text();
-  let json: any = null;
-  if (text) {
-    try {
-      json = JSON.parse(text);
-    } catch { /* keep as text */ }
-  }
+async function bagsFormFetch<T>(path: string, formData: FormData): Promise<BagsResult<T>> {
+  const config = getConfig();
+  if ("error" in config) return { success: false, error: config.error };
 
-  if (!res.ok) {
+  const { base, apiKey, timeoutMs } = config.response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+      },
+      body: formData,
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    const data = await readJsonOrText(res);
+    const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: {
+          code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
+          message: sanitizeUpstreamError(record?.error ?? record?.message ?? data),
+          details: { status: res.status, statusText: res.statusText },
+        },
+      };
+    }
+
+    if (record?.success === false) {
+      return {
+        success: false,
+        error: {
+          code: "UPSTREAM_BAD_RESPONSE",
+          message: sanitizeUpstreamError(record.error),
+        },
+      };
+    }
+
+    return {
+      success: true,
+      response: (record && "response" in record ? record.response : data) as T,
+    };
+  } catch (error) {
     return {
       success: false,
       error: {
-        code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
-        details: { status: res.status, statusText: res.statusText, url, body: json ?? text },
+        code: "UPSTREAM_REQUEST_FAILED",
+        message: error instanceof Error && error.name === "AbortError"
+          ? "Bags API request timed out"
+          : "Bags API request failed",
       },
     };
+  } finally {
+    clearTimeout(timeout);
   }
+}
 
-  if (json && typeof json === "object" && json.success === false && json.error) {
-    return {
-      success: false,
-      error: { code: json.error.code ?? "UPSTREAM_BAD_RESPONSE", details: json.error },
-    };
-  }
+function appendIfPresent(formData: FormData, key: string, value: string | undefined) {
+  if (value && value.trim()) formData.append(key, value.trim());
+}
 
-  return {
-    success: true,
-    response: (json ?? (text as any)) as BagsRegisterFeeShareResponse,
-  };
+export async function createTokenInfo(
+  req: BagsTokenInfoRequest,
+): Promise<BagsResult<BagsTokenInfoResponse>> {
+  const formData = new FormData();
+  formData.append("name", req.name);
+  formData.append("symbol", req.symbol);
+  formData.append("description", req.description);
+  appendIfPresent(formData, "imageUrl", req.imageUrl);
+  appendIfPresent(formData, "metadataUrl", req.metadataUrl);
+  appendIfPresent(formData, "telegram", req.telegram);
+  appendIfPresent(formData, "twitter", req.twitter);
+  appendIfPresent(formData, "website", req.website);
+
+  return bagsFormFetch<BagsTokenInfoResponse>("/token-launch/create-token-info", formData);
+}
+
+export async function createFeeShareConfig(
+  req: BagsFeeShareConfigRequest,
+): Promise<BagsResult<BagsFeeShareConfigResponse>> {
+  return bagsJsonFetch<BagsFeeShareConfigResponse>("/fee-share/config", req);
+}
+
+export async function createLaunchTransaction(
+  req: BagsCreateLaunchTransactionRequest,
+): Promise<BagsResult<BagsCreateLaunchTransactionResponse>> {
+  return bagsJsonFetch<BagsCreateLaunchTransactionResponse>(
+    "/token-launch/create-launch-transaction",
+    req,
+  );
 }

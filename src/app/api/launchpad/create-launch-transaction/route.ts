@@ -1,8 +1,8 @@
 /**
- * POST /api/launchpad/create-config
+ * POST /api/launchpad/create-launch-transaction
  *
- * Creates a Bags fee-share configuration for Launch v2. The creator/payer
- * must be explicitly included and the BPS total must be exactly 10000.
+ * Requests an unsigned serialized Launch v2 transaction from Bags. The
+ * backend never signs on behalf of the user.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,16 +18,16 @@ import {
 } from "@/src/lib/security";
 import { handlePreflight } from "@/src/lib/security/cors";
 import {
-  bagsFeeShareConfigRequestSchema,
+  bagsCreateLaunchTransactionRequestSchema,
   validateLaunchpadInput,
 } from "@/src/lib/launchpad/schemas";
 import {
-  createFeeShareConfig,
-  type BagsFeeShareConfigRequest,
+  createLaunchTransaction,
+  type BagsCreateLaunchTransactionRequest,
 } from "@/src/lib/launchpad/bags-client";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
-const ROUTE = "/api/launchpad/create-config";
+const ROUTE = "/api/launchpad/create-launch-transaction";
 
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
@@ -42,22 +42,15 @@ function jsonResponse(req: NextRequest, requestId: string, body: unknown, init?:
   return res;
 }
 
-function pickConfigKey(response: Record<string, unknown>) {
-  const configKey = response.configKey;
-  if (typeof configKey === "string" && configKey.trim()) return configKey;
-
-  const meteoraConfigKey = response.meteoraConfigKey;
-  if (typeof meteoraConfigKey === "string" && meteoraConfigKey.trim()) return meteoraConfigKey;
-
-  return undefined;
-}
-
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   const requestId = getOrGenerateRequestId(req.headers);
 
   if (!isLaunchpadEnabled()) {
-    SafeLogger.warn("Launchpad create-config called while disabled", { requestId, endpoint: ROUTE });
+    SafeLogger.warn("Launchpad create-launch-transaction called while disabled", {
+      requestId,
+      endpoint: ROUTE,
+    });
     return jsonResponse(
       req,
       requestId,
@@ -176,7 +169,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const validation = validateLaunchpadInput(bagsFeeShareConfigRequestSchema, parseResult.data);
+  const validation = validateLaunchpadInput(bagsCreateLaunchTransactionRequestSchema, parseResult.data);
   if (!validation.ok) {
     return jsonResponse(
       req,
@@ -191,12 +184,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const input = ("data" in validation ? validation.data : {}) as BagsCreateLaunchTransactionRequest & {
+    metadataUrl?: string;
+  };
+  const metadataUri = input.ipfs || input.metadataUrl;
+
   try {
-    const config = ("data" in validation ? validation.data : {}) as BagsFeeShareConfigRequest;
-    const bagsResult = await createFeeShareConfig(config);
+    const bagsResult = await createLaunchTransaction({
+      ipfs: metadataUri as string,
+      tokenMint: input.tokenMint,
+      wallet: input.wallet,
+      initialBuyLamports: input.initialBuyLamports,
+      configKey: input.configKey,
+      tipWallet: input.tipWallet,
+      tipLamports: input.tipLamports,
+    });
 
     if ("error" in bagsResult) {
-      SafeLogger.error("Bags fee-share config request failed", undefined, {
+      SafeLogger.error("Bags create-launch-transaction request failed", undefined, {
         requestId,
         endpoint: ROUTE,
         errorCode: bagsResult.error.code,
@@ -214,18 +219,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const upstreamResponse = bagsResult.response as Record<string, unknown>;
-    const configKey = pickConfigKey(upstreamResponse);
-
     return jsonResponse(
       req,
       requestId,
       {
         success: true,
         response: {
-          ...upstreamResponse,
-          configKey,
-          meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
+          transaction: bagsResult.response,
+          encoding: "base58",
+          tokenMint: input.tokenMint,
+          metadataUri,
+          configKey: input.configKey,
         },
         meta: {
           requestId,
@@ -237,7 +241,7 @@ export async function POST(req: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    SafeLogger.error("Internal error creating Bags fee-share config", error, {
+    SafeLogger.error("Internal error creating Bags launch transaction", error, {
       requestId,
       endpoint: ROUTE,
       elapsedMs: Date.now() - startTime,

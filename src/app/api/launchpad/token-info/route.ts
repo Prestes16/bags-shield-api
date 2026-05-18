@@ -1,8 +1,8 @@
 /**
  * POST /api/launchpad/token-info
  *
- * Validates TokenDraft and proxies to Bags create-token-info endpoint.
- * Prioritizes imageUrl to avoid multipart in v1.
+ * Validates the Bags Launch v2 token-info contract and proxies it server-side
+ * to Bags without exposing BAGS_API_KEY to the frontend.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,67 +13,112 @@ import {
   checkIdempotencyKey,
   applyCorsHeaders,
   applyNoStore,
-  SafeLogger,
   applySecurityHeaders,
+  SafeLogger,
 } from "@/src/lib/security";
 import { handlePreflight } from "@/src/lib/security/cors";
-import { validateLaunchpadInput, tokenDraftSchema } from "@/src/lib/launchpad/schemas";
-import { isLaunchpadEnabled, getLaunchpadMode } from "@/lib/env";
-import { createTokenInfo } from "@/lib/bags";
-import { stubCreateTokenInfo } from "@/src/lib/launchpad/stub";
-import type { TokenDraft } from "@/src/lib/launchpad/types";
+import {
+  bagsTokenInfoRequestSchema,
+  validateLaunchpadInput,
+} from "@/src/lib/launchpad/schemas";
+import {
+  createTokenInfo,
+  type BagsTokenInfoRequest,
+} from "@/src/lib/launchpad/bags-client";
+import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
+
+const ROUTE = "/api/launchpad/token-info";
 
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
 }
 
+function jsonResponse(req: NextRequest, requestId: string, body: unknown, init?: ResponseInit) {
+  const res = NextResponse.json(body, init);
+  applyCorsHeaders(req, res);
+  applyNoStore(res);
+  applySecurityHeaders(res);
+  res.headers.set("X-Request-Id", requestId);
+  return res;
+}
+
+function normalizeSocialUrl(value: string | undefined, prefix: "https://x.com/" | "https://t.me/") {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `${prefix}${trimmed.replace(/^@+/, "")}`;
+}
+
+function pickMetadataUri(response: Record<string, unknown>, fallback?: string) {
+  const tokenMetadata = response.tokenMetadata;
+  if (typeof tokenMetadata === "string" && tokenMetadata.trim()) return tokenMetadata;
+
+  const tokenLaunch = response.tokenLaunch;
+  if (tokenLaunch && typeof tokenLaunch === "object") {
+    const uri = (tokenLaunch as Record<string, unknown>).uri;
+    if (typeof uri === "string" && uri.trim()) return uri;
+  }
+
+  return fallback;
+}
+
+function pickTokenMint(response: Record<string, unknown>) {
+  const tokenMint = response.tokenMint;
+  if (typeof tokenMint === "string" && tokenMint.trim()) return tokenMint;
+
+  const tokenLaunch = response.tokenLaunch;
+  if (tokenLaunch && typeof tokenLaunch === "object") {
+    const nestedMint = (tokenLaunch as Record<string, unknown>).tokenMint;
+    if (typeof nestedMint === "string" && nestedMint.trim()) return nestedMint;
+  }
+
+  return undefined;
+}
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
-  let requestId = getOrGenerateRequestId(req.headers);
+  const requestId = getOrGenerateRequestId(req.headers);
 
-  // Check feature flag
   if (!isLaunchpadEnabled()) {
-    SafeLogger.warn("Launchpad endpoint called but feature is disabled", {
+    SafeLogger.warn("Launchpad token-info called while disabled", { requestId, endpoint: ROUTE });
+    return jsonResponse(
+      req,
       requestId,
-      endpoint: "/api/launchpad/token-info",
-    });
-    let res: Response = new NextResponse();
-    res = applyCorsHeaders(req, res);
-    res = applyNoStore(res);
-    res = applySecurityHeaders(res);
-    res.headers.set("X-Request-Id", requestId);
-    return NextResponse.json(
       {
         success: false,
-        error: {
-          code: "FEATURE_DISABLED",
-          message: "Launchpad feature is not enabled",
-        },
+        error: { code: "FEATURE_DISABLED", message: "Launchpad feature is not enabled" },
         meta: { requestId },
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
-  // Apply security headers
-  let res: Response = new NextResponse();
-  res = applyCorsHeaders(req, res);
-  res = applyNoStore(res);
-  res = applySecurityHeaders(res);
-  res.headers.set("X-Request-Id", requestId);
-
-  // Rate limiting by IP
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const route = "/api/launchpad/token-info";
-  const rateLimitCheck = checkRateLimitByIp(ip, route);
-  if (!rateLimitCheck.allowed) {
-    return NextResponse.json(
+  if (getLaunchpadMode() !== "real") {
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
         error: {
-          code: "TOO_MANY_REQUESTS",
-          message: "Rate limit exceeded",
+          code: "LAUNCHPAD_REAL_MODE_REQUIRED",
+          message: "Launchpad Bags integration is not enabled in real mode",
         },
+        meta: { requestId },
+      },
+      { status: 503 },
+    );
+  }
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimitCheck = checkRateLimitByIp(ip, ROUTE);
+  if (!rateLimitCheck.allowed) {
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: { code: "TOO_MANY_REQUESTS", message: "Rate limit exceeded" },
         meta: { requestId },
       },
       {
@@ -84,16 +129,17 @@ export async function POST(req: NextRequest) {
           "X-RateLimit-Remaining": "0",
           "X-RateLimit-Reset": String(rateLimitCheck.resetAt),
         },
-      }
+      },
     );
   }
 
-  // Idempotency check (optional)
   const idempotencyKey = req.headers.get("Idempotency-Key");
   if (idempotencyKey) {
-    const idempotencyCheck = checkIdempotencyKey(idempotencyKey, route);
+    const idempotencyCheck = checkIdempotencyKey(idempotencyKey, ROUTE);
     if (idempotencyCheck && !idempotencyCheck.allowed) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
+        requestId,
         {
           success: false,
           error: {
@@ -102,211 +148,150 @@ export async function POST(req: NextRequest) {
           },
           meta: { requestId },
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
   }
 
-  // Content-Type check
   const contentType = req.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "UNSUPPORTED_MEDIA_TYPE",
-          message: "Content-Type must be application/json",
-        },
-        issues: [
-          {
-            path: "headers.content-type",
-            message: "Expected application/json",
-          },
-        ],
+        error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Content-Type must be application/json" },
+        issues: [{ path: "headers.content-type", message: "Expected application/json" }],
         meta: { requestId },
       },
-      { status: 415 }
+      { status: 415 },
     );
   }
 
-  // Safe JSON parsing
   let bodyText: string;
   try {
     bodyText = await req.text();
   } catch (error) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "BAD_REQUEST",
-          message: "Failed to read request body",
-        },
-        issues: [
-          {
-            path: "<root>",
-            message: error instanceof Error ? error.message : "Unknown error",
-          },
-        ],
+        error: { code: "BAD_REQUEST", message: "Failed to read request body" },
+        issues: [{ path: "<root>", message: error instanceof Error ? error.message : "Unknown error" }],
         meta: { requestId },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const parseResult = safeJsonParse<TokenDraft>(bodyText);
+  const parseResult = safeJsonParse<unknown>(bodyText);
   if (!parseResult.success) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "BAD_REQUEST",
-          message: parseResult.error || "Invalid JSON",
-        },
+        error: { code: "BAD_REQUEST", message: parseResult.error || "Invalid JSON" },
         issues: parseResult.issues || [],
         meta: { requestId },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  // Validate schema
-  const validation = validateLaunchpadInput(tokenDraftSchema, parseResult.data);
+  const validation = validateLaunchpadInput(bagsTokenInfoRequestSchema, parseResult.data);
   if (!validation.ok) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "VALIDATION_FAILED",
-          message: "Request validation failed",
-        },
-        issues: ("issues" in validation ? validation.issues : []),
+        error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
+        issues: "issues" in validation ? validation.issues : [],
         meta: { requestId },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const tokenDraft = validation.data;
-
-  const mode = getLaunchpadMode();
+  const tokenInfo = ("data" in validation ? validation.data : {}) as BagsTokenInfoRequest & {
+    websiteUrl?: string;
+    twitterHandle?: string;
+    telegramHandle?: string;
+  };
   const elapsedMs = Date.now() - startTime;
 
-  // Use stub mode if configured
-  if (mode === "stub") {
-    SafeLogger.info("Using stub mode for token-info", {
-      requestId,
-      endpoint: "/api/launchpad/token-info",
-      mode: "stub",
-    });
-
-    const stubResponse = stubCreateTokenInfo(tokenDraft as TokenDraft, requestId);
-
-    return NextResponse.json(
-      {
-        success: true,
-        response: stubResponse,
-        meta: {
-          requestId,
-          upstream: "stub",
-          upstreamStatus: 200,
-          elapsedMs,
-          mode: "stub",
-        },
-      },
-      { status: 201 }
-    );
-  }
-
-  // Real mode: Proxy to Bags API
   try {
-    SafeLogger.info("Calling Bags API for token-info", {
-      requestId,
-      endpoint: "/api/launchpad/token-info",
-      mode: "real",
-    });
-
-    // Build full social URLs — Bags API expects https:// URLs, not bare handles
-    const twitterUrl = tokenDraft.twitterHandle
-      ? `https://x.com/${tokenDraft.twitterHandle.replace(/^@/, "")}`
-      : undefined;
-    const telegramUrl = tokenDraft.telegramHandle
-      ? `https://t.me/${tokenDraft.telegramHandle.replace(/^@/, "")}`
-      : undefined;
-
     const bagsResult = await createTokenInfo({
-      name: tokenDraft.name,
-      symbol: tokenDraft.symbol,
-      description: tokenDraft.description,
-      imageUrl: tokenDraft.imageUrl, // Prioritize imageUrl
-      website: tokenDraft.websiteUrl,
-      twitter: twitterUrl,
-      telegram: telegramUrl,
+      name: tokenInfo.name,
+      symbol: tokenInfo.symbol,
+      description: tokenInfo.description,
+      imageUrl: tokenInfo.imageUrl,
+      metadataUrl: tokenInfo.metadataUrl,
+      website: tokenInfo.website || tokenInfo.websiteUrl,
+      twitter: normalizeSocialUrl(tokenInfo.twitter || tokenInfo.twitterHandle, "https://x.com/"),
+      telegram: normalizeSocialUrl(tokenInfo.telegram || tokenInfo.telegramHandle, "https://t.me/"),
     });
 
-    if (!bagsResult.success) {
-      SafeLogger.error("Bags API error", undefined, {
+    if ("error" in bagsResult) {
+      SafeLogger.error("Bags token-info request failed", undefined, {
         requestId,
-        endpoint: "/api/launchpad/token-info",
-        errorCode: (("error" in bagsResult ? bagsResult.error : undefined)?.code),
+        endpoint: ROUTE,
+        errorCode: bagsResult.error.code,
       });
 
-      return NextResponse.json(
+      return jsonResponse(
+        req,
+        requestId,
         {
           success: false,
-          error: {
-            code: (("error" in bagsResult ? bagsResult.error : undefined)?.code) || "UPSTREAM_ERROR",
-            message: "Failed to create token info",
-          },
-          meta: {
-            requestId,
-            upstream: "bags",
-            upstreamStatus: 500,
-            elapsedMs,
-          },
+          error: { code: bagsResult.error.code, message: bagsResult.error.message },
+          meta: { requestId, upstream: "bags", elapsedMs: Date.now() - startTime },
         },
-        { status: 502 }
+        { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
       );
     }
 
-    SafeLogger.info("Token info created successfully", {
-      requestId,
-      endpoint: "/api/launchpad/token-info",
-      elapsedMs,
-    });
+    const upstreamResponse = bagsResult.response as Record<string, unknown>;
+    const metadataUri = pickMetadataUri(upstreamResponse, tokenInfo.metadataUrl);
+    const tokenMint = pickTokenMint(upstreamResponse);
 
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: true,
-        response: bagsResult.response,
+        response: {
+          ...upstreamResponse,
+          tokenMint,
+          metadataUri,
+        },
         meta: {
           requestId,
           upstream: "bags",
           upstreamStatus: 200,
-          elapsedMs,
+          elapsedMs: Date.now() - startTime,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
-    SafeLogger.error("Internal error creating token info", error, {
+    SafeLogger.error("Internal error creating Bags token info", error, {
       requestId,
-      endpoint: "/api/launchpad/token-info",
+      endpoint: ROUTE,
       elapsedMs,
     });
 
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Internal server error",
-        },
-        meta: {
-          requestId,
-          elapsedMs,
-        },
+        error: { code: "INTERNAL_ERROR", message: "Internal server error" },
+        meta: { requestId, elapsedMs: Date.now() - startTime },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
