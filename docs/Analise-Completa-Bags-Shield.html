@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bags Shield - Análise Completa do Projeto</title>
+<style>
+:root {
+  --bg: #080811;
+  --bg1: #0D0D1A;
+  --surface: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.08);
+  --cyan: #4DD4FF;
+  --purple: #9945FF;
+  --green: #00D68F;
+  --red: #FF3B5C;
+  --amber: #FFB340;
+  --txt: #F0F0FF;
+  --txt2: #8888AA;
+  --txt3: #666677;
+  --radius: 1.25rem;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height:1.6;
+  padding: 2rem;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: var(--cyan); font-size: 2.2rem; margin-bottom: 0.5rem; }
+h2 { color: var(--purple); font-size: 1.5rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+h3 { color: var(--amber); font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+p { margin-bottom: 1rem; color: var(--txt2); }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 8px;
+}
+.badge-green { background: rgba(0,214,143,0.15); color: var(--green); }
+.badge-amber { background: rgba(255,179,64,0.15); color: var(--amber); }
+.badge-red { background: rgba(255,59,92,0.15); color: var(--red); }
+.badge-cyan { background: rgba(77,212,255,0.15); color: var(--cyan); }
+.status-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+.status-table th { text-align: left; padding: 10px; color: var(--cyan); border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.status-table td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.status-table tr:hover { background: rgba(255,255,255,0.02); }
+.timeline { position: relative; padding-left: 30px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--cyan), var(--purple));
+}
+.timeline-item { position: relative; margin-bottom: 1.5rem; }
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -26px; top: 4px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--cyan);
+  border: 2px solid var(--bg);
+}
+.timeline-item.done::before { background: var(--green); }
+.timeline-item.pending::before { background: var(--amber); }
+.timeline-item.future::before { background: var(--txt3); }
+.metric { display: inline-block; text-align: center; padding: 1rem; min-width: 120px; }
+.metric-value { font-size: 2rem; font-weight: 800; color: var(--cyan); }
+.metric-label { font-size: 0.8rem; color: var(--txt2); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+.highlight { color: var(--cyan); font-weight: 600; }
+.warning { color: var(--amber); }
+.danger { color: var(--red); }
+.success { color: var(--green); }
+ul { margin-left: 1.5rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.5rem; color: var(--txt2); }
+.footer { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--txt3); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- CAPA -->
+<div style="text-align:center; padding: 3rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem;">
+  <div style="font-size: 60px; margin-bottom: 10px;">🛡️</div>
+  <div style="font-size: 32px; font-weight: 800; color: var(--cyan); letter-spacing: 2px;">BagsShield</div>
+  <div style="font-size: 14px; color: var(--txt2); margin-top: 8px;">Análise Completa do Projeto — Maio 2026</div>
+</div>
+
+<h1>📊 Diagnóstico Técnico Completo</h1>
+
+<div class="grid-3">
+  <div class="card" style="text-align:center;">
+    <div class="metric-value">32</div>
+    <div class="metric-label">Rotas API</div>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div class="metric-value">10</div>
+    <div class="metric-label">Páginas App</div>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div class="metric-value">59</div>
+    <div class="metric-label">Componentes UI</div>
+  </div>
+</div>
+
+<h2>🏗️ Arquitetura do Sistema</h2>
+
+<h3>Backend (bags-shield-api) — Next.js 14</h3>
+<table class="status-table">
+<tr><th>Módulo</th><th>Status</th><th>Observações</th></tr>
+<tr><td>🔍 Scanner de Tokens (/api/scan)</td><td><span class="badge badge-green">COMPLETO</span></td><td>Rate limiting, quota diária, 50+ indicadores de risco</td></tr>
+<tr><td>💱 Swap Jupiter V2 (/api/order + /api/execute)</td><td><span class="badge badge-green">COMPLETO</span></td><td>Ultra V2 com fees, CORS fixado</td></tr>
+<tr><td>📊 Dados de Mercado (/api/market/summary)</td><td><span class="badge badge-green">COMPLETO</span></td><td>CoinGecko fallback, Jupiter price</td></tr>
+<tr><td>🚀 Launchpad (/api/launchpad/*)</td><td><span class="badge badge-amber">PARCIAL</span></td><td>Create, config, status, LP lock — precisa de testes em prod</td></tr>
+<tr><td>🔐 Autenticação (/api/auth/*)</td><td><span class="badge badge-green">COMPLETO</span></td><td>Google, Twitter, Wallet linking</td></tr>
+<tr><td>👛 Wallet Tokens (/api/wallet/tokens)</td><td><span class="badge badge-green">COMPLETO</span></td><td>SPL tokens + Token-2022 + NFT filter</td></tr>
+<tr><td>🎣 Webhooks Helius</td><td><span class="badge badge-green">COMPLETO</span></td><td>Integração ativa</td></tr>
+<tr><td>🧪 Simulação (/api/simulate)</td><td><span class="badge badge-green">COMPLETO</span></td><td>Simulação de transações</td></tr>
+</table>
+
+<h3>Frontend (bags-shield-app2) — React + Tailwind</h3>
+<table class="status-table">
+<tr><th>Página/Funcionalidade</th><th>Status</th><th>Observações</th></tr>
+<tr><td>🏠 HomePage</td><td><span class="badge badge-green">COMPLETO</span></td><td>Design minimalista funcional</td></tr>
+<tr><td>🔍 ScanPage + ScanLoading</td><td><span class="badge badge-green">COMPLETO</span></td><td>Fluxo completo de scan</td></tr>
+<tr><td>📋 ScanResultPage</td><td><span class="badge badge-green">COMPLETO</span></td><td>Score badge, pool cards, swap drawer integrado</td></tr>
+<tr><td>💱 SwapPage</td><td><span class="badge badge-green">COMPLETO</span></td><td>Wallet detection, MAX button, Jupiter V2 flow</td></tr>
+<tr><td>🚀 LaunchpadPage</td><td><span class="badge badge-amber">PARCIAL</span></td><td>UI pronta, precisa de polimento UX</td></tr>
+<tr><td>👤 ProfilePage</td><td><span class="badge badge-amber">PARCIAL</span></td><td>Funcional básico</td></tr>
+<tr><td>💼 PortfolioPage</td><td><span class="badge badge-amber">PARCIAL</span></td><td>Estrutura pronta</td></tr>
+<tr><td>⚙️ SettingsPage</td><td><span class="badge badge-green">COMPLETO</span></td><td>Configurações de idioma, RPC, tema</td></tr>
+<tr><td>🔐 AuthCallback</td><td><span class="badge badge-green">COMPLETO</span></td><td>OAuth callback handlers</td></tr>
+</table>
+
+<h2>⏱️ Cronograma para Lançamento</h2>
+
+<div class="timeline">
+  <div class="timeline-item done">
+    <strong>Fase 1 — Fundação (Concluído)</strong><br>
+    <span style="color:var(--txt2)">Scanner de tokens, swap Jupiter, autenticação, wallet integration</span>
+  </div>
+  <div class="timeline-item done">
+    <strong>Fase 2 — Integração (Concluído)</strong><br>
+    <span style="color:var(--txt2)">App2 consumindo API, i18n, design system dark, swap drawer</span>
+  </div>
+  <div class="timeline-item pending">
+    <strong>Fase 3 — Polimento (1-2 semanas)</strong><br>
+    <span style="color:var(--txt2)">• Testes end-to-end do fluxo swap<br>• Revisão UX do launchpad<br>• Otimização de performance (bundle size)<br>• Correções de bugs menores</span>
+  </div>
+  <div class="timeline-item pending">
+    <strong>Fase 4 — Pré-lançamento (1 semana)</strong><br>
+    <span style="color:var(--txt2)">• Beta fechado com 50 usuários<br>• Coleta de feedback<br>• Ajustes finais<br>• Preparação de materiais de marketing</span>
+  </div>
+  <div class="timeline-item future">
+    <strong>Fase 5 — Lançamento Público</strong><br>
+    <span style="color:var(--txt2)">• Deploy em produção<br>• Campanha de marketing inicial<br>• Monitoramento 24/7</span>
+  </div>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--cyan);">
+  <strong style="color:var(--cyan)">⏳ TEMPO ESTIMADO PARA LANÇAMENTO: 2-3 SEMANAS</strong><br><br>
+  O projeto está <span class="highlight">~85% completo</span>. O core (scanner + swap) está 100% funcional.
+  O que falta é principalmente polimento UX, testes de integração e preparação para escala.
+</div>
+
+<h2>🎯 Análise de Potencial de Mercado</h2>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="color:var(--green)">✅ Pontos Fortes</h3>
+    <ul>
+      <li>Scanner com 50+ indicadores de risco — mais completo que concorrentes</li>
+      <li>Integração nativa com Jupiter para swap seguro</li>
+      <li>Suporte a Token-2022 e NFT filtering</li>
+      <li>Design dark premium diferenciado</li>
+      <li>Arquitetura modular escalável</li>
+      <li>Rate limiting e quota system prontos</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--red)">⚠️ Pontos de Atenção</h3>
+    <ul>
+      <li>Sem token nativo ainda — monetização limitada</li>
+      <li>Dependência de APIs externas (Helius, Jupiter, Birdeye)</li>
+      <li>Sem sistema de alertas em tempo real (WebSocket)</li>
+      <li>Launchpad ainda não validado em produção</li>
+      <li>Sem testes automatizados de frontend</li>
+    </ul>
+  </div>
+</div>
+
+<h3>🏆 Benchmark Concorrencial</h3>
+<table class="status-table">
+<tr><th>Concorrente</th><th>Pontos Fortes</th><th>Fraquezas</th><th>Como Bags Shield se Diferencia</th></tr>
+<tr><td><strong>Token Sniffer</strong></td><td>Reputação estabelecida, citado pelo Tesouro dos EUA</td><td>Limitado a EVM chains, UI datada</td><td>Foco em Solana + design moderno + swap integrado</td></tr>
+<tr><td><strong>RugDoc</strong></td><td>Comunidade grande, wiki educacional</td><td>Foco em presales, não em tokens lançados</td><td>Scanner pós-launch + proteção ativa via swap</td></tr>
+<tr><td><strong>Honeypot.is</strong></td><td>Simples, rápido</td><td>Apenas honeypot check, sem score completo</td><td>Score multi-dimensional + dados de mercado</td></tr>
+<tr><td><strong>Birdeye</strong></td><td>Dados de mercado robustos</td><td>Sem foco em segurança</td><td>Segurança first + dados de mercado integrados</td></tr>
+</table>
+
+<div class="card" style="border-left: 4px solid var(--green);">
+  <strong style="color:var(--green)">📈 POTENCIAL DE MERCADO: ALTO</strong><br><br>
+  O mercado de segurança DeFi na Solana está em crescimento. Com ~$5B+ em volume diário,
+  há demanda real por ferramentas que protejam investidores. O Bags Shield se posiciona
+  como o <span class="highlight">"Token Sniffer da Solana"</span> — um nicho ainda não dominado.
+</div>
+
+<h2>📢 Campanha de Marketing Zero-Custo</h2>
+
+<h3>Fase 1 — Pré-lançamento (Semana 1-2)</h3>
+<div class="card">
+  <strong style="color:var(--cyan)">🎯 Objetivo: Construir expectativa e lista de espera</strong>
+  <ul>
+    <li><strong>Twitter/X Threads:</strong> Criar 3-5 threads educativas sobre como identificar rug pulls na Solana. Usar casos reais (anônimos) que o scanner detectou.</li>
+    <li><strong>Discord Community:</strong> Criar servidor com canais: #announcements, #feedback, #bugs, #sugestões. Oferecer acesso beta antecipado para primeiros 100 membros.</li>
+    <li><strong>GitHub Open Source:</strong> Publicar partes do projeto (score engine, rules) como open source. Gera credibilidade e backlinks.</li>
+    <li><strong>Reddit:</strong> Postar em r/Solana, r/CryptoCurrency, r/DeFi sobre a ferramenta. Foco em educação, não em venda.</li>
+  </ul>
+</div>
+
+<h3>Fase 2 — Lançamento (Semana 3-4)</h3>
+<div class="card">
+  <strong style="color:var(--cyan)">🎯 Objetivo: Aquisição massiva de usuários</strong>
+  <ul>
+    <li><strong>Product Hunt Launch:</strong> Submeter o Bags Shield no Product Hunt. Preparar descrição, screenshots, maker comment.</li>
+    <li><strong>Crypto Twitter KOLs:</strong> Identificar 10-15 micro-influenciadores de Solana (5k-50k seguidores). Propor parceria: acesso vitalício premium em troca de review honesto.</li>
+    <li><strong>Airdrop de "Shield Points":</strong> Sistema de pontos por uso da plataforma. Quem scannear 10 tokens ganha badge. Quem indicar amigo ganha pontos. Sem custo — apenas gamificação.</li>
+    <li><strong>SEO Content:</strong> Criar blog com artigos: "Como evitar rug pulls na Solana", "Top 10 red flags em tokens SPL", "Guia de segurança DeFi 2026".</li>
+  </ul>
+</div>
+
+<h3>Fase 3 — Crescimento (Mês 2-3)</h3>
+<div class="card">
+  <strong style="color:var(--cyan)">🎯 Objetivo: Retenção e viralização</strong>
+  <ul>
+    <li><strong>Programa de Embaixadores:</strong> Selecionar 20 usuários ativos. Dar-lhes título "Shield Guardian", acesso a features beta, e comissão em futuro token.</li>
+    <li><strong>Integrações Parceiras:</strong> Propor integração com wallets (Phantom, Solflare), DEXs (Jupiter, Raydium), e agregadores de dados.</li>
+    <li><strong>AMA Sessions:</strong> Realizar AMAs semanais no Twitter Spaces e Discord. Tema: segurança em Solana, análise de tokens ao vivo.</li>
+    <li><strong>Weekly Reports:</strong> Publicar relatório semanal de tokens suspeitos detectados. Dados agregados, sem expor tokens específicos (a menos que scam confirmado).</li>
+  </ul>
+</div>
+
+<h3>📊 Canais Prioritários (Custo Zero)</h3>
+<table class="status-table">
+<tr><th>Canal</th><th>Esforço</th><th>Impacto Esperado</th><th>Prioridade</th></tr>
+<tr><td>Twitter/X Organic</td><td>Alto (posts diários)</td><td>Alto — principal canal crypto</td><td><span class="badge badge-green">P1</span></td></tr>
+<tr><td>Discord Community</td><td>Médio (moderação)</td><td>Alto — retenção e feedback</td><td><span class="badge badge-green">P1</span></td></tr>
+<tr><td>SEO/Blog Content</td><td>Alto (2-3 posts/semana)</td><td>Médio-Alto — tráfego orgânico</td><td><span class="badge badge-green">P1</span></td></tr>
+<tr><td>Reddit (r/Solana, r/Crypto)</td><td>Médio</td><td>Médio — comunidade engajada</td><td><span class="badge badge-amber">P2</span></td></tr>
+<tr><td>Product Hunt</td><td>Baixo (one-time)</td><td>Médio — spike inicial</td><td><span class="badge badge-amber">P2</span></td></tr>
+<tr><td>GitHub Open Source</td><td>Baixo</td><td>Baixo-Médio — credibilidade dev</td><td><span class="badge badge-amber">P2</span></td></tr>
+<tr><td>YouTube/TikTok</td><td>Alto</td><td>Alto — mas requer tempo</td><td><span class="badge badge-red">P3</span></td></tr>
+</table>
+
+<h2>💰 Análise de Contratação de Agência</h2>
+
+<h3>Absoluta Propaganda — Diagnóstico</h3>
+<div class="card">
+  <ul>
+    <li><strong>Experiência:</strong> 28 anos no mercado, foco em criação de sites e posicionamento Google</li>
+    <li><strong>Especialização:</strong> Marketing digital tradicional (sites, logotipos, Google Ads, redes sociais)</li>
+    <li><strong>Clientes:</strong> Diversos setores, mas <span class="danger">sem evidência de clientes crypto/Web3</span></li>
+    <li><strong>Localização:</strong> Rio de Janeiro e São Paulo</li>
+    <li><strong>Contato:</strong> WhatsApp (21) 99862-8190</li>
+  </ul>
+</div>
+
+<h3>Veredito: Contratar Agência vs. Marketing Próprio</h3>
+
+<div class="grid-2">
+  <div class="card" style="border-left: 4px solid var(--red);">
+    <h3 style="color:var(--red)">❌ Por que NÃO contratar agência agora</h3>
+    <ul>
+      <li><strong>Custo:</strong> Agências tradicionais cobram R$ 3.000-15.000/mês. Crypto agencies internacionais: $5.000-30.000/mês.</li>
+      <li><strong>Desalinhamento:</strong> Agências tradicionais não entendem o nicho crypto. Jargão, timing de mercado, cultura da comunidade.</li>
+      <li><strong>ROI incerto:</strong> Em early-stage, cada real gasto em marketing precisa ter retorno mensurável. Agências cobram pelo tempo, não por resultado.</li>
+      <li><strong>Velocidade:</strong> Você consegue iterar 10x mais rápido sozinho do que via agência (briefing, aprovação, revisão).</li>
+      <li><strong>Autenticidade:</strong> Comunidade crypto valoriza founders que estão presentes. "Build in public" gera mais trust do que posts corporativos.</li>
+    </ul>
+  </div>
+  <div class="card" style="border-left: 4px solid var(--green);">
+    <h3 style="color:var(--green)">✅ Quando CONTRATAR (futuro)</h3>
+    <ul>
+      <li><strong>Após PMF:</strong> Quando tiver 1.000+ usuários ativos e taxa de retenção >30%</li>
+      <li><strong>Para escalar:</strong> Quando o canal orgânico estiver saturado e precisar de paid acquisition</li>
+      <li><strong>Para PR:</strong> Agências especializadas em crypto PR (ex: Wachsman, Melrose) para grandes anúncios</li>
+      <li><strong>Para design:</strong> Quando precisar de rebrand profissional ou materiais para eventos</li>
+      <li><strong>Orçamento mínimo:</strong> Somente quando tiver R$ 10.000+/mês dedicado a marketing</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--amber);">
+  <strong style="color:var(--amber)">💡 RECOMENDAÇÃO ESTRATÉGICA</strong><br><br>
+  <strong>Não contrate agência agora.</strong> Invista seu tempo (não dinheiro) nas estratégias de marketing zero-custo.
+  Quando o projeto atingir <span class="highlight">5.000 usuários ativos mensais</span>, aí sim avalie contratar uma
+  agência especializada em crypto (não tradicional) para escalar o que já está funcionando.
+</div>
+
+<h2>📋 Plano de Ação Imediato</h2>
+
+<table class="status-table">
+<tr><th>#</th><th>Ação</th><th>Prazo</th><th>Custo</th><th>Impacto</th></tr>
+<tr><td>1</td><td>Finalizar testes do fluxo swap end-to-end</td><td>3 dias</td><td>R$ 0</td><td><span class="badge badge-green">Alto</span></td></tr>
+<tr><td>2</td><td>Criar conta Twitter/X @BagsShield e postar thread inaugural</td><td>1 dia</td><td>R$ 0</td><td><span class="badge badge-green">Alto</span></td></tr>
+<tr><td>3</td><td>Criar servidor Discord e convidar 50 beta testers</td><td>2 dias</td><td>R$ 0</td><td><span class="badge badge-green">Alto</span></td></tr>
+<tr><td>4</td><td>Escrever 3 artigos para blog (SEO)</td><td>1 semana</td><td>R$ 0</td><td><span class="badge badge-amber">Médio</span></td></tr>
+<tr><td>5</td><td>Submeter no Product Hunt</td><td>1 dia</td><td>R$ 0</td><td><span class="badge badge-amber">Médio</span></td></tr>
+<tr><td>6</td><td>Identificar e contatar 10 micro-KOLs de Solana</td><td>1 semana</td><td>R$ 0</td><td><span class="badge badge-green">Alto</span></td></tr>
+<tr><td>7</td><td>Implementar sistema de "Shield Points" (gamificação)</td><td>1 semana</td><td>R$ 0</td><td><span class="badge badge-amber">Médio</span></td></tr>
+<tr><td>8</td><td>Publicar parte do código no GitHub (open source)</td><td>2 dias</td><td>R$ 0</td><td><span class="badge badge-amber">Médio</span></td></tr>
+</table>
+
+<h2>🎯 Conclusão</h2>
+
+<div class="card">
+  <p>O <strong>Bags Shield</strong> está em uma posição <span class="success">excelente</span> para lançamento. Com ~85% do projeto concluído e o core (scanner + swap) 100% funcional, faltam apenas 2-3 semanas de polimento para um MVP de alta qualidade.</p>
+  
+  <p>O potencial de mercado é <span class="success">alto</span> — o nicho de segurança na Solana não tem um player dominante, e a demanda por proteção contra rug pulls só cresce.</p>
+  
+  <p>A estratégia de marketing zero-custo é não apenas viável, mas <span class="highlight">recomendada</span> para esta fase. Comunidades crypto valorizam autenticidade e "build in public" muito mais do que campanhas corporativas.</p>
+  
+  <p><strong>Não contrate agência de marketing agora.</strong> Use seu tempo e energia para construir a comunidade organicamente. Quando atingir tração (5.000+ MAU), aí sim invista em profissionalização do marketing.</p>
+  
+  <p style="text-align:center; margin-top:1.5rem; font-size:1.1rem; color:var(--cyan);">
+    <strong>🚀 Lançamento estimado: 2-3 semanas<br>
+    🎯 Meta de usuários (Mês 1): 500 ativos<br>
+    🎯 Meta de usuários (Mês 3): 5.000 ativos</strong>
+  </p>
+</div>
+
+<div class="footer">
+  Bags Shield Protocol v3.0 — Análise Estratégica — Maio 2026<br>
+  Documento confidencial — Uso interno
+</div>
+
+</div>
+</body>
+</html>
