@@ -1,9 +1,7 @@
-name: ci(smoke): prod health (tag smoke-*)
+name: ci(smoke): prod health (manual)
 
 on:
-  push:
-    tags:
-      - "smoke-*"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -19,22 +17,6 @@ jobs:
           set -Eeuo pipefail
           URL="https://bags-shield-api.vercel.app/api/health"
           echo "Ping: ${URL}"
-          set +e
-          HTTP=$(curl -sS -o /dev/null -w "%{http_code}" "${URL}")
-          CURL_EXIT=$?
-          set -e
-          echo "HTTP=${HTTP} exit=${CURL_EXIT}"
-          if [ "${CURL_EXIT}" -ne 0 ] || [ "${HTTP}" != "200" ]; then
-            echo "::error:: /api/health falhou (exit=${CURL_EXIT}, http=${HTTP})"
-            echo "Body ↓"
-            set +e; curl -sS "${URL}"; set -e
-            exit 1
-          fi
-
-      - name: Dump contexto (sempre)
-        if: always()
-        shell: bash
-        run: |
-          echo "ref=$GITHUB_REF"
-          echo "sha=$GITHUB_SHA"
-          echo "event=$GITHUB_EVENT_NAME"
+          HTTP=$(curl -sS -o /dev/null -w "%{http_code}" "${URL}" || true)
+          echo "HTTP=${HTTP}"
+          test "${HTTP}" = "200" || { echo "Health check falhou (HTTP=${HTTP})"; exit 1; }
