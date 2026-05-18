@@ -25,6 +25,7 @@ import {
   createFeeShareConfig,
   type BagsFeeShareConfigRequest,
 } from "@/src/lib/launchpad/bags-client";
+import { buildLaunchpadFeeShare } from "@/src/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
 const ROUTE = "/api/launchpad/create-config";
@@ -192,7 +193,41 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const config = ("data" in validation ? validation.data : {}) as BagsFeeShareConfigRequest;
+    const input = ("data" in validation ? validation.data : {}) as BagsFeeShareConfigRequest;
+    let feeShare: ReturnType<typeof buildLaunchpadFeeShare>;
+    try {
+      feeShare = buildLaunchpadFeeShare(input.payer);
+    } catch (error) {
+      SafeLogger.error("Launchpad fee-share configuration unavailable", error, {
+        requestId,
+        endpoint: ROUTE,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "FEE_CONFIGURATION_UNAVAILABLE",
+            message: error instanceof Error ? error.message : "Launchpad fee-share configuration is unavailable",
+          },
+          meta: { requestId, elapsedMs: Date.now() - startTime },
+        },
+        { status: 503 },
+      );
+    }
+
+    const config: BagsFeeShareConfigRequest = {
+      payer: input.payer,
+      baseMint: input.baseMint,
+      claimersArray: feeShare.claimersArray,
+      basisPointsArray: feeShare.basisPointsArray,
+      ...(input.bagsConfigType ? { bagsConfigType: input.bagsConfigType } : {}),
+      ...(input.partner ? { partner: input.partner } : {}),
+      ...(input.partnerConfig ? { partnerConfig: input.partnerConfig } : {}),
+      ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
+    };
+
     const bagsResult = await createFeeShareConfig(config);
 
     if ("error" in bagsResult) {
@@ -226,6 +261,15 @@ export async function POST(req: NextRequest) {
           ...upstreamResponse,
           configKey,
           meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
+          feeShare: {
+            feesEnabled: feeShare.feesEnabled,
+            treasuryWallet: feeShare.treasuryWallet,
+            claimersArray: feeShare.claimersArray,
+            basisPointsArray: feeShare.basisPointsArray,
+            creatorFeeShareBps: feeShare.creatorFeeShareBps,
+            bagsShieldFeeShareBps: feeShare.bagsShieldFeeShareBps,
+            totalBps: feeShare.totalBps,
+          },
         },
         meta: {
           requestId,

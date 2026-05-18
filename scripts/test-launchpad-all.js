@@ -4,8 +4,11 @@
  * Executes schema, SSRF, and manifest hash tests
  */
 
-const { spawn } = require("child_process");
-const path = require("path");
+import { spawn } from "child_process";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const tests = [
   { name: "Schema Validation", script: "test-launchpad-schemas.js" },

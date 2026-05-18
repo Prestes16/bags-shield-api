@@ -1,8 +1,8 @@
 /**
- * POST /api/launchpad/create-launch-transaction
+ * POST /api/launchpad/fee-quote
  *
- * Requests an unsigned serialized Launch v2 transaction from Bags. The
- * backend never signs on behalf of the user.
+ * Returns the explicit Bags Shield Launchpad fee quote shown before wallet
+ * signing. This route never signs transactions and never exposes secrets.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,7 +10,6 @@ import {
   getOrGenerateRequestId,
   safeJsonParse,
   checkRateLimitByIp,
-  checkIdempotencyKey,
   applyCorsHeaders,
   applyNoStore,
   applySecurityHeaders,
@@ -18,17 +17,16 @@ import {
 } from "@/src/lib/security";
 import { handlePreflight } from "@/src/lib/security/cors";
 import {
-  bagsCreateLaunchTransactionRequestSchema,
+  launchpadFeeQuoteRequestSchema,
   validateLaunchpadInput,
 } from "@/src/lib/launchpad/schemas";
 import {
-  createLaunchTransaction,
-  type BagsCreateLaunchTransactionRequest,
-} from "@/src/lib/launchpad/bags-client";
-import { buildLaunchpadFeeQuote } from "@/src/lib/launchpad/fees";
+  buildLaunchpadFeeQuote,
+  type LaunchpadFeeQuoteInput,
+} from "@/src/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
-const ROUTE = "/api/launchpad/create-launch-transaction";
+const ROUTE = "/api/launchpad/fee-quote";
 
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
@@ -48,10 +46,7 @@ export async function POST(req: NextRequest) {
   const requestId = getOrGenerateRequestId(req.headers);
 
   if (!isLaunchpadEnabled()) {
-    SafeLogger.warn("Launchpad create-launch-transaction called while disabled", {
-      requestId,
-      endpoint: ROUTE,
-    });
+    SafeLogger.warn("Launchpad fee-quote called while disabled", { requestId, endpoint: ROUTE });
     return jsonResponse(
       req,
       requestId,
@@ -103,26 +98,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const idempotencyKey = req.headers.get("Idempotency-Key");
-  if (idempotencyKey) {
-    const idempotencyCheck = checkIdempotencyKey(idempotencyKey, ROUTE);
-    if (idempotencyCheck && !idempotencyCheck.allowed) {
-      return jsonResponse(
-        req,
-        requestId,
-        {
-          success: false,
-          error: {
-            code: "IDEMPOTENCY_KEY_CONFLICT",
-            message: "Request with this idempotency key already processed",
-          },
-          meta: { requestId },
-        },
-        { status: 409 },
-      );
-    }
-  }
-
   const contentType = req.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
     return jsonResponse(
@@ -170,7 +145,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const validation = validateLaunchpadInput(bagsCreateLaunchTransactionRequestSchema, parseResult.data);
+  const validation = validateLaunchpadInput(launchpadFeeQuoteRequestSchema, parseResult.data);
   if (!validation.ok) {
     return jsonResponse(
       req,
@@ -185,103 +160,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const input = ("data" in validation ? validation.data : {}) as BagsCreateLaunchTransactionRequest & {
-    metadataUrl?: string;
-    verified?: boolean;
-    extraTipLamports?: number;
-  };
-  const metadataUri = input.ipfs || input.metadataUrl;
-
   try {
-    let feeQuote: ReturnType<typeof buildLaunchpadFeeQuote>;
-    try {
-      feeQuote = buildLaunchpadFeeQuote({
-        wallet: input.wallet,
-        verified: input.verified,
-        initialBuyLamports: input.initialBuyLamports,
-        extraTipLamports: input.extraTipLamports,
-      });
-    } catch (error) {
-      SafeLogger.error("Launchpad platform fee unavailable", error, {
-        requestId,
-        endpoint: ROUTE,
-      });
-      return jsonResponse(
-        req,
-        requestId,
-        {
-          success: false,
-          error: {
-            code: "FEE_CONFIGURATION_UNAVAILABLE",
-            message: error instanceof Error ? error.message : "Platform fee collection is not available; launch disabled until fee mode is configured.",
-          },
-          meta: { requestId, elapsedMs: Date.now() - startTime },
-        },
-        { status: 503 },
-      );
-    }
-
-    const feeFields = feeQuote.feesEnabled && feeQuote.totalTipLamports > 0
-      ? {
-          tipWallet: feeQuote.treasuryWallet,
-          tipLamports: feeQuote.totalTipLamports,
-        }
-      : {};
-
-    const bagsResult = await createLaunchTransaction({
-      ipfs: metadataUri as string,
-      tokenMint: input.tokenMint,
-      wallet: input.wallet,
-      initialBuyLamports: input.initialBuyLamports,
-      configKey: input.configKey,
-      ...feeFields,
-    });
-
-    if ("error" in bagsResult) {
-      SafeLogger.error("Bags create-launch-transaction request failed", undefined, {
-        requestId,
-        endpoint: ROUTE,
-        errorCode: bagsResult.error.code,
-      });
-
-      return jsonResponse(
-        req,
-        requestId,
-        {
-          success: false,
-          error: { code: bagsResult.error.code, message: bagsResult.error.message },
-          meta: { requestId, upstream: "bags", elapsedMs: Date.now() - startTime },
-        },
-        { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
-      );
-    }
+    const input = ("data" in validation ? validation.data : {}) as LaunchpadFeeQuoteInput;
+    const quote = buildLaunchpadFeeQuote(input);
 
     return jsonResponse(
       req,
       requestId,
       {
         success: true,
-        response: {
-          transaction: bagsResult.response,
-          encoding: "base58",
-          tokenMint: input.tokenMint,
-          metadataUri,
-          configKey: input.configKey,
-          tipWallet: feeFields.tipWallet,
-          tipLamports: feeFields.tipLamports ?? 0,
-          feeQuote,
-        },
-        meta: {
-          requestId,
-          upstream: "bags",
-          upstreamStatus: 200,
-          elapsedMs: Date.now() - startTime,
-        },
+        response: quote,
+        meta: { requestId, elapsedMs: Date.now() - startTime },
       },
-      { status: 201 },
+      { status: 200 },
     );
   } catch (error) {
-    SafeLogger.error("Internal error creating Bags launch transaction", error, {
+    SafeLogger.error("Launchpad fee quote failed", error, {
       requestId,
       endpoint: ROUTE,
       elapsedMs: Date.now() - startTime,
@@ -292,10 +186,13 @@ export async function POST(req: NextRequest) {
       requestId,
       {
         success: false,
-        error: { code: "INTERNAL_ERROR", message: "Internal server error" },
+        error: {
+          code: "FEE_CONFIGURATION_UNAVAILABLE",
+          message: error instanceof Error ? error.message : "Launchpad fee configuration is unavailable",
+        },
         meta: { requestId, elapsedMs: Date.now() - startTime },
       },
-      { status: 500 },
+      { status: 503 },
     );
   }
 }

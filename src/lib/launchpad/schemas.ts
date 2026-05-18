@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Zod Schemas for Bags Shield Launchpad
  *
  * Strict validation schemas with additionalProperties: false behavior.
@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { PublicKey } from '@solana/web3.js';
 import type { TokenDraft, LaunchConfigDraft, PreflightReport, ShieldProofManifest } from './types';
 
 /**
@@ -16,21 +17,32 @@ import type { TokenDraft, LaunchConfigDraft, PreflightReport, ShieldProofManifes
 const BASE58_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 /**
- * ValidaÃ§Ã£o de endereÃ§o Solana (mint ou pubkey)
+ * Validação de endereço Solana (mint ou pubkey)
  */
 const solanaAddressSchema = z
   .string()
-  .min(32, 'EndereÃ§o deve ter no mÃ­nimo 32 caracteres')
-  .max(44, 'EndereÃ§o deve ter no mÃ¡ximo 44 caracteres')
-  .regex(BASE58_PATTERN, 'EndereÃ§o deve ser base58 vÃ¡lido (sem 0, O, I, l)');
+  .min(32, 'Endereço deve ter no mínimo 32 caracteres')
+  .max(44, 'Endereço deve ter no máximo 44 caracteres')
+  .regex(BASE58_PATTERN, 'Endereço deve ser base58 válido (sem 0, O, I, l)')
+  .refine(
+    (value) => {
+      try {
+        new PublicKey(value);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Endereço deve ser uma public key Solana válida' },
+  );
 
 /**
- * ValidaÃ§Ã£o de URL HTTP/HTTPS com proteÃ§Ã£o anti-SSRF
+ * Validação de URL HTTP/HTTPS com proteção anti-SSRF
  */
 function createUrlSchema(fieldName: string) {
   return z
     .string()
-    .url(`Campo '${fieldName}' deve ser uma URL vÃ¡lida`)
+    .url(`Campo '${fieldName}' deve ser uma URL válida`)
     .refine(
       (url) => {
         try {
@@ -42,7 +54,7 @@ function createUrlSchema(fieldName: string) {
 
           const hostname = parsed.hostname.toLowerCase();
 
-          // Bloquear localhost e variaÃ§Ãµes
+          // Bloquear localhost e variações
           const blockedHosts = [
             'localhost',
             '127.0.0.1',
@@ -74,8 +86,8 @@ function createUrlSchema(fieldName: string) {
             return false;
           }
 
-          // Opcional: allowlist de domÃ­nios (via env var)
-          // Usa env var diretamente (refinements nÃ£o podem usar imports dinÃ¢micos)
+          // Opcional: allowlist de domínios (via env var)
+          // Usa env var diretamente (refinements não podem usar imports dinâmicos)
           const allowedDomainsEnv = process.env.ALLOWED_IMAGE_DOMAINS;
           if (allowedDomainsEnv) {
             const allowedDomains = allowedDomainsEnv
@@ -93,7 +105,7 @@ function createUrlSchema(fieldName: string) {
         }
       },
       {
-        message: `Campo '${fieldName}' deve ser uma URL HTTP/HTTPS pÃºblica vÃ¡lida (localhost e IPs privados nÃ£o permitidos)`,
+        message: `Campo '${fieldName}' deve ser uma URL HTTP/HTTPS pública válida (localhost e IPs privados não permitidos)`,
       },
     )
     .optional();
@@ -104,20 +116,20 @@ function createUrlSchema(fieldName: string) {
  */
 export const tokenDraftSchema = z
   .object({
-    name: z.string().min(1, 'Nome do token Ã© obrigatÃ³rio').max(32, 'Nome do token deve ter no mÃ¡ximo 32 caracteres'),
+    name: z.string().min(1, 'Nome do token é obrigatório').max(32, 'Nome do token deve ter no máximo 32 caracteres'),
 
     symbol: z
       .string()
-      .min(1, 'SÃ­mbolo do token Ã© obrigatÃ³rio')
-      .max(10, 'SÃ­mbolo do token deve ter no mÃ¡ximo 10 caracteres'),
+      .min(1, 'Símbolo do token é obrigatório')
+      .max(10, 'Símbolo do token deve ter no máximo 10 caracteres'),
 
     decimals: z
       .number()
-      .int('Decimais deve ser um nÃºmero inteiro')
+      .int('Decimais deve ser um número inteiro')
       .min(0, 'Decimais deve ser >= 0')
       .max(18, 'Decimais deve ser <= 18'),
 
-    description: z.string().max(1000, 'DescriÃ§Ã£o deve ter no mÃ¡ximo 1000 caracteres').optional(),
+    description: z.string().max(1000, 'Descrição deve ter no máximo 1000 caracteres').optional(),
 
     /** URL real (http/https/ipfs/ar). NÃO aceita data: (use imagePreviewUrl para preview) */
     imageUrl: z
@@ -153,12 +165,12 @@ export const tokenDraftSchema = z
 
     twitterHandle: z
       .string()
-      .regex(/^[a-zA-Z0-9_]{1,15}$/, 'Twitter handle deve ter 1-15 caracteres alfanumÃ©ricos ou underscore (sem @)')
+      .regex(/^[a-zA-Z0-9_]{1,15}$/, 'Twitter handle deve ter 1-15 caracteres alfanuméricos ou underscore (sem @)')
       .optional(),
 
     telegramHandle: z
       .string()
-      .regex(/^[a-zA-Z0-9_]{5,32}$/, 'Telegram handle deve ter 5-32 caracteres alfanumÃ©ricos ou underscore')
+      .regex(/^[a-zA-Z0-9_]{5,32}$/, 'Telegram handle deve ter 5-32 caracteres alfanuméricos ou underscore')
       .optional(),
   })
   .strict(); // additionalProperties: false
@@ -182,7 +194,7 @@ export const launchConfigDraftSchema = z
 
     tipLamports: z
       .number()
-      .int('tipLamports deve ser um nÃºmero inteiro')
+      .int('tipLamports deve ser um número inteiro')
       .nonnegative('tipLamports deve ser >= 0')
       .optional(),
 
@@ -204,7 +216,7 @@ export const launchConfigDraftSchema = z
       return true;
     },
     {
-      message: 'tipLamports Ã© obrigatÃ³rio e deve ser > 0 quando tipWallet Ã© fornecido',
+      message: 'tipLamports é obrigatório e deve ser > 0 quando tipWallet é fornecido',
       path: ['tipLamports'],
     },
   );
@@ -235,11 +247,11 @@ const optionalPublicUriSchema = z.preprocess(
 
 const bagsSymbolSchema = z
   .string()
-  .min(1, 'SÃ­mbolo do token Ã© obrigatÃ³rio')
-  .max(11, 'SÃ­mbolo do token deve ter no mÃ¡ximo 10 caracteres sem $')
+  .min(1, 'Símbolo do token é obrigatório')
+  .max(11, 'Símbolo do token deve ter no máximo 10 caracteres sem $')
   .transform((value) => value.replace(/^\$+/, '').trim().toUpperCase())
   .refine((value) => value.length >= 1 && value.length <= 10, {
-    message: 'SÃ­mbolo do token deve ter 1-10 caracteres',
+    message: 'Símbolo do token deve ter 1-10 caracteres',
   });
 
 /**
@@ -247,14 +259,16 @@ const bagsSymbolSchema = z
  */
 export const bagsTokenInfoRequestSchema = z
   .object({
-    name: z.string().trim().min(1, 'Nome do token Ã© obrigatÃ³rio').max(32, 'Nome do token deve ter no mÃ¡ximo 32 caracteres'),
+    name: z.string().trim().min(1, 'Nome do token é obrigatório').max(32, 'Nome do token deve ter no máximo 32 caracteres'),
     symbol: bagsSymbolSchema,
     description: z
       .string()
       .trim()
-      .min(1, 'DescriÃ§Ã£o do token Ã© obrigatÃ³ria')
-      .max(1000, 'DescriÃ§Ã£o deve ter no mÃ¡ximo 1000 caracteres'),
-    imageUrl: optionalPublicUriSchema,
+      .min(1, 'Descrição do token é obrigatória')
+      .max(1000, 'Descrição deve ter no máximo 1000 caracteres'),
+    imageUrl: optionalPublicUriSchema.refine(Boolean, {
+      message: 'imageUrl pública é obrigatória enquanto upload real não estiver disponível',
+    }),
     metadataUrl: optionalPublicUriSchema,
     telegram: optionalTrimmedString,
     twitter: optionalTrimmedString,
@@ -263,11 +277,26 @@ export const bagsTokenInfoRequestSchema = z
     twitterHandle: optionalTrimmedString,
     websiteUrl: optionalTrimmedString,
   })
-  .strict()
-  .refine((data) => Boolean(data.imageUrl || data.metadataUrl), {
-    message: 'imageUrl ou metadataUrl Ã© obrigatÃ³rio para criar metadata real na Bags',
-    path: ['imageUrl'],
-  });
+  .strict();
+
+export const launchpadFeeQuoteRequestSchema = z
+  .object({
+    wallet: solanaAddressSchema,
+    verified: z.boolean().default(true),
+    initialBuyLamports: z
+      .number()
+      .int('initialBuyLamports deve ser inteiro')
+      .nonnegative('initialBuyLamports deve ser >= 0')
+      .max(Number.MAX_SAFE_INTEGER, 'initialBuyLamports excede o limite seguro')
+      .default(0),
+    extraTipLamports: z
+      .number()
+      .int('extraTipLamports deve ser inteiro')
+      .nonnegative('extraTipLamports deve ser >= 0')
+      .max(Number.MAX_SAFE_INTEGER, 'extraTipLamports excede o limite seguro')
+      .default(0),
+  })
+  .strict();
 
 /**
  * Contract used by POST /api/launchpad/create-config for Bags fee-share config.
@@ -276,10 +305,11 @@ export const bagsFeeShareConfigRequestSchema = z
   .object({
     payer: solanaAddressSchema,
     baseMint: solanaAddressSchema,
-    claimersArray: z.array(solanaAddressSchema).min(1, 'claimersArray deve ter ao menos um claimer'),
+    claimersArray: z.array(solanaAddressSchema).min(1, 'claimersArray deve ter ao menos um claimer').optional(),
     basisPointsArray: z
       .array(z.number().int('basisPointsArray deve conter inteiros').min(0).max(10000))
-      .min(1, 'basisPointsArray deve ter ao menos um valor'),
+      .min(1, 'basisPointsArray deve ter ao menos um valor')
+      .optional(),
     bagsConfigType: optionalTrimmedString,
     partner: solanaAddressSchema.optional(),
     partnerConfig: solanaAddressSchema.optional(),
@@ -289,6 +319,19 @@ export const bagsFeeShareConfigRequestSchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
+    if (Boolean(data.claimersArray) !== Boolean(data.basisPointsArray)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['claimersArray'],
+        message: 'claimersArray e basisPointsArray devem ser enviados juntos',
+      });
+      return;
+    }
+
+    if (!data.claimersArray || !data.basisPointsArray) {
+      return;
+    }
+
     if (data.claimersArray.length !== data.basisPointsArray.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -318,7 +361,7 @@ export const bagsFeeShareConfigRequestSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['tipLamports'],
-        message: 'tipLamports deve ser > 0 quando tipWallet Ã© fornecido',
+        message: 'tipLamports deve ser > 0 quando tipWallet é fornecido',
       });
     }
   });
@@ -340,10 +383,17 @@ export const bagsCreateLaunchTransactionRequestSchema = z
     configKey: solanaAddressSchema,
     tipWallet: solanaAddressSchema.optional(),
     tipLamports: z.number().int('tipLamports deve ser inteiro').nonnegative('tipLamports deve ser >= 0').optional(),
+    verified: z.boolean().default(true),
+    extraTipLamports: z
+      .number()
+      .int('extraTipLamports deve ser inteiro')
+      .nonnegative('extraTipLamports deve ser >= 0')
+      .max(Number.MAX_SAFE_INTEGER, 'extraTipLamports excede o limite seguro')
+      .default(0),
   })
   .strict()
   .refine((data) => Boolean(data.ipfs || data.metadataUrl), {
-    message: 'ipfs ou metadataUrl Ã© obrigatÃ³rio',
+    message: 'ipfs ou metadataUrl é obrigatório',
     path: ['ipfs'],
   });
 
@@ -352,7 +402,7 @@ export const bagsCreateLaunchTransactionRequestSchema = z
  */
 export const launchpadSendRequestSchema = z
   .object({
-    signedTransaction: z.string().min(32, 'signedTransaction Ã© obrigatÃ³ria').max(100000),
+    signedTransaction: z.string().min(32, 'signedTransaction é obrigatória').max(100000),
     encoding: z.enum(['base64', 'base58']).default('base64'),
   })
   .strict();
@@ -366,22 +416,22 @@ export const preflightReportSchema = z
 
     issues: z.array(
       z.object({
-        path: z.string().min(1, 'Path Ã© obrigatÃ³rio'),
-        message: z.string().min(1, 'Message Ã© obrigatÃ³rio'),
+        path: z.string().min(1, 'Path é obrigatório'),
+        message: z.string().min(1, 'Message é obrigatório'),
         severity: z.enum(['error', 'warning', 'info']),
       }),
     ),
 
     warnings: z.array(
       z.object({
-        path: z.string().min(1, 'Path Ã© obrigatÃ³rio'),
-        message: z.string().min(1, 'Message Ã© obrigatÃ³rio'),
+        path: z.string().min(1, 'Path é obrigatório'),
+        message: z.string().min(1, 'Message é obrigatório'),
       }),
     ),
 
     validatedAt: z.string().datetime('validatedAt deve ser ISO 8601'),
 
-    requestId: z.string().uuid('requestId deve ser UUID vÃ¡lido'),
+    requestId: z.string().uuid('requestId deve ser UUID válido'),
   })
   .strict(); // additionalProperties: false
 
@@ -416,7 +466,7 @@ export const shieldProofManifestSchema = z
 
     evaluatedAt: z.string().datetime('evaluatedAt deve ser ISO 8601'),
 
-    requestId: z.string().uuid('requestId deve ser UUID vÃ¡lido'),
+    requestId: z.string().uuid('requestId deve ser UUID válido'),
   })
   .strict(); // additionalProperties: false
 
@@ -440,6 +490,3 @@ export function validateLaunchpadInput<T>(
 
   return { ok: false, issues };
 }
-
-
-

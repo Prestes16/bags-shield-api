@@ -4,7 +4,7 @@
  * Tests that same normalized payload produces same hash
  */
 
-const { createHash } = require("crypto");
+import { createHash } from "crypto";
 
 let testsRun = 0;
 let testsPassed = 0;
