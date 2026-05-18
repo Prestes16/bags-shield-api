@@ -226,6 +226,23 @@ const optionalTrimmedString = z.preprocess(
   z.string().trim().optional(),
 );
 
+function isBlockedPublicHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  const blockedHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254']);
+  if (blockedHosts.has(normalized)) return true;
+
+  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipRegex.test(normalized)) return false;
+
+  const parts = normalized.split('.').map(Number);
+  return (
+    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255) ||
+    parts[0] === 10 ||
+    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+    (parts[0] === 192 && parts[1] === 168)
+  );
+}
+
 const optionalPublicUriSchema = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
   z
@@ -235,12 +252,16 @@ const optionalPublicUriSchema = z.preprocess(
       (value) => {
         try {
           const url = new URL(value);
-          return ['http:', 'https:', 'ipfs:', 'ar:'].includes(url.protocol);
+          if (!['http:', 'https:', 'ipfs:', 'ar:'].includes(url.protocol)) return false;
+          if (['http:', 'https:'].includes(url.protocol) && isBlockedPublicHostname(url.hostname)) {
+            return false;
+          }
+          return true;
         } catch {
           return false;
         }
       },
-      { message: 'URL deve usar http://, https://, ipfs:// ou ar://' },
+      { message: 'URL deve ser publica e usar http://, https://, ipfs:// ou ar://' },
     )
     .optional(),
 );
@@ -266,9 +287,7 @@ export const bagsTokenInfoRequestSchema = z
       .trim()
       .min(1, 'Descrição do token é obrigatória')
       .max(1000, 'Descrição deve ter no máximo 1000 caracteres'),
-    imageUrl: optionalPublicUriSchema.refine(Boolean, {
-      message: 'imageUrl pública é obrigatória enquanto upload real não estiver disponível',
-    }),
+    imageUrl: optionalPublicUriSchema,
     metadataUrl: optionalPublicUriSchema,
     telegram: optionalTrimmedString,
     twitter: optionalTrimmedString,

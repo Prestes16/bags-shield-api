@@ -36,6 +36,7 @@ export interface BagsTokenInfoRequest {
   name: string;
   symbol: string;
   description: string;
+  image?: File;
   imageUrl?: string;
   metadataUrl?: string;
   telegram?: string;
@@ -273,6 +274,7 @@ export async function createTokenInfo(
   formData.append("name", req.name);
   formData.append("symbol", req.symbol);
   formData.append("description", req.description);
+  if (req.image) formData.append("image", req.image, req.image.name || "token-image");
   appendIfPresent(formData, "imageUrl", req.imageUrl);
   appendIfPresent(formData, "metadataUrl", req.metadataUrl);
   appendIfPresent(formData, "telegram", req.telegram);

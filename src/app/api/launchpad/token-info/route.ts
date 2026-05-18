@@ -27,7 +27,17 @@ import {
 } from "@/src/lib/launchpad/bags-client";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
+export const runtime = "nodejs";
+
 const ROUTE = "/api/launchpad/token-info";
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/webp",
+]);
 
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
@@ -74,6 +84,41 @@ function pickTokenMint(response: Record<string, unknown>) {
   }
 
   return undefined;
+}
+
+function getFormString(formData: FormData, key: string): string | undefined {
+  const value = formData.get(key);
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function isUploadFile(value: FormDataEntryValue | null): value is File {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "arrayBuffer" in value &&
+      "size" in value &&
+      "type" in value,
+  );
+}
+
+function validateImageFile(file: File): Array<{ path: string; message: string }> {
+  const issues: Array<{ path: string; message: string }> = [];
+
+  if (file.size <= 0) {
+    issues.push({ path: "image", message: "Arquivo de imagem vazio" });
+  }
+
+  if (file.size > MAX_IMAGE_BYTES) {
+    issues.push({ path: "image", message: "Imagem deve ter no maximo 15MB" });
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type.toLowerCase())) {
+    issues.push({ path: "image", message: "Tipo de imagem invalido. Use PNG, JPG, JPEG, GIF ou WebP" });
+  }
+
+  return issues;
 }
 
 export async function POST(req: NextRequest) {
@@ -153,73 +198,172 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const contentType = req.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
+  const contentType = req.headers.get("content-type") || "";
+  let tokenInfo: BagsTokenInfoRequest & {
+    websiteUrl?: string;
+    twitterHandle?: string;
+    telegramHandle?: string;
+  };
+  let imageFile: File | undefined;
+
+  if (contentType.includes("application/json")) {
+    let bodyText: string;
+    try {
+      bodyText = await req.text();
+    } catch (error) {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: { code: "BAD_REQUEST", message: "Failed to read request body" },
+          issues: [{ path: "<root>", message: error instanceof Error ? error.message : "Unknown error" }],
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+
+    const parseResult = safeJsonParse<unknown>(bodyText);
+    if (!parseResult.success) {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: { code: "BAD_REQUEST", message: parseResult.error || "Invalid JSON" },
+          issues: parseResult.issues || [],
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+
+    const validation = validateLaunchpadInput(bagsTokenInfoRequestSchema, parseResult.data);
+    if (!validation.ok) {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
+          issues: "issues" in validation ? validation.issues : [],
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+
+    tokenInfo = ("data" in validation ? validation.data : {}) as typeof tokenInfo;
+  } else if (contentType.includes("multipart/form-data")) {
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (error) {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: { code: "BAD_REQUEST", message: "Failed to read multipart form data" },
+          issues: [{ path: "<root>", message: error instanceof Error ? error.message : "Invalid multipart form data" }],
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+
+    const maybeImage = formData.get("image");
+    if (maybeImage !== null) {
+      if (!isUploadFile(maybeImage)) {
+        return jsonResponse(
+          req,
+          requestId,
+          {
+            success: false,
+            error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
+            issues: [{ path: "image", message: "Campo image deve ser um arquivo" }],
+            meta: { requestId },
+          },
+          { status: 400 },
+        );
+      }
+
+      const imageIssues = validateImageFile(maybeImage);
+      if (imageIssues.length > 0) {
+        return jsonResponse(
+          req,
+          requestId,
+          {
+            success: false,
+            error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
+            issues: imageIssues,
+            meta: { requestId },
+          },
+          { status: 400 },
+        );
+      }
+
+      imageFile = maybeImage;
+    }
+
+    const validation = validateLaunchpadInput(bagsTokenInfoRequestSchema, {
+      name: getFormString(formData, "name"),
+      symbol: getFormString(formData, "symbol"),
+      description: getFormString(formData, "description"),
+      imageUrl: getFormString(formData, "imageUrl"),
+      metadataUrl: getFormString(formData, "metadataUrl"),
+      telegram: getFormString(formData, "telegram"),
+      twitter: getFormString(formData, "twitter"),
+      website: getFormString(formData, "website"),
+    });
+
+    if (!validation.ok) {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
+          issues: "issues" in validation ? validation.issues : [],
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+
+    tokenInfo = ("data" in validation ? validation.data : {}) as typeof tokenInfo;
+  } else {
     return jsonResponse(
       req,
       requestId,
       {
         success: false,
-        error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Content-Type must be application/json" },
-        issues: [{ path: "headers.content-type", message: "Expected application/json" }],
+        error: {
+          code: "UNSUPPORTED_MEDIA_TYPE",
+          message: "Content-Type must be application/json or multipart/form-data",
+        },
+        issues: [{ path: "headers.content-type", message: "Expected application/json or multipart/form-data" }],
         meta: { requestId },
       },
       { status: 415 },
     );
   }
 
-  let bodyText: string;
-  try {
-    bodyText = await req.text();
-  } catch (error) {
-    return jsonResponse(
-      req,
-      requestId,
-      {
-        success: false,
-        error: { code: "BAD_REQUEST", message: "Failed to read request body" },
-        issues: [{ path: "<root>", message: error instanceof Error ? error.message : "Unknown error" }],
-        meta: { requestId },
-      },
-      { status: 400 },
-    );
-  }
-
-  const parseResult = safeJsonParse<unknown>(bodyText);
-  if (!parseResult.success) {
-    return jsonResponse(
-      req,
-      requestId,
-      {
-        success: false,
-        error: { code: "BAD_REQUEST", message: parseResult.error || "Invalid JSON" },
-        issues: parseResult.issues || [],
-        meta: { requestId },
-      },
-      { status: 400 },
-    );
-  }
-
-  const validation = validateLaunchpadInput(bagsTokenInfoRequestSchema, parseResult.data);
-  if (!validation.ok) {
+  if (!imageFile && !tokenInfo.imageUrl) {
     return jsonResponse(
       req,
       requestId,
       {
         success: false,
         error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
-        issues: "issues" in validation ? validation.issues : [],
+        issues: [{ path: "image", message: "Envie um arquivo de imagem real ou uma imageUrl publica" }],
         meta: { requestId },
       },
       { status: 400 },
     );
   }
 
-  const tokenInfo = ("data" in validation ? validation.data : {}) as BagsTokenInfoRequest & {
-    websiteUrl?: string;
-    twitterHandle?: string;
-    telegramHandle?: string;
-  };
   const elapsedMs = Date.now() - startTime;
 
   try {
@@ -227,6 +371,7 @@ export async function POST(req: NextRequest) {
       name: tokenInfo.name,
       symbol: tokenInfo.symbol,
       description: tokenInfo.description,
+      image: imageFile,
       imageUrl: tokenInfo.imageUrl,
       metadataUrl: tokenInfo.metadataUrl,
       website: tokenInfo.website || tokenInfo.websiteUrl,
@@ -246,7 +391,10 @@ export async function POST(req: NextRequest) {
         requestId,
         {
           success: false,
-          error: { code: bagsResult.error.code, message: bagsResult.error.message },
+          error: {
+            code: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? "BAGS_NOT_CONFIGURED" : "BAGS_TOKEN_INFO_FAILED",
+            message: bagsResult.error.message,
+          },
           meta: { requestId, upstream: "bags", elapsedMs: Date.now() - startTime },
         },
         { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
