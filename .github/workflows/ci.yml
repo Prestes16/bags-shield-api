@@ -2,11 +2,18 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: typecheck + smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -21,5 +28,5 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Smoke
+      - name: Smoke (local)
         run: npm run smoke
