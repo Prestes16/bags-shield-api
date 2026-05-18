@@ -123,7 +123,7 @@ function runSmoke() {
 
     const smokeRunner = spawn(
       'node',
-      [path.join(__dirname, 'smoke-runner.js')],
+      [path.join(__dirname, 'smoke-runner.cjs')],
       {
         env: {
           ...process.env,
@@ -163,3 +163,4 @@ async function main() {
 }
 
 main();
+
