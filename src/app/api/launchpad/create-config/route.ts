@@ -19,7 +19,7 @@ import {
 } from "@/src/lib/launchpad/schemas";
 import { checkLaunchpadEnabled, setupSecurityHeaders } from "@/src/lib/launchpad/middleware";
 import { getLaunchpadMode } from "@/lib/env";
-import { createLaunchConfig } from "@/src/lib/launchpad/bags-client";
+import { registerFeeShare } from "@/src/lib/launchpad/bags-client";
 import { stubCreateConfig } from "@/src/lib/launchpad/stub";
 import type { LaunchConfigDraft } from "@/src/lib/launchpad/types";
 
@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
       mode: "real",
     });
 
-    const bagsResult = await createLaunchConfig({
+    const bagsResult = await registerFeeShare({
       launchWallet: config.launchWallet,
       tipWallet: config.tipWallet,
       tipLamports: config.tipLamports,

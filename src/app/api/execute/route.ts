@@ -1,7 +1,7 @@
 /**
- * POST /api/execute — Jupiter Swap V2 /execute
+ * POST /api/execute — Jupiter Ultra V1 /execute
  * Recebe a transação ASSINADA pelo frontend e delega o landing ao Jupiter.
- * Body: { signedTransaction: string (base64), requestId: string, lastValidBlockHeight?: string }
+ * Body: { signedTransaction: string (base64), requestId: string }
  * Jupiter gerencia retry, confirmação e landing — não precisa de RPC próprio.
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,7 +17,7 @@ const RATE_LIMIT  = { windowMs: 60_000, max: 15 };
 
 const ExecuteSchema = z.object({
   signedTransaction:    z.string().min(10).max(8192),  // base64 tx assinada
-  requestId:            z.string().min(1).max(256),   // Jupiter Ultra requestId (não é UUID)
+  requestId:            z.string().min(1).max(256),    // Jupiter Ultra requestId (não é UUID)
   lastValidBlockHeight: z.string().optional(),
 }).strict();
 

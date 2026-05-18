@@ -1,6 +1,6 @@
 /**
  * POST /api/launchpad/token-info
- * 
+ *
  * Validates TokenDraft and proxies to Bags create-token-info endpoint.
  * Prioritizes imageUrl to avoid multipart in v1.
  */
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Apply security headers
-    let res: Response = new NextResponse();
+  let res: Response = new NextResponse();
   res = applyCorsHeaders(req, res);
   res = applyNoStore(res);
   res = applySecurityHeaders(res);
@@ -225,14 +225,22 @@ export async function POST(req: NextRequest) {
       mode: "real",
     });
 
+    // Build full social URLs — Bags API expects https:// URLs, not bare handles
+    const twitterUrl = tokenDraft.twitterHandle
+      ? `https://x.com/${tokenDraft.twitterHandle.replace(/^@/, "")}`
+      : undefined;
+    const telegramUrl = tokenDraft.telegramHandle
+      ? `https://t.me/${tokenDraft.telegramHandle.replace(/^@/, "")}`
+      : undefined;
+
     const bagsResult = await createTokenInfo({
       name: tokenDraft.name,
       symbol: tokenDraft.symbol,
       description: tokenDraft.description,
       imageUrl: tokenDraft.imageUrl, // Prioritize imageUrl
       website: tokenDraft.websiteUrl,
-      twitter: tokenDraft.twitterHandle,
-      telegram: tokenDraft.telegramHandle,
+      twitter: twitterUrl,
+      telegram: telegramUrl,
     });
 
     if (!bagsResult.success) {

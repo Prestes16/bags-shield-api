@@ -378,7 +378,7 @@ export async function POST(req: NextRequest) {
     (async () => {
       try {
         await fetch(
-          "https://public-api-v2.bags.fm/api/v1/fee-share/create-config",
+          "https://public-api-v2.bags.fm/api/v1/fee-share/config",
           {
             method: "POST",
             headers: {
