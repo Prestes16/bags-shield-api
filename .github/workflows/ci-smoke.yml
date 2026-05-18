@@ -1,10 +1,7 @@
-name: ci(smoke): v4 — ubuntu + curl (manual e tag)
+name: ci(smoke): health prod (manual)
 
 on:
   workflow_dispatch: {}
-  push:
-    tags:
-      - "smoke-*"
 
 permissions:
   contents: read
