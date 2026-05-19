@@ -61,13 +61,20 @@ function normalizeSocialUrl(value: string | undefined, prefix: "https://x.com/" 
 }
 
 function pickMetadataUri(response: Record<string, unknown>, fallback?: string) {
-  const tokenMetadata = response.tokenMetadata;
-  if (typeof tokenMetadata === "string" && tokenMetadata.trim()) return tokenMetadata;
+  // Check common top-level fields first
+  for (const key of ["tokenMetadata", "uri", "ipfs", "metadata", "metadataUrl", "metadataUri"]) {
+    const val = response[key];
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
 
+  // Check inside tokenLaunch nested object
   const tokenLaunch = response.tokenLaunch;
   if (tokenLaunch && typeof tokenLaunch === "object") {
-    const uri = (tokenLaunch as Record<string, unknown>).uri;
-    if (typeof uri === "string" && uri.trim()) return uri;
+    const nested = tokenLaunch as Record<string, unknown>;
+    for (const key of ["uri", "ipfs", "metadata", "metadataUrl", "metadataUri"]) {
+      const val = nested[key];
+      if (typeof val === "string" && val.trim()) return val.trim();
+    }
   }
 
   return fallback;
@@ -315,6 +322,7 @@ export async function POST(req: NextRequest) {
       metadataUrl: getFormString(formData, "metadataUrl"),
       telegram: getFormString(formData, "telegram"),
       twitter: getFormString(formData, "twitter"),
+      discord: getFormString(formData, "discord"),
       website: getFormString(formData, "website"),
     });
 
@@ -377,6 +385,7 @@ export async function POST(req: NextRequest) {
       website: tokenInfo.website || tokenInfo.websiteUrl,
       twitter: normalizeSocialUrl(tokenInfo.twitter || tokenInfo.twitterHandle, "https://x.com/"),
       telegram: normalizeSocialUrl(tokenInfo.telegram || tokenInfo.telegramHandle, "https://t.me/"),
+      discord: tokenInfo.discord,
     });
 
     if ("error" in bagsResult) {

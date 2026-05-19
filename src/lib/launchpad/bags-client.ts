@@ -41,6 +41,7 @@ export interface BagsTokenInfoRequest {
   metadataUrl?: string;
   telegram?: string;
   twitter?: string;
+  discord?: string;
   website?: string;
 }
 
@@ -87,7 +88,7 @@ export interface BagsFeeShareConfigResponse {
 }
 
 export interface BagsCreateLaunchTransactionRequest {
-  ipfs: string;
+  ipfs?: string;
   tokenMint: string;
   wallet: string;
   initialBuyLamports: number;
@@ -279,6 +280,7 @@ export async function createTokenInfo(
   appendIfPresent(formData, "metadataUrl", req.metadataUrl);
   appendIfPresent(formData, "telegram", req.telegram);
   appendIfPresent(formData, "twitter", req.twitter);
+  appendIfPresent(formData, "discord", req.discord);
   appendIfPresent(formData, "website", req.website);
 
   return bagsFormFetch<BagsTokenInfoResponse>("/token-launch/create-token-info", formData);

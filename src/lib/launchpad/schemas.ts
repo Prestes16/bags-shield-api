@@ -290,6 +290,7 @@ export const bagsTokenInfoRequestSchema = z
     metadataUrl: optionalPublicUriSchema,
     telegram: optionalTrimmedString,
     twitter: optionalTrimmedString,
+    discord: optionalTrimmedString,
     website: optionalTrimmedString,
     telegramHandle: optionalTrimmedString,
     twitterHandle: optionalTrimmedString,
@@ -409,11 +410,7 @@ export const bagsCreateLaunchTransactionRequestSchema = z
       .max(Number.MAX_SAFE_INTEGER, 'extraTipLamports excede o limite seguro')
       .default(0),
   })
-  .strict()
-  .refine((data) => Boolean(data.ipfs || data.metadataUrl), {
-    message: 'ipfs ou metadataUrl é obrigatório',
-    path: ['ipfs'],
-  });
+  .strict();
 
 /**
  * Contract used by POST /api/launchpad/send. It only broadcasts a user-signed tx.

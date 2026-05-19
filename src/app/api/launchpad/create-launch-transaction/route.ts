@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
       : {};
 
     const bagsResult = await createLaunchTransaction({
-      ipfs: metadataUri as string,
+      ipfs: metadataUri,
       tokenMint: input.tokenMint,
       wallet: input.wallet,
       initialBuyLamports: input.initialBuyLamports,
