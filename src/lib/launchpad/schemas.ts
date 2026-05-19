@@ -7,7 +7,6 @@
 
 import { z } from 'zod';
 import { PublicKey } from '@solana/web3.js';
-import type { TokenDraft, LaunchConfigDraft, PreflightReport, ShieldProofManifest } from './types';
 
 /**
  * Base58 validation regex (Solana addresses)
