@@ -30,6 +30,16 @@ import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
 const ROUTE = "/api/launchpad/create-launch-transaction";
 
+function compactKey(value?: string) {
+  if (!value) return undefined;
+  return `${value.slice(0, 6)}...${value.slice(-6)}`;
+}
+
+function getUpstreamStatus(details?: Record<string, unknown>) {
+  const status = details?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
 }
@@ -186,11 +196,26 @@ export async function POST(req: NextRequest) {
   }
 
   const input = ("data" in validation ? validation.data : {}) as BagsCreateLaunchTransactionRequest & {
+    metadataUri?: string;
     metadataUrl?: string;
     verified?: boolean;
     extraTipLamports?: number;
   };
-  const metadataUri = input.ipfs || input.metadataUrl;
+  const finalIpfs = input.ipfs || input.metadataUri || input.metadataUrl;
+
+  if (!finalIpfs) {
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
+        issues: [{ path: "ipfs", message: "ipfs ou metadataUri Ã© obrigatÃ³rio" }],
+        meta: { requestId },
+      },
+      { status: 400 },
+    );
+  }
 
   try {
     let feeQuote: ReturnType<typeof buildLaunchpadFeeQuote>;
@@ -229,7 +254,7 @@ export async function POST(req: NextRequest) {
       : {};
 
     const bagsResult = await createLaunchTransaction({
-      ipfs: metadataUri,
+      ipfs: finalIpfs,
       tokenMint: input.tokenMint,
       wallet: input.wallet,
       initialBuyLamports: input.initialBuyLamports,
@@ -238,10 +263,18 @@ export async function POST(req: NextRequest) {
     });
 
     if ("error" in bagsResult) {
+      const upstreamStatus = getUpstreamStatus(bagsResult.error.details);
       SafeLogger.error("Bags create-launch-transaction request failed", undefined, {
         requestId,
         endpoint: ROUTE,
         errorCode: bagsResult.error.code,
+        upstreamStatus,
+        wallet: input.wallet,
+        tokenMint: input.tokenMint,
+        hasIpfs: Boolean(finalIpfs),
+        configKey: compactKey(input.configKey),
+        initialBuyLamports: input.initialBuyLamports,
+        tipLamports: feeFields.tipLamports ?? 0,
       });
 
       return jsonResponse(
@@ -249,8 +282,12 @@ export async function POST(req: NextRequest) {
         requestId,
         {
           success: false,
-          error: { code: bagsResult.error.code, message: bagsResult.error.message },
-          meta: { requestId, upstream: "bags", elapsedMs: Date.now() - startTime },
+          error: {
+            code: "BAGS_CREATE_LAUNCH_TRANSACTION_FAILED",
+            message: bagsResult.error.message,
+            upstreamStatus,
+          },
+          meta: { requestId, upstream: "bags", upstreamStatus, elapsedMs: Date.now() - startTime },
         },
         { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
       );
@@ -265,7 +302,7 @@ export async function POST(req: NextRequest) {
           transaction: bagsResult.response,
           encoding: "base58",
           tokenMint: input.tokenMint,
-          metadataUri,
+          metadataUri: finalIpfs,
           configKey: input.configKey,
           tipWallet: feeFields.tipWallet,
           tipLamports: feeFields.tipLamports ?? 0,

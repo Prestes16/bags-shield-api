@@ -390,8 +390,9 @@ export const bagsFeeShareConfigRequestSchema = z
  */
 export const bagsCreateLaunchTransactionRequestSchema = z
   .object({
-    ipfs: optionalTrimmedString,
-    metadataUrl: optionalTrimmedString,
+    ipfs: optionalPublicUriSchema,
+    metadataUri: optionalPublicUriSchema,
+    metadataUrl: optionalPublicUriSchema,
     tokenMint: solanaAddressSchema,
     wallet: solanaAddressSchema,
     initialBuyLamports: z
@@ -410,7 +411,16 @@ export const bagsCreateLaunchTransactionRequestSchema = z
       .max(Number.MAX_SAFE_INTEGER, 'extraTipLamports excede o limite seguro')
       .default(0),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    if (!data.ipfs && !data.metadataUri && !data.metadataUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ipfs'],
+        message: 'ipfs ou metadataUri Ã© obrigatÃ³rio',
+      });
+    }
+  });
 
 /**
  * Contract used by POST /api/launchpad/send. It only broadcasts a user-signed tx.
