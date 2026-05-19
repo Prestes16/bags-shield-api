@@ -5,9 +5,9 @@
  * ──────────────────────────────────────────────────────
  * COMO RODAR NO WINDOWS POWERSHELL:
  *
- *   node create-usdc-ata.mjs <PRIVATE_KEY>
+ *   node create-usdc-ata.mjs <PAYER_KEYPAIR_BASE58>
  *
- * <PRIVATE_KEY> pode ser:
+ * <PAYER_KEYPAIR_BASE58> pode ser:
  *   - Chave base58 exportada do Phantom (Settings → Security → Export Private Key)
  *   - Ou caminho para um arquivo .json com array de bytes (ex: C:\Users\cleit\keypair.json)
  *
@@ -32,8 +32,12 @@ import bs58 from 'bs58';
 // ── Config ──────────────────────────────────────────────────────────────────
 const FEE_COLLECTOR = new PublicKey('7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi');
 const USDC_MINT     = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const RPC_URL       = process.env.SOLANA_RPC_URL
-  || 'https://mainnet.helius-rpc.com/?api-key=a6eb98dd-5471-4849-b03f-6cf777f11f09';
+const RPC_URL = process.env.SOLANA_RPC_URL;
+
+if (!RPC_URL) {
+  console.error('Defina SOLANA_RPC_URL antes de rodar este script.');
+  process.exit(1);
+}
 
 // ── Load payer keypair ───────────────────────────────────────────────────────
 const arg = process.argv[2] || process.env.PAYER_KEYPAIR;
@@ -42,7 +46,7 @@ if (!arg) {
   console.error('');
   console.error('❌  Informe a chave privada ou o caminho do keypair.');
   console.error('');
-  console.error('   node create-usdc-ata.mjs <PRIVATE_KEY_BASE58>');
+  console.error('   node create-usdc-ata.mjs <PAYER_KEYPAIR_BASE58>');
   console.error('   node create-usdc-ata.mjs C:\\Users\\cleit\\keypair.json');
   console.error('');
   process.exit(1);
@@ -102,4 +106,4 @@ console.log('✅  ATA criada com sucesso!');
 console.log('📝  Transação :', `https://solscan.io/tx/${txSig}`);
 console.log('🏦  ATA       :', `https://solscan.io/account/${ata.toBase58()}`);
 console.log('');
-console.log('✅  O backend agora vai coletar fees em USDC em cada swap.');
+console.log('✅  O backend agora vai coletar

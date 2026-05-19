@@ -503,15 +503,14 @@ export function validateLaunchpadInput<T>(
   data: unknown,
 ): { ok: true; data: T } | { ok: false; issues: Array<{ path: string; message: string }> } {
   const result = schema.safeParse(data);
-
   if (result.success) {
     return { ok: true, data: result.data };
   }
-
-  const issues = result.error.issues.map((issue) => ({
-    path: issue.path.length > 0 ? issue.path.join('.') : '<root>',
-    message: issue.message,
-  }));
-
-  return { ok: false, issues };
+  return {
+    ok: false,
+    issues: result.error.issues.map((issue) => ({
+      path: issue.path.join('.') || '<root>',
+      message: issue.message,
+    })),
+  };
 }

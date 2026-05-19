@@ -99,6 +99,100 @@ export interface BagsCreateLaunchTransactionRequest {
 
 export type BagsCreateLaunchTransactionResponse = string;
 
+// ── Fee-claim types ──────────────────────────────────────────────────────────
+
+export interface BagsClaimablePosition {
+  tokenMint: string;
+  poolAddress: string;
+  feeClaimer: string;
+  claimableSol: number;
+  claimableTokens: number;
+}
+
+export interface BagsClaimTransactionsV3Request {
+  feeClaimer: string;
+  tokenMint: string;
+  wallet?: string;
+}
+
+export interface BagsClaimTransaction {
+  tx: string;
+  blockhash?: string;
+  encoding?: "base58" | "base64";
+  description?: string;
+}
+
+// ── GET helper ────────────────────────────────────────────────────────────────
+
+async function bagsGetFetch<T>(
+  path: string,
+  params: Record<string, string>,
+): Promise<BagsResult<T>> {
+  const config = getConfig();
+  if ("error" in config) return { success: false, error: config.error };
+
+  const { base, apiKey, timeoutMs } = config.response;
+  const qs = new URLSearchParams(params).toString();
+  const url = `${base}${path}${qs ? `?${qs}` : ""}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "x-api-key": apiKey,
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    const data = await readJsonOrText(res);
+    const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: {
+          code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
+          message: sanitizeUpstreamError(record?.error ?? record?.message ?? data),
+          details: { status: res.status, statusText: res.statusText },
+        },
+      };
+    }
+
+    if (record?.success === false) {
+      return {
+        success: false,
+        error: {
+          code: "UPSTREAM_BAD_RESPONSE",
+          message: sanitizeUpstreamError(record.error),
+        },
+      };
+    }
+
+    return {
+      success: true,
+      response: (record && "response" in record ? record.response : data) as T,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: "UPSTREAM_REQUEST_FAILED",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "Bags API request timed out"
+            : "Bags API request failed",
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+
 function sanitizeUpstreamError(value: unknown): string {
   if (!value) return "Bags API request failed";
   if (typeof value === "string") return value.slice(0, 500);
@@ -299,4 +393,16 @@ export async function createLaunchTransaction(
     "/token-launch/create-launch-transaction",
     req,
   );
+}
+
+export async function getClaimablePositions(
+  wallet: string,
+): Promise<BagsResult<BagsClaimablePosition[]>> {
+  return bagsGetFetch<BagsClaimablePosition[]>("/fee-share/user-positions", { wallet });
+}
+
+export async function getClaimTransactionsV3(
+  req: BagsClaimTransactionsV3Request,
+): Promise<BagsResult<BagsClaimTransaction[]>> {
+  return bagsJsonFetch<BagsClaimTransaction[]>("/fee-share/claim-v3", req);
 }

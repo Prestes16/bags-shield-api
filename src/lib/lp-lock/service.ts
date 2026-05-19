@@ -1,8 +1,10 @@
 /**
- * LP Lock Service — pool detection, status tracking, Supabase persistence.
+ * LP lock service.
+ *
+ * This module only tracks launch intents and verifies observable pool data.
+ * It does not create custody, does not sign transactions, and does not mark
+ * liquidity as locked unless a real protocol locker can be verified.
  */
-
-// ── Types ────────────────────────────────────────────────────────────────
 
 export type LpLockStatus =
   | "awaiting_pool"
@@ -10,6 +12,7 @@ export type LpLockStatus =
   | "lock_pending"
   | "locked"
   | "failed"
+  | "withdrawn"
   | "not_requested";
 
 export interface LpLockRecord {
@@ -26,18 +29,22 @@ export interface LpLockRecord {
   updatedAt: string;
 }
 
-// ── Supabase helpers ─────────────────────────────────────────────────────
+export interface DetectedPool {
+  poolAddress: string;
+  poolType: "orca" | "meteora" | "raydium";
+  liquidityUsd: number;
+}
+
+const SUPPORTED_DEXES = ["orca", "meteora", "raydium"] as const;
 
 function supabaseHeaders(): Record<string, string> | null {
-  const url = process.env.SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!process.env.SUPABASE_URL || !key) return null;
+
   return {
     apikey: key,
     authorization: `Bearer ${key}`,
     "content-type": "application/json",
-    prefer: "return=representation",
   };
 }
 
@@ -47,67 +54,33 @@ function supabaseUrl(table: string): string | null {
   return `${url.replace(/\/+$/, "")}/rest/v1/${table}`;
 }
 
-// ── Pool detection (DexScreener) ─────────────────────────────────────────
-
-const SUPPORTED_DEXES = ["orca", "meteora", "raydium"] as const;
-
-export async function detectPoolForMint(mint: string): Promise<{
-  poolAddress: string;
-  poolType: "orca" | "meteora" | "raydium";
-  liquidityUsd: number;
-} | null> {
-  try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${mint}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!res.ok) return null;
-
-    const data = (await res.json()) as {
-      pairs?: Array<{
-        chainId: string;
-        dexId: string;
-        pairAddress: string;
-        liquidity?: { usd?: number };
-      }>;
-    };
-
-    if (!data.pairs?.length) return null;
-
-    const solanaPairs = data.pairs
-      .filter(
-        (p) =>
-          p.chainId === "solana" &&
-          SUPPORTED_DEXES.includes(p.dexId as (typeof SUPPORTED_DEXES)[number])
-      )
-      .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
-
-    if (solanaPairs.length === 0) return null;
-
-    const best = solanaPairs[0];
-    return {
-      poolAddress: best.pairAddress,
-      poolType: best.dexId as "orca" | "meteora" | "raydium",
-      liquidityUsd: best.liquidity?.usd ?? 0,
-    };
-  } catch {
-    return null;
-  }
+function toRecord(row: Record<string, unknown>): LpLockRecord {
+  return {
+    mint: String(row.mint ?? ""),
+    wallet: String(row.wallet ?? ""),
+    lockDays: Number(row.lock_days ?? 0),
+    status: String(row.status ?? "not_requested") as LpLockStatus,
+    poolAddress: row.pool_address ? String(row.pool_address) : undefined,
+    poolType: row.pool_type
+      ? (String(row.pool_type) as "orca" | "meteora" | "raydium")
+      : undefined,
+    lockTxSignature: row.lock_tx_signature ? String(row.lock_tx_signature) : undefined,
+    lockerProgram: row.locker_program ? String(row.locker_program) : undefined,
+    lockedLiquidityUsd:
+      row.locked_liquidity_usd == null ? undefined : Number(row.locked_liquidity_usd),
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? ""),
+  };
 }
 
-// ── Status persistence (Supabase) ────────────────────────────────────────
-
-export async function updateLpLockStatus(
+function buildRow(
   mint: string,
   status: LpLockStatus,
-  extra?: Partial<LpLockRecord>
-): Promise<void> {
-  const base = supabaseUrl("lp_lock_status");
-  const headers = supabaseHeaders();
-  if (!base || !headers) return;
-
+  extra?: Partial<LpLockRecord>,
+): Record<string, unknown> {
   const now = new Date().toISOString();
-  const row: Record<string, unknown> = {
+
+  return {
     mint,
     status,
     updated_at: now,
@@ -122,61 +95,173 @@ export async function updateLpLockStatus(
     }),
     ...(extra?.createdAt && { created_at: extra.createdAt }),
   };
-
-  // Upsert: if row with mint exists, update it; otherwise create
-  await fetch(`${base}?mint=eq.${mint}`, {
-    method: "PATCH",
-    headers: { ...headers, prefer: "return=minimal" },
-    body: JSON.stringify(row),
-  }).then(async (res) => {
-    // If PATCH returned 0 rows (404 or empty), INSERT instead
-    if (!res.ok || res.status === 404) {
-      row.created_at = row.created_at ?? now;
-      await fetch(base, {
-        method: "POST",
-        headers: { ...headers, prefer: "return=minimal" },
-        body: JSON.stringify(row),
-      });
-    }
-  });
 }
 
-export async function getLpLockStatus(
-  mint: string
-): Promise<LpLockRecord | null> {
+export function getLpLockCapabilities() {
+  return {
+    providerConfigured: false,
+    provider: null as string | null,
+    canGenerateLockTransaction: false,
+    canWithdraw: false,
+    canExtendOnChain: false,
+    mode: "monitor_only" as const,
+    message:
+      "Real protocol LP locking is not configured. Bags Shield can monitor pool creation and fee claims, but will not simulate LP custody.",
+  };
+}
+
+export async function detectPoolForMint(mint: string): Promise<DetectedPool | null> {
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, {
+      signal: AbortSignal.timeout(8000),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as {
+      pairs?: Array<{
+        chainId: string;
+        dexId: string;
+        pairAddress: string;
+        liquidity?: { usd?: number };
+      }>;
+    };
+
+    const pairs = data.pairs ?? [];
+    const solanaPairs = pairs
+      .filter(
+        (pair) =>
+          pair.chainId === "solana" &&
+          SUPPORTED_DEXES.includes(pair.dexId as (typeof SUPPORTED_DEXES)[number]) &&
+          pair.pairAddress,
+      )
+      .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+
+    const best = solanaPairs[0];
+    if (!best) return null;
+
+    return {
+      poolAddress: best.pairAddress,
+      poolType: best.dexId as "orca" | "meteora" | "raydium",
+      liquidityUsd: best.liquidity?.usd ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getLpLockStatus(mint: string): Promise<LpLockRecord | null> {
   const base = supabaseUrl("lp_lock_status");
   const headers = supabaseHeaders();
   if (!base || !headers) return null;
 
   try {
-    const res = await fetch(`${base}?mint=eq.${mint}&limit=1`, {
+    const res = await fetch(`${base}?mint=eq.${encodeURIComponent(mint)}&limit=1`, {
       headers: { ...headers, prefer: "return=representation" },
+      cache: "no-store",
     });
     if (!res.ok) return null;
-    const rows = (await res.json()) as Array<Record<string, unknown>>;
-    if (!rows.length) return null;
 
-    const r = rows[0];
-    return {
-      mint: String(r.mint),
-      wallet: String(r.wallet ?? ""),
-      lockDays: Number(r.lock_days ?? 0),
-      status: String(r.status ?? "not_requested") as LpLockStatus,
-      poolAddress: r.pool_address ? String(r.pool_address) : undefined,
-      poolType: r.pool_type
-        ? (String(r.pool_type) as "orca" | "meteora" | "raydium")
-        : undefined,
-      lockTxSignature: r.lock_tx_signature
-        ? String(r.lock_tx_signature)
-        : undefined,
-      lockerProgram: r.locker_program ? String(r.locker_program) : undefined,
-      lockedLiquidityUsd: r.locked_liquidity_usd
-        ? Number(r.locked_liquidity_usd)
-        : undefined,
-      createdAt: String(r.created_at ?? ""),
-      updatedAt: String(r.updated_at ?? ""),
-    };
+    const rows = (await res.json()) as Array<Record<string, unknown>>;
+    return rows[0] ? toRecord(rows[0]) : null;
   } catch {
     return null;
   }
+}
+
+export async function updateLpLockStatus(
+  mint: string,
+  status: LpLockStatus,
+  extra?: Partial<LpLockRecord>,
+): Promise<LpLockRecord | null> {
+  const base = supabaseUrl("lp_lock_status");
+  const headers = supabaseHeaders();
+  if (!base || !headers) return null;
+
+  const now = new Date().toISOString();
+  const existing = await getLpLockStatus(mint);
+  const row = buildRow(mint, status, {
+    ...extra,
+    createdAt: existing?.createdAt || extra?.createdAt || now,
+  });
+
+  if (existing) {
+    const res = await fetch(`${base}?mint=eq.${encodeURIComponent(mint)}`, {
+      method: "PATCH",
+      headers: { ...headers, prefer: "return=representation" },
+      body: JSON.stringify(row),
+      cache: "no-store",
+    });
+
+    if (!res.ok) return existing;
+    const rows = (await res.json().catch(() => [])) as Array<Record<string, unknown>>;
+    return rows[0] ? toRecord(rows[0]) : { ...existing, ...extra, status };
+  }
+
+  const res = await fetch(base, {
+    method: "POST",
+    headers: { ...headers, prefer: "return=representation" },
+    body: JSON.stringify(row),
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+  const rows = (await res.json().catch(() => [])) as Array<Record<string, unknown>>;
+  return rows[0] ? toRecord(rows[0]) : null;
+}
+
+export async function listLpLocksForWallet(wallet: string): Promise<LpLockRecord[]> {
+  const base = supabaseUrl("lp_lock_status");
+  const headers = supabaseHeaders();
+  if (!base || !headers) return [];
+
+  try {
+    const url = `${base}?wallet=eq.${encodeURIComponent(wallet)}&order=created_at.desc&limit=50`;
+    const res = await fetch(url, { headers, cache: "no-store" });
+    if (!res.ok) return [];
+
+    const rows = (await res.json()) as Array<Record<string, unknown>>;
+    return rows.map(toRecord);
+  } catch {
+    return [];
+  }
+}
+
+export function enrichLpLockRecord(record: LpLockRecord) {
+  const lockUntil =
+    record.createdAt && record.lockDays > 0
+      ? new Date(
+          new Date(record.createdAt).getTime() + record.lockDays * 86_400_000,
+        ).toISOString()
+      : null;
+
+  const now = Date.now();
+  const lockUntilMs = lockUntil ? new Date(lockUntil).getTime() : 0;
+  const daysRemaining = lockUntil
+    ? Math.max(0, Math.ceil((lockUntilMs - now) / 86_400_000))
+    : 0;
+
+  const canWithdraw =
+    record.status === "locked" && lockUntilMs > 0 && lockUntilMs <= now;
+  const canExtend = record.status === "locked" && !canWithdraw;
+
+  // monitor_only mode — no real on-chain lock provider configured
+  const canGenerateLockTx = false;
+  const lockProviderAvailable = false;
+  const lockMode = "monitor_only" as const;
+  const providerMessage =
+    "Real protocol LP locking is not configured. " +
+    "Bags Shield monitors pool creation and fee claims but will not simulate LP custody.";
+
+  return {
+    ...record,
+    lockUntil,
+    daysRemaining,
+    canWithdraw,
+    canExtend,
+    canGenerateLockTx,
+    lockProviderAvailable,
+    lockMode,
+    providerMessage,
+  };
 }

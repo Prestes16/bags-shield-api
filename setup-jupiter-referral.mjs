@@ -7,10 +7,10 @@
  * ──────────────────────────────────────────────────────────────────────────
  * COMO RODAR:
  *
- *   node setup-jupiter-referral.mjs <PRIVATE_KEY_BASE58>
+ *   node setup-jupiter-referral.mjs <PAYER_KEYPAIR_BASE58>
  *   node setup-jupiter-referral.mjs C:\Users\cleit\keypair.json
  *
- * <PRIVATE_KEY> pode ser a chave do fee collector (7ZybPucn...) ou qualquer
+ * <PAYER_KEYPAIR_BASE58> pode ser a chave do fee collector (7ZybPucn...) ou qualquer
  * wallet com SOL suficiente para pagar o rent (~0.01 SOL total).
  *
  * Após rodar, copie o JUPITER_REFERRAL_ACCOUNT exibido e adicione nas
@@ -37,8 +37,12 @@ const JUPITER_PROJECT      = new PublicKey('DkiqsTrw1u1bYFumumC7sCG2S8K25qc2vemJ
 const FEE_COLLECTOR_OWNER  = new PublicKey('7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi');
 const REFERRAL_NAME        = 'bagsshield';
 
-const RPC_URL = process.env.SOLANA_RPC_URL
-  || 'https://mainnet.helius-rpc.com/?api-key=a6eb98dd-5471-4849-b03f-6cf777f11f09';
+const RPC_URL = process.env.SOLANA_RPC_URL;
+
+if (!RPC_URL) {
+  console.error('Defina SOLANA_RPC_URL antes de rodar este script.');
+  process.exit(1);
+}
 
 // Mints que Jupiter Ultra usa para coletar fees (priority list aproximada)
 const FEE_MINTS = [
@@ -72,7 +76,7 @@ if (!arg) {
   console.error('');
   console.error('❌  Informe a chave privada ou caminho do keypair.');
   console.error('');
-  console.error('   node setup-jupiter-referral.mjs <PRIVATE_KEY_BASE58>');
+  console.error('   node setup-jupiter-referral.mjs <PAYER_KEYPAIR_BASE58>');
   console.error('   node setup-jupiter-referral.mjs C:\\Users\\cleit\\keypair.json');
   console.error('');
   process.exit(1);
@@ -246,4 +250,4 @@ console.log('  3. Redeploy o projeto');
 console.log('  4. Faça um swap de teste e confirme as fees no Solscan');
 console.log('');
 console.log('  Referral dashboard: https://referral.jup.ag/');
-console.log('═══════════════════════════════════════════════════════════════');
+console.log('════════════════════════════════════════════════════
