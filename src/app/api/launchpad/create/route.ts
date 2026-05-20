@@ -490,17 +490,3 @@ export async function GET() {
     405
   );
 }
-  });
-}
-
-export async function GET() {
-  return jsonNoStore(
-    {
-      success: false,
-      error: "METHOD_NOT_ALLOWED",
-      message: "Use POST to create a launch",
-      allowed: ["POST", "OPTIONS"],
-    },
-    405
-  );
-}
