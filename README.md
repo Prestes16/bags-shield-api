@@ -31,6 +31,16 @@ showing hands-on experience with:
 - **Network:** Solana (Bags ecosystem + token launches)
 - **Infra:** Vercel Functions (Hobby plan, Node.js 20)
 
+### Current source of truth
+
+For the current product state, roadmap and security language, use:
+
+- [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
+- [docs/ROADMAP_TRANSPARENTE.md](docs/ROADMAP_TRANSPARENTE.md)
+- [docs/SECURITY_TRANSPARENCY.md](docs/SECURITY_TRANSPARENCY.md)
+
+Do not use older claims such as "100% ready", "unique on Solana" or fixed route counts without checking those documents first.
+
 ### Observações (Release Candidate)
 
 - **Imports ESM ajustados para Node 20 no Vercel** (sem `ERR_MODULE_NOT_FOUND`).
@@ -69,7 +79,7 @@ Typical output:
 
 ---
 
-### Apply / decision - `POST /api/apply`
+### Apply / decision - roadmap
 
 Takes the result of a scan/simulation and applies decision rules, such as:
 
@@ -77,32 +87,33 @@ Takes the result of a scan/simulation and applies decision rules, such as:
 - require extra confirmation;
 - log events for audit/compliance.
 
-This endpoint is designed to be **idempotent** and safe to call from both wallets and backend services.
+This is a roadmap capability. Do not document `/api/apply` as a current production route unless it exists in `src/app/api`.
 
 ---
 
-## Token intelligence - `/api/token/*`
+## Token intelligence - Bags API routes
 
 Integration with the public **Bags** API to enrich security context:
 
-- `GET /api/token/:mint/creators` - list creators for a given mint;
-- `GET /api/token/:mint/lifetime-fees` - return total lifetime fees for a token (in lamports and SOL).
+- Launchpad and fee-claim routes call Bags server-side where implemented.
+- Some older `/api/token/*` examples are historical and should be verified against `src/app/api` before use.
 
 These endpoints feed risk indicators and metadata in the Bags Shield app.
 
 ---
 
-## Bags launch integration - `POST /api/bags/create-config`
+## Bags launch integration - Launchpad beta
 
-Proxy to Bags `token-launch/create-config`.
+The active Launchpad beta uses routes under `/api/launchpad/*`, including token info, fee quote, create config, create launch transaction and send. The flow is implemented locally but still needs controlled real Bags validation before production-ready claims.
 
 **Request example:**
 
 ```json
 {
-  "launchWallet": "RequiredSolanaPubkey",
-  "tipWallet": "OptionalTipPubkey",
-  "tipLamports": 1000000
+  "payer": "CreatorSolanaPubkey",
+  "baseMint": "TokenMint",
+  "claimersArray": ["CreatorSolanaPubkey"],
+  "basisPointsArray": [10000]
 }
 ```
 
@@ -112,8 +123,7 @@ Proxy to Bags `token-launch/create-config`.
 {
   "success": true,
   "response": {
-    "configKey": "BagsConfigPubkey",
-    "tx": "Base64EncodedTransactionToSignOrNull"
+    "configKey": "BagsConfigPubkey"
   },
   "meta": {
     "requestId": "example-id",
@@ -127,7 +137,7 @@ Proxy to Bags `token-launch/create-config`.
 Behavior:
 
 - Validates input (for example: public key format, non-empty body);
-- Injects `x-api-key` and `Authorization: Bearer ...` using `BAGS_API_KEY`;
+- Injects `x-api-key` server-side using `BAGS_API_KEY`;
 - Normalizes upstream Bags errors into the common `{ success, error, meta }` envelope.
 
 ---
@@ -207,6 +217,7 @@ Bags Shield is built with a **fail-closed** mindset: if data cannot be trusted, 
 > We do not claim "anti-scam guarantee".
 > Bags Shield is a risk intelligence layer: it helps users decide faster with better signals.
 > Safety is probabilistic; we continuously harden defenses and publish changes.
+> Bags Shield verifies native protocol LP lock when evidence exists; it does not execute LP lock.
 
 ### Responsible disclosure
 See [SECURITY.md](./SECURITY.md).
