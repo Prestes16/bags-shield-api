@@ -132,26 +132,37 @@ async function fetchDlmmPair(
 }
 
 // ---------------------------------------------------------------------------
-// Core: search for any DLMM pair that involves the given mint
+// Core: resolve pool address from DexScreener when none is provided
 // ---------------------------------------------------------------------------
 
-async function searchDlmmPairsForMint(mint: string): Promise<DlmmPairResponse | null> {
-  // The /pair/all endpoint returns all pairs (large payload) — we only use it
-  // if we don't have a poolAddress. We filter client-side.
-  const result = await dlmmGet<DlmmPairResponse[]>("/pair/all");
-  if (!result.ok || !Array.isArray(result.data)) return null;
-
-  const matches = result.data.filter(
-    (p) => p.mint_x === mint || p.mint_y === mint,
-  );
-
-  // Prefer the pair with the highest liquidity
-  if (matches.length === 0) return null;
-  return matches.reduce((best, curr) => {
-    const bLiq = parseFloat(best.liquidity ?? "0");
-    const cLiq = parseFloat(curr.liquidity ?? "0");
-    return cLiq > bLiq ? curr : best;
-  }, matches[0]);
+async function resolvePoolAddressFromDexScreener(mint: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(
+        `https://api.dexscreener.com/latest/dex/tokens/${mint}`,
+        { signal: controller.signal, cache: "no-store" },
+      );
+      if (!res.ok) return null;
+      const data = (await res.json()) as {
+        pairs?: Array<{ chainId: string; dexId: string; pairAddress: string; liquidity?: { usd?: number } }>;
+      };
+      const pairs = (data.pairs ?? [])
+        .filter(
+          (p) =>
+            p.chainId === "solana" &&
+            /meteora/i.test(p.dexId) &&
+            p.pairAddress,
+        )
+        .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+      return pairs[0]?.pairAddress ?? null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -274,8 +285,12 @@ export async function getMeteoraDbcLockState(
       }
     }
 
-    // 2. Fall back to searching all pairs by mint
-    const pair = await searchDlmmPairsForMint(mint);
+    // 2. No pool address or direct lookup failed — resolve via DexScreener
+    //    (avoids the expensive /pair/all payload which times out in serverless)
+    const resolved = await resolvePoolAddressFromDexScreener(mint);
+    if (!resolved) return NONE;
+
+    const pair = await fetchDlmmPair(resolved);
     if (!pair) return NONE;
 
     return deriveLockState(pair, "dlmm_pair_estimate");
