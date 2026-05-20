@@ -25,6 +25,8 @@ import {
 import { getLaunchFee, getTreasuryWallet } from "@/lib/solana/fees";
 import { updateLpLockStatus } from "@/lib/lp-lock/service";
 import { verifyToken } from "@/lib/auth/jwt";
+import { buildLaunchpadFeeShare } from "@/lib/launchpad/fees";
+import { createFeeShareConfig } from "@/lib/launchpad/bags-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -373,25 +375,20 @@ export async function POST(req: NextRequest) {
   }
 
   // Bags.fm fee share registration (fire-and-forget, do not block the response)
-  const bagsApiKey = process.env.BAGS_API_KEY;
-  if (bagsApiKey && walletStr) {
+  // Uses createFeeShareConfig (bags-client) + buildLaunchpadFeeShare (fees) so the
+  // correct fields (payer, baseMint, claimersArray, basisPointsArray) are sent and
+  // the treasury wallet (7ZybP…) is included as a claimer with its BPS share.
+  const bagsConfigured = Boolean(process.env.BAGS_API_KEY && process.env.BAGS_API_BASE);
+  if (bagsConfigured && walletStr) {
     (async () => {
       try {
-        await fetch(
-          "https://public-api-v2.bags.fm/api/v1/fee-share/config",
-          {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              "x-api-key": bagsApiKey,
-            },
-            body: JSON.stringify({
-              launchWallet: walletStr,
-              feeShareWallet: treasuryStr ?? walletStr,
-            }),
-            signal: AbortSignal.timeout(5000),
-          }
-        );
+        const feeShare = buildLaunchpadFeeShare(walletStr);
+        await createFeeShareConfig({
+          payer: walletStr,
+          baseMint: mint.toBase58(),
+          claimersArray: feeShare.claimersArray,
+          basisPointsArray: feeShare.basisPointsArray,
+        });
       } catch (e) {
         console.warn("[launchpad/create] Bags fee-share config skipped:", e);
       }
@@ -435,7 +432,7 @@ export async function POST(req: NextRequest) {
     launchFeeLamports: Number(getLaunchFee(allLayersActive)),
     shieldTier: allLayersActive,
     treasuryConfigured: Boolean(treasuryStr),
-    bagsFeeshareEnrolled: Boolean(bagsApiKey),
+    bagsFeeshareEnrolled: bagsConfigured,
   };
 
   return jsonNoStore({
@@ -479,6 +476,20 @@ export async function OPTIONS() {
       "access-control-allow-methods": "POST, OPTIONS",
       "access-control-allow-headers": "content-type",
     },
+  });
+}
+
+export async function GET() {
+  return jsonNoStore(
+    {
+      success: false,
+      error: "METHOD_NOT_ALLOWED",
+      message: "Use POST to create a launch",
+      allowed: ["POST", "OPTIONS"],
+    },
+    405
+  );
+}
   });
 }
 
