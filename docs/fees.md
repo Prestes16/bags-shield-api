@@ -1,46 +1,39 @@
-# Fees & Cost Splits (Bags Shield)
+# Fees & Cost Splits - Bags Shield
 
-## Fee formula
-```
-fee(amount) = clamp(fee_base + amount * fee_rate, fee_base, fee_cap)
-```
+**Status:** beta documentation
+**Last reviewed:** 2026-05-20
 
-- `amount`: volume da operação (ex.: em SOL ou USD-equivalente)
-- `fee_base`: mínimo por transação (anti-spam / custo fixo)
-- `fee_rate`: taxa proporcional
-- `fee_cap`: teto (pra não punir whale)
+Fees must be explicit before the user signs. Do not mix Swap fees with Launchpad fees.
 
-## Split por carteiras (separação de cofres)
-Objetivo: separar claramente "fundos do projeto" vs "custos operacionais".
+## Revenue Categories
 
-### Vaults
-- **Treasury** (fundos do projeto / runway / reserva)
-- **Ops** (infra: host, server, observabilidade, domínios, APIs)
-- **Payroll** (equipe / dev / auditorias / contractors)
-- **Community** (incentivos, grants, recompensas, campanhas)
+| Category | Status | Notes |
+|---|---|---|
+| SWAP_FEE | Implemented, needs real audit | Jupiter/swap fee path is separate. Do not change or describe it as Launchpad revenue. |
+| LAUNCHPAD_SERVICE_FEE | Partial / beta | Fee quote and tip flow exist. Mark verified only when visible in a real signed transaction. |
+| BAGS_FEE_SHARE | Partial / beta | Fee-share config exists. Mark verified only with Bags response/config and later on-chain evidence. |
+| VERIFIED_UPSELL | Partial / beta | Must be included in the real fee quote/transaction before being described as charged. |
+| NETWORK_COST / RENT_COST | Estimate unless simulated | Must be labeled as estimate if not returned by RPC/simulation. |
+| UI_ONLY | Not acceptable as fee claim | Remove or label clearly as estimate/roadmap. |
 
-### Split inicial sugerido
-- 55% Treasury
-- 20% Ops
-- 15% Payroll
-- 10% Community
+## Launchpad Beta Defaults
 
-## Creator cut (opcional)
-Antes do split acima:
-- `creator_cut = X%` da fee total (ex.: 0–20%)
-- restante entra no split padrão
+Current intended beta model:
 
-## Governança e segurança
-- Preferência por **multisig** (Treasury, Community, Ops)
-- Limites mensais (Ops/Payroll)
-- Signer frio para Treasury
-- Transparência: relatório periódico de entradas/saídas
+- Base fee: `0.020 SOL`
+- Verified fee: `0.030 SOL` when enabled/selected
+- Liquidity proportional fee: marginal tier calculation in lamports, capped in beta
+- Treasury wallet: documented server-side via `LAUNCHPAD_TREASURY_WALLET`
+- Fee-share target: creator 9500 bps / Bags Shield 500 bps when enabled
 
-## Exemplo numérico
-Se fee total = 0.010 SOL e creator_cut = 10%:
-- 0.001 SOL para Creator
-- 0.009 SOL split:
-  - Treasury: 0.00495
-  - Ops: 0.00180
-  - Payroll: 0.00135
-  - Community: 0.00090
+## Security Rules
+
+- No hidden fees.
+- No fee claim without transaction/config evidence.
+- Backend never signs user transactions.
+- Frontend wallet signs user transactions.
+- Server-side keys and private keys must never appear in frontend.
+
+## Roadmap / Future
+
+Multisig treasury splits, ops/payroll/community vaults, periodic reporting and governance are future operational design items unless implemented and approved.

@@ -105,14 +105,15 @@ function buildRow(
 
 export function getLpLockCapabilities() {
   return {
-    providerConfigured: false,
-    provider: null as string | null,
+    providerConfigured: true,
+    provider: "meteora_dbc" as const,
+    lockProvider: "meteora_dbc" as const,
+    lockMode: "native_protocol" as const,
     canGenerateLockTransaction: false,
     canWithdraw: false,
     canExtendOnChain: false,
-    mode: "monitor_only" as const,
     message:
-      "Real protocol LP locking is not configured. Bags Shield can monitor pool creation and fee claims, but will not simulate LP custody.",
+      "LP locked automatically by Meteora DBC after graduation. Bags Shield reads and verifies the on-chain lock state.",
   };
 }
 
@@ -251,13 +252,19 @@ export function enrichLpLockRecord(record: LpLockRecord) {
     record.status === "locked" && lockUntilMs > 0 && lockUntilMs <= now;
   const canExtend = record.status === "locked" && !canWithdraw;
 
-  // monitor_only mode — no real on-chain lock provider configured
+  // native_protocol mode — Meteora DBC handles the lock automatically on graduation
   const canGenerateLockTx = false;
-  const lockProviderAvailable = false;
-  const lockMode = "monitor_only" as const;
+  const lockProviderAvailable = true;
+  const lockProvider = "meteora_dbc" as const;
+  const lockMode = "native_protocol" as const;
+  const migrationStatus = (
+    record.status === "locked" ? "migrated" :
+    record.poolAddress ? "migrated" :
+    "unknown"
+  ) as "migrated" | "unknown";
+  const verified = false; // overridden to true by enrichLpLockRecordWithOnChainData when confirmed
   const providerMessage =
-    "Real protocol LP locking is not configured. " +
-    "Bags Shield monitors pool creation and fee claims but will not simulate LP custody.";
+    "Auto-lock via Meteora DBC — LP locked automatically by the protocol after graduation.";
 
   return {
     ...record,
@@ -267,7 +274,10 @@ export function enrichLpLockRecord(record: LpLockRecord) {
     canExtend,
     canGenerateLockTx,
     lockProviderAvailable,
+    lockProvider,
     lockMode,
+    migrationStatus,
+    verified,
     providerMessage,
   };
 }
@@ -301,9 +311,12 @@ export async function enrichLpLockRecordWithOnChainData(record: LpLockRecord) {
         ? "locked"
         : record.status) as LpLockStatus,
       lockedLiquidityUsd: onChain.lockedLiquidityUsd ?? base.lockedLiquidityUsd,
+      lockProvider: "meteora_dbc" as const,
       lockMode: onChain.lockMode,
       lockProviderAvailable: true,
       canGenerateLockTx: false, // LP already locked automatically — no new TX needed
+      migrationStatus: "migrated" as const,
+      verified: onChain.verified,
       providerMessage: onChain.message,
       // On-chain enrichments
       onChain: {
@@ -314,6 +327,7 @@ export async function enrichLpLockRecordWithOnChainData(record: LpLockRecord) {
         lockedLiquidityUsd: onChain.lockedLiquidityUsd,
         claimableSol: onChain.claimableSol,
         source: onChain.source,
+        verified: onChain.verified,
       },
     };
   } catch {

@@ -233,8 +233,8 @@ def main():
     # Diferenciais em tabela
     diff_data = [
         ["Diferencial", "Descrição", "Impacto"],
-        ["ZK-Proof Scanner", "Verificação matemática de contratos inteligentes", "100% auditável"],
-        ["AI Predictive Shield", "Modelo de ML treinado com 50k+ rug pulls", "95% precisão"],
+        ["Evidence-Based Scanner", "Verificacao baseada em fontes e cobertura", "Beta"],
+        ["Monitoring Roadmap", "Alertas e modelos avancados planejados", "Roadmap"],
         ["On-Chain Registry", "Blacklist descentralizada de tokens maliciosos", "Imutável"],
         ["Real-time Monitoring", "Análise contínua de liquidez e holders", "< 30s alerta"],
     ]
@@ -276,7 +276,7 @@ def main():
     
     story.append(Paragraph("2. Camada de Análise (Analysis Layer)", heading2))
     story.append(Paragraph(
-        "• Motor de scoring com 50+ indicadores de risco<br/>"
+        "• Motor de scoring com indicadores auditaveis a serem publicados em matriz tecnica<br/>"
         "• Integração com Jupiter Aggregator para dados de mercado<br/>"
         "• Sistema de reputação de wallets baseado em histórico",
         body_text
@@ -310,7 +310,7 @@ def main():
     
     story.append(Paragraph("AI Predictive Shield — Prevenção Proativa", heading2))
     story.append(Paragraph(
-        "Nosso modelo de machine learning foi treinado com mais de 50.000 casos reais de rug pulls "
+        "Modelos preditivos e automacoes de monitoramento sao roadmap. "
         "na Solana, identificando padrões sutis que scanners estáticos não detectam. O sistema "
         "atualiza seus pesos automaticamente a cada novo incidente reportado pela comunidade.",
         body_text

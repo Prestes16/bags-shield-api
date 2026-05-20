@@ -1,89 +1,48 @@
-# 🚀 Bags Shield Launchpad
+# Bags Shield Launchpad
 
-Sistema completo de lançamento de tokens com validação de segurança integrada.
+**Status:** partial / beta
+**Last reviewed:** 2026-05-20
 
-## Status
+The Launchpad is integrated with the Bags Launch v2 flow in the local codebase, but it must not be documented as fully complete or production-ready until controlled real Bags and wallet tests are attached.
 
-✅ **Totalmente Integrado e Funcional**
+## Current State
 
-- ✅ UI completa e navegável
-- ✅ Chamadas de API reais
-- ✅ Integração com Bags API
-- ✅ Validação de segurança
-- ✅ Histórico local
-- ✅ Documentação completa
+Implemented locally:
 
-## Acesso Rápido
+- Token info / metadata route.
+- Image upload or public image URL flow.
+- Fee quote route.
+- Bags fee-share config route.
+- Create launch transaction route returning an unsigned transaction.
+- Send route for already signed transactions.
+- Frontend Launchpad page and step flow.
+- LP lock status UI in monitor/verification mode.
 
-- **Landing**: `/launchpad`
-- **Criar Token**: `/launchpad/create`
-- **Histórico**: `/launchpad/history`
-- **Token**: `/launchpad/[mint]`
+Needs real validation:
 
-## Configuração Rápida
+- Real Bags upstream responses in production.
+- Wallet signing behavior with the returned launch transaction.
+- Fee collection and fee-share audit from real config/transaction data.
+- No unauthorized mainnet launch during testing.
 
-```bash
-# .env
-LAUNCHPAD_ENABLED=true
-LAUNCHPAD_MODE=real
-BAGS_API_KEY=sua-chave
-```
+## LP Lock Narrative
 
-Veja [SETUP.md](./SETUP.md) para detalhes.
+Bags Shield does not execute LP lock.
 
-## Fluxo Completo
+The Launchpad may record lock intent and check native protocol evidence later. For Meteora DBC, Bags Shield can verify protocol/native lock evidence when available. States such as `pending`, `unknown`, `pool_detected`, `monitor_only` or `unverified` are not Verified.
 
-1. **Dashboard** → Botão "Launchpad"
-2. **Landing** → "Create Token"
-3. **Create** → Preencher formulário (auto-save)
-4. **Review** → Preflight → Criar Token → Criar Config → Scan → Manifest → Launch
-5. **Token Page** → Ver Shield Proof completo
-6. **History** → Listar todos os tokens
+## Documentation
 
-## Documentação
+- [API.md](./API.md)
+- [SETUP.md](./SETUP.md)
+- [INTEGRATION.md](./INTEGRATION.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [THREAT_MODEL.md](./THREAT_MODEL.md)
+- [HARDENING.md](./HARDENING.md)
+- [TESTING.md](./TESTING.md)
 
-- [API.md](./API.md) - Documentação completa da API
-- [SETUP.md](./SETUP.md) - Guia de configuração
-- [INTEGRATION.md](./INTEGRATION.md) - Guia de integração
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitetura do sistema
-- [THREAT_MODEL.md](./THREAT_MODEL.md) - Modelo de ameaças
-- [HARDENING.md](./HARDENING.md) - Hardening e segurança
-- [TESTING.md](./TESTING.md) - Guia de testes
+Project-wide source of truth:
 
-## Features
-
-### Segurança
-
-- ✅ Validação strict de schemas
-- ✅ Anti-SSRF em URLs
-- ✅ Rate limiting
-- ✅ Security headers
-- ✅ Logs sanitizados
-- ✅ Feature flags
-
-### Funcionalidades
-
-- ✅ Criação de token via Bags API
-- ✅ Configuração de launch
-- ✅ Preflight validation
-- ✅ Shield score real
-- ✅ Manifest com hash e assinatura
-- ✅ Histórico persistente
-
-### UI/UX
-
-- ✅ Navegação integrada
-- ✅ Auto-save de drafts
-- ✅ Loading states
-- ✅ Error handling amigável
-- ✅ Design consistente
-
-## Próximos Passos
-
-1. Configure as variáveis de ambiente (veja SETUP.md)
-2. Acesse `/launchpad` no app
-3. Crie seu primeiro token!
-
----
-
-**Desenvolvido com segurança por padrão** 🛡️
+- [../CURRENT_STATE.md](../CURRENT_STATE.md)
+- [../ROADMAP_TRANSPARENTE.md](../ROADMAP_TRANSPARENTE.md)
+- [../SECURITY_TRANSPARENCY.md](../SECURITY_TRANSPARENCY.md)

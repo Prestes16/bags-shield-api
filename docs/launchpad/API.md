@@ -1,5 +1,7 @@
 # Launchpad API Documentation
 
+> **Status note (2026-05-20):** this document contains historical stub-mode examples. The active Launchpad is beta and should be checked against `src/app/api/launchpad/**/route.ts` plus `docs/CURRENT_STATE.md` before using any endpoint contract in production docs.
+
 ## Overview
 
 The Launchpad API provides secure endpoints for token creation and validation in the Bags Shield ecosystem. All endpoints follow strict security practices and return standardized responses.
@@ -19,8 +21,8 @@ The Launchpad can be enabled/disabled and run in different modes:
 
 ### Modes
 
-- **stub**: Returns mock responses without calling Bags API. Useful for testing and development.
-- **real**: Makes actual calls to Bags API. Requires `BAGS_API_KEY` and `BAGS_API_BASE` to be configured.
+- **stub**: Historical/dev behavior where present. Must never be marketed as a real launch.
+- **real**: Makes actual calls to Bags API where implemented. Requires server-side `BAGS_API_KEY` and relevant Launchpad env configuration.
 
 ## Authentication
 

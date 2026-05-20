@@ -3,643 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bags Shield — Plano Completo de Lançamento e Marketing</title>
+<title>Bags Shield - Plano de Lancamento e Marketing</title>
 <style>
 :root {
-  --bg: #080811; --bg1: #0D0D1A; --surface: rgba(255,255,255,0.05);
-  --border: rgba(255,255,255,0.08); --cyan: #4DD4FF; --purple: #9945FF;
-  --green: #00D68F; --red: #FF3B5C; --amber: #FFB340; --txt: #F0F0FF;
-  --txt2: #8888AA; --txt3: #666677; --radius: 1.25rem;
+  --bg:#080811; --bg1:#0d0d1a; --surface:rgba(255,255,255,.05);
+  --border:rgba(255,255,255,.10); --cyan:#4dd4ff; --purple:#9945ff;
+  --green:#00d68f; --red:#ff3b5c; --amber:#ffb340; --txt:#f0f0ff;
+  --txt2:#aaaac6; --txt3:#77778c; --radius:18px;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { box-sizing:border-box; }
 body {
-  background: var(--bg); color: var(--txt);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  line-height:1.6; padding: 2rem;
+  margin:0; background:var(--bg); color:var(--txt);
+  font-family:Segoe UI, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height:1.6; padding:32px;
 }
-.container { max-width: 1000px; margin: 0 auto; }
-h1 { color: var(--cyan); font-size: 2rem; margin-bottom: 0.5rem; }
-h2 { color: var(--purple); font-size: 1.4rem; margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-h3 { color: var(--amber); font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
-h4 { color: var(--cyan); font-size: 1rem; margin: 1.2rem 0 0.5rem; }
-p { margin-bottom: 1rem; color: var(--txt2); }
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.badge {
-  display: inline-block; padding: 4px 12px;
-  border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-right: 8px;
-}
-.badge-green { background: rgba(0,214,143,0.15); color: var(--green); }
-.badge-amber { background: rgba(255,179,64,0.15); color: var(--amber); }
-.badge-red { background: rgba(255,59,92,0.15); color: var(--red); }
-.badge-cyan { background: rgba(77,212,255,0.15); color: var(--cyan); }
-.status-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-.status-table th { text-align: left; padding: 10px; color: var(--cyan); border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-.status-table td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-.status-table tr:hover { background: rgba(255,255,255,0.02); }
-.timeline { position: relative; padding-left: 30px; }
-.timeline::before {
-  content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
-  width: 2px; background: linear-gradient(to bottom, var(--cyan), var(--purple));
-}
-.timeline-item { position: relative; margin-bottom: 1.5rem; }
-.timeline-item::before {
-  content: ''; position: absolute; left: -26px; top: 4px;
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--cyan); border: 2px solid var(--bg);
-}
-.timeline-item.done::before { background: var(--green); }
-.timeline-item.pending::before { background: var(--amber); }
-.timeline-item.future::before { background: var(--txt3); }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-.highlight { color: var(--cyan); font-weight: 600; }
-.warning { color: var(--amber); }
-.danger { color: var(--red); }
-.success { color: var(--green); }
-ul { margin-left: 1.5rem; margin-bottom: 1rem; }
-li { margin-bottom: 0.5rem; color: var(--txt2); }
-.checklist { list-style: none; margin-left: 0; }
-.checklist li::before { content: "☐ "; color: var(--cyan); margin-right: 8px; }
-.checklist li.checked::before { content: "☑ "; color: var(--green); }
-.step-box {
-  background: var(--bg1);
-  border-left: 4px solid var(--cyan);
-  padding: 1rem 1.5rem;
-  margin: 1rem 0;
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-.step-number {
-  display: inline-block;
-  background: var(--cyan);
-  color: var(--bg);
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  text-align: center;
-  line-height: 28px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  margin-right: 10px;
-}
-.footer { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--txt3); font-size: 0.85rem; }
-.tip {
-  background: rgba(77,212,255,0.08);
-  border: 1px solid rgba(77,212,255,0.2);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1rem 0;
-}
-.tip::before { content: "💡 DICA: "; color: var(--cyan); font-weight: 700; }
-.warning-box {
-  background: rgba(255,179,64,0.08);
-  border: 1px solid rgba(255,179,64,0.2);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1rem 0;
-}
-.warning-box::before { content: "⚠️ ATENÇÃO: "; color: var(--amber); font-weight: 700; }
+.container { max-width:1040px; margin:0 auto; }
+.hero { text-align:center; padding:32px 0; border-bottom:1px solid var(--border); margin-bottom:28px; }
+.brand { font-size:30px; font-weight:800; color:var(--cyan); }
+.subtitle { color:var(--txt2); margin-top:8px; }
+h1 { color:var(--cyan); font-size:28px; margin:34px 0 14px; }
+h2 { color:var(--purple); font-size:21px; margin:28px 0 12px; }
+h3 { color:var(--amber); font-size:17px; margin:22px 0 10px; }
+p, li { color:var(--txt2); }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px; margin:18px 0; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+table { width:100%; border-collapse:collapse; margin:14px 0; }
+th, td { border-bottom:1px solid var(--border); text-align:left; padding:10px; vertical-align:top; }
+th { color:var(--cyan); font-size:13px; }
+td { color:var(--txt2); font-size:14px; }
+.badge { display:inline-block; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700; }
+.now { background:rgba(0,214,143,.14); color:var(--green); }
+.next { background:rgba(255,179,64,.14); color:var(--amber); }
+.future { background:rgba(153,69,255,.14); color:var(--purple); }
+.blocked { background:rgba(255,59,92,.14); color:var(--red); }
+.note { border-left:4px solid var(--cyan); }
+.warn { border-left:4px solid var(--amber); }
+code { color:var(--cyan); background:rgba(255,255,255,.06); padding:2px 5px; border-radius:5px; }
+@media (max-width:800px) { body{padding:18px}.grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-<div class="container">
+<main class="container">
+  <section class="hero">
+    <div class="brand">Bags Shield</div>
+    <div class="subtitle">Plano de lancamento e marketing separado do roadmap tecnico</div>
+    <div class="subtitle">Revisado em 20 de Maio de 2026</div>
+  </section>
 
-<!-- CAPA -->
-<div style="text-align:center; padding: 2rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem;">
-  <div style="font-size: 50px; margin-bottom: 10px;">🛡️</div>
-  <div style="font-size: 28px; font-weight: 800; color: var(--cyan);">BagsShield</div>
-  <div style="font-size: 13px; color: var(--txt2); margin-top: 8px;">Plano Completo de Lançamento e Marketing</div>
-  <div style="font-size: 12px; color: var(--txt3); margin-top: 4px;">Da concepção ao destaque na DApp Store — Maio 2026</div>
-</div>
+  <section class="card note">
+    <h1>Posicionamento aprovado</h1>
+    <p>Bags Shield e uma plataforma Solana-native de transparencia, seguranca e qualidade para tokens. A narrativa publica deve ser: scan multi-fonte, ShieldScore com cobertura, safe swap/pre-trade risk check, verificacao de LP lock nativo via protocolo, verified badge baseado em evidencia e roadmap de monitoramento/alertas.</p>
+    <p>Principio editorial: <strong>proof, not promises</strong>.</p>
+  </section>
 
-<!-- ÍNDICE -->
-<div class="card">
-  <h3 style="color:var(--cyan); margin-top:0;">📑 Índice do Documento</h3>
-  <ol style="color:var(--txt2); margin-left:1.5rem;">
-    <li>DApp Store Solana Mobile — Guia Completo</li>
-    <li>Estratégia de Micro-KOLs Solana</li>
-    <li>Plano de Atração de Beta Testers</li>
-    <li>Estratégia de Retenção de Usuários</li>
-    <li>Cronograma de Lançamento (D-30 a D+90)</li>
-    <li>Checklist de Ações Imediatas</li>
-  </ol>
-</div>
-
-<!-- SEÇÃO 1: DAPP STORE -->
-<h1>1. DApp Store Solana Mobile — Guia Completo</h1>
-
-<div class="card">
-  <h3 style="margin-top:0; color:var(--cyan)">🎯 O que é a DApp Store Solana?</h3>
-  <p>A <strong>Solana dApp Store</strong> é a loja de aplicativos nativa dos dispositivos <strong>Solana Mobile</strong> (Saga e Seeker). Diferente da Google Play, ela é <span class="highlight">crypto-friendly</span> — sem restrições a wallets, DeFi ou NFTs. É o canal oficial para distribuir seu DApp para usuários mobile da Solana.</p>
-  
-  <p><strong>URL do Publisher Portal:</strong> <a href="https://publish.solanamobile.com" style="color:var(--cyan)">publish.solanamobile.com</a></p>
-</div>
-
-<h3>📋 Requisitos para Submissão</h3>
-<div class="step-box">
-  <span class="step-number">1</span><strong>APK Assinado</strong>
-  <ul>
-    <li>APK release assinado com sua keystore de produção</li>
-    <li>Target SDK compatível com Android 13+</li>
-    <li>Integração com <strong>Mobile Wallet Adapter</strong> (MWA) obrigatória</li>
-    <li>Suporte a <strong>Seed Vault</strong> (carteira segura do Seeker)</li>
-  </ul>
-</div>
-
-<div class="step-box">
-  <span class="step-number">2</span><strong>Metadados do App</strong>
-  <ul>
-    <li>Nome do app (máx. 30 caracteres)</li>
-    <li>Descrição curta (máx. 80 caracteres)</li>
-    <li>Descrição longa (máx. 4000 caracteres)</li>
-    <li>Ícone 512x512 PNG</li>
-    <li>Screenshots (mín. 3, máx. 8) — 1080x1920 ou 1920x1080</li>
-    <li>Feature graphic (1024x500) para destaque</li>
-    <li>URL do site e documentação</li>
-  </ul>
-</div>
-
-<div class="step-box">
-  <span class="step-number">3</span><strong>Wallet e Taxas</strong>
-  <ul>
-    <li>Wallet Solana com saldo suficiente em SOL</li>
-    <li>Taxa de submissão: ~0.01-0.05 SOL (varia com a rede)</li>
-    <li>Revisão manual pela equipe Solana Mobile (1-7 dias)</li>
-  </ul>
-</div>
-
-<h3>⭐ Como Ser Destaque (Featured) na DApp Store</h3>
-
-<div class="card" style="border-left:4px solid var(--green)">
-  <p><strong style="color:var(--green)">A DApp Store não tem algoritmo de ranqueamento automático como a Play Store.</strong> Os destaques são <span class="highlight">curados manualmente</span> pela equipe Solana Mobile. Isso significa que você precisa <strong>construir relacionamento</strong> e demonstrar qualidade.</p>
-</div>
-
-<table class="status-table">
-<tr><th>Critério</th><th>Como Atender</th><th>Prioridade</th></tr>
-<tr><td>🎨 Design de Qualidade</td><td>UI/UX polido, consistente com guidelines Material Design, dark mode nativo</td><td><span class="badge badge-green">ALTA</span></td></tr>
-<tr><td>🔗 Integração Solana Nativa</td><td>Usar Mobile Wallet Adapter, Seed Vault, transações assinadas no device</td><td><span class="badge badge-green">ALTA</span></td></tr>
-<tr><td>📱 Otimização Mobile</td><td>Performance fluida (< 3s load), responsivo, bateria eficiente</td><td><span class="badge badge-green">ALTA</span></td></tr>
-<tr><td>⭐ Reviews Positivas</td><td>Manter rating > 4.5, responder a feedbacks, iterar rapidamente</td><td><span class="badge badge-amber">MÉDIA</span></td></tr>
-<tr><td>📢 Engajamento da Comunidade</td><td>Presença ativa no Twitter/X Solana, AMAs, parcerias com outros DApps</td><td><span class="badge badge-amber">MÉDIA</span></td></tr>
-<tr><td>🆕 Inovação/Utilidade Única</td><td>Oferecer algo que outros DApps não têm (ex: scanner de segurança integrado)</td><td><span class="badge badge-green">ALTA</span></td></tr>
-<tr><td>📈 Métricas de Uso</td><td>Alto DAU/MAU, tempo de sessão, retenção — dados visíveis para curadores</td><td><span class="badge badge-amber">MÉDIA</span></td></tr>
-<tr><td>🤝 Relacionamento com Solana Mobile</td><td>Participar de hackathons, grant programs, canais oficiais do Discord</td><td><span class="badge badge-green">ALTA</span></td></tr>
-</table>
-
-<div class="tip">
-  Participe do <strong>Solana Mobile Discord</strong> e do <strong>Solana Tech Discord</strong>. Interaja com a equipe, mostre seu progresso, peça feedback. Relacionamento pessoal conta muito para ser featured.
-</div>
-
-<h3>🔧 Otimização para DApp Store (ASO)</h3>
-<div class="card">
-  <ul>
-    <li><strong>Nome:</strong> "Bags Shield — Token Scanner & Safe Swap" (inclui keywords principais)</li>
-    <li><strong>Descrição curta:</strong> "Proteja seus investimentos em Solana. Scanner de tokens, swap seguro e alertas de risco em tempo real."</li>
-    <li><strong>Keywords na descrição longa:</strong> token scanner, rug pull detector, Solana security, safe swap, DeFi protection, honeypot checker, token analysis, wallet security</li>
-    <li><strong>Screenshots:</strong> Mostrar fluxo completo: scan → score → swap → confirmação. Destacar badges de segurança.</li>
-    <li><strong>Feature Graphic:</strong> Design com escudo, cores do app, texto "Proteja seus tokens na Solana"</li>
-  </ul>
-</div>
-
-<!-- SEÇÃO 2: MICRO-KOLS -->
-<h1>2. Estratégia de Micro-KOLs Solana</h1>
-
-<div class="card">
-  <h3 style="margin-top:0; color:var(--cyan)">🎯 Por que Micro-KOLs (5k-50k seguidores)?</h3>
-  <ul>
-    <li><strong>Engajamento mais alto:</strong> Micro-influenciadores têm taxa de engajamento 3-5x maior que macro (100k+)</li>
-    <li><strong>Custo zero:</strong> Em early-stage, você troca <span class="highlight">acesso vitalício premium</span> por review honesto</li>
-    <li><strong>Confiança:</strong> Comunidade crypto confia mais em "cara da comunidade" do que em celebridades</li>
-    <li><strong>Nicho:</strong> Micro-KOLs de Solana têm audiência 100% alinhada com seu produto</li>
-  </ul>
-</div>
-
-<h3>🔍 Como Identificar Micro-KOLs de Solana</h3>
-
-<div class="step-box">
-  <span class="step-number">1</span><strong>Busca no Twitter/X</strong>
-  <ul>
-    <li>Buscar: "Solana" + "thread" + "analysis" — filtrar por seguidores 5k-50k</li>
-    <li>Buscar: "$SOL" + "gem" + "alpha" — encontrar hunters de tokens</li>
-    <li>Buscar: "Solana" + "security" + "scam" — encontrar educadores de segurança</li>
-    <li>Usar <strong>TweetDeck</strong> ou <strong>Typefully</strong> para monitorar</li>
-  </ul>
-</div>
-
-<div class="step-box">
-  <span class="step-number">2</span><strong>Listas de Referência</strong>
-  <ul>
-    <li><strong>Comunidades:</strong> Superteam DAO, Solana Collective, Metacamp</li>
-    <li><strong>Discord servers:</strong> Solana Tech, Solana Mobile, Jupiter Exchange</li>
-    <li><strong>Hackathons:</strong> Participantes e vencedores de Solana hackathons (Colosseum, Grizzlython)</li>
-    <li><strong>Podcasts:</strong> Anfitriões de podcasts de Solana (e.g., Solana Compass, Validated)</li>
-  </ul>
-</div>
-
-<div class="step-box">
-  <span class="step-number">3</span><strong>Critérios de Seleção</strong>
-  <ul>
-    <li>Seguidores: 5.000 — 50.000 (micro) ou 50.000 — 200.000 (médio)</li>
-    <li>Engajamento: > 3% (likes + replies + RTs / impressões)</li>
-    <li>Frequência: Posta pelo menos 3x por semana sobre Solana/crypto</li>
-    <li>Autenticidade: Não promove shitcoins/scams, tem reputação positiva</li>
-    <li>Idioma: Priorizar PT-BR (seu mercado inicial) + EN (expansão)</li>
-  </ul>
-</div>
-
-<h3>📧 Como Abordar e Negociar</h3>
-
-<div class="card">
-  <h4>Template de Primeiro Contato (DM/Twitter)</h4>
-  <div style="background:var(--bg1); padding:1rem; border-radius:8px; font-family:monospace; font-size:0.85rem; color:var(--txt2);">
-    E aí [Nome], tudo bem? 👋
-    
-    Sou o [Seu Nome], founder do Bags Shield — um scanner de 
-    tokens e swap seguro que estamos construindo para a Solana.
-    
-    Acompanho seu trabalho há um tempo e curto muito sua 
-    abordagem sobre segurança/DeFi na Solana. 
-    
-    Estamos procurando 10 pessoas da comunidade para testar 
-    o app antes do lançamento e dar feedback honesto. 
-    Em troca, oferecemos acesso vitalício à versão premium 
-    (sem limites de scan + alertas prioritários).
-    
-    Topa dar uma olhada? Sem compromisso de postar nada — 
-    só queremos sua opinião sincera.
-    
-    Valeu! 🛡️
-  </div>
-</div>
-
-<div class="card">
-  <h4>O que Oferecer (Sem Gastar Dinheiro)</h4>
-  <table class="status-table">
-  <tr><th>Oferta</th><th>Valor Percebido</th><th>Seu Custo</th></tr>
-  <tr><td>Acesso vitalício premium</td><td>Alto (se o app for útil)</td><td>R$ 0 (margem zero digital)</td></tr>
-  <tr><td>Badge exclusivo "Founding Guardian"</td><td>Médio (status na comunidade)</td><td>R$ 0</td></tr>
-  <tr><td>Acesso antecipado a features</td><td>Alto (ser o primeiro)</td><td>R$ 0</td></tr>
-  <tr><td>Menção como advisor/beta tester</td><td>Médio (reputação)</td><td>R$ 0</td></tr>
-  <tr><td>Comissão em token futuro (vesting)</td><td>Alto (upside)</td><td>R$ 0 (token ainda não existe)</td></tr>
+  <h1>1. O que pode ser comunicado agora</h1>
+  <table>
+    <tr><th>Mensagem</th><th>Status</th><th>Como falar</th></tr>
+    <tr><td>Scan multi-fonte</td><td><span class="badge now">agora/beta</span></td><td>Usa multiplas fontes e heuristicas locais; nao prometer "50+" sem matriz publicada.</td></tr>
+    <tr><td>ShieldScore</td><td><span class="badge now">agora/beta</span></td><td>Score de risco com cobertura de fontes; nao e garantia de seguranca.</td></tr>
+    <tr><td>Safe swap checks</td><td><span class="badge next">precisa validacao</span></td><td>Pre-trade risk check integrado ao fluxo; teste mainnet com wallet real ainda e gate.</td></tr>
+    <tr><td>Launchpad Bags</td><td><span class="badge next">beta</span></td><td>Fluxo em beta para criadores; nao prometer launch 100% validado sem teste real aprovado.</td></tr>
+    <tr><td>LP lock</td><td><span class="badge next">verify only</span></td><td>Bags Shield verifica lock nativo do protocolo quando houver prova. Nao executa LP lock.</td></tr>
+    <tr><td>Alerts/monitoring</td><td><span class="badge future">roadmap</span></td><td>Falar como proxima etapa, nao como feature atual.</td></tr>
   </table>
-</div>
 
-<div class="warning-box">
-  <strong>NUNCA peça para o KOL postar algo positivo.</strong> Peça feedback honesto. Se eles gostarem, vão postar organicamente. Se não gostarem, o feedback é mais valioso que o post.
-</div>
-
-<h3>📋 Planilha de Acompanhamento de KOLs</h3>
-<div class="card">
-  <p><strong>Crie uma planilha (Google Sheets) com as colunas:</strong></p>
-  <ul>
-    <li>Nome / Handle Twitter</li>
-    <li>Seguidores</li>
-    <li>Engajamento médio (%)</li>
-    <li>Nicho (security/DeFi/educação/trading)</li>
-    <li>Idioma</li>
-    <li>Status (não contatado / contatado / respondeu / testando / postou)</li>
-    <li>Data do contato</li>
-    <li>Data do post (se houver)</li>
-    <li>Impressões do post</li>
-    <li>Cliques no link</li>
-  </ul>
-</div>
-
-<!-- SEÇÃO 3: BETA TESTERS -->
-<h1>3. Plano de Atração de Beta Testers</h1>
-
-<div class="card">
-  <h3 style="margin-top:0; color:var(--cyan)">🎯 Objetivo do Programa Beta</h3>
-  <ul>
-    <li><strong>50 beta testers</strong> nas primeiras 2 semanas</li>
-    <li><strong>20 ativos</strong> (usam o app pelo menos 3x por semana)</li>
-    <li><strong>100 bugs/sugestões</strong> reportados</li>
-    <li><strong>NPS > 50</strong> (Net Promoter Score)</li>
-  </ul>
-</div>
-
-<h3>🚪 Canais de Atração de Beta Testers</h3>
-
-<div class="grid-2">
-  <div class="card">
-    <h4 style="color:var(--green)">✅ Canais Gratuitos</h4>
+  <h1>2. Claims proibidos ou rebaixados</h1>
+  <div class="card warn">
     <ul>
-      <li>Twitter/X — post com formulário de inscrição</li>
-      <li>Discord — anúncio em servidores de Solana</li>
-      <li>Reddit — r/Solana, r/CryptoCurrency</li>
-      <li>Telegram — grupos de crypto BR e EN</li>
-      <li>Indicação de amigos (reward)</li>
-      <li>Blog/SEO — "Participe do beta fechado"</li>
+      <li>Nao usar "100% pronto" sem build, smoke, commit/data e teste real.</li>
+      <li>Nao usar "sem bugs criticos" sem QA/smoke cobrindo fluxos criticos.</li>
+      <li>Nao usar "unico na Solana" sem fonte externa forte.</li>
+      <li>Nao usar "50+ indicadores vs concorrentes" sem matriz de indicadores e criterio de comparacao.</li>
+      <li>Nao dizer que Bags Shield executa LP lock.</li>
+      <li>Nao transformar <code>pending</code>, <code>unknown</code>, <code>monitor_only</code> ou <code>unverified</code> em Verified.</li>
     </ul>
   </div>
-  <div class="card">
-    <h4 style="color:var(--amber)">⚠️ Canais de Baixo Custo</h4>
-    <ul>
-      <li>Twitter Ads — R$ 200-500 para impulsionar post de beta</li>
-      <li>Discord/Telegram ads — R$ 100-300</li>
-      <li>Sorteio de SOL/USDC — R$ 500-1.000</li>
-      <li>Parceria com newsletter crypto — R$ 0 (troca)</li>
-    </ul>
-  </div>
-</div>
 
-<h3>📝 Fluxo de Onboarding do Beta Tester</h3>
+  <h1>3. Roadmap de comunicacao</h1>
+  <div class="grid">
+    <section class="card">
+      <h2>Agora</h2>
+      <ul>
+        <li>Publicar narrativa de transparencia e qualidade de tokens.</li>
+        <li>Mostrar scan multi-fonte com disclaimers de cobertura.</li>
+        <li>Explicar ShieldScore como sinal de risco.</li>
+        <li>Documentar o estado beta da Launchpad.</li>
+        <li>Preparar pagina "Security Transparency".</li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Proximo</h2>
+      <ul>
+        <li>Executar teste mainnet de swap com wallet real.</li>
+        <li>Validar Launchpad com Bags em ambiente aprovado.</li>
+        <li>Gerar matriz publica de indicadores.</li>
+        <li>Testar OAuth em producao.</li>
+        <li>Preparar screenshots reais do app atual.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Futuro</h2>
+      <ul>
+        <li>Alertas e monitoramento de tokens.</li>
+        <li>Gamificacao, Shield Points e badges de comunidade.</li>
+        <li>Programa de embaixadores.</li>
+        <li>Submissao Solana Mobile / DApp Store.</li>
+        <li>Premium tiers e beneficios avancados.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Visao futura</h2>
+      <ul>
+        <li>Camada de reputacao para criadores.</li>
+        <li>Verified badge amplamente auditavel.</li>
+        <li>Automacoes de monitoramento pos-launch.</li>
+        <li>Integracoes com wallets, DEXs e comunidades.</li>
+      </ul>
+    </section>
+  </div>
 
-<div class="timeline">
-  <div class="timeline-item">
-    <strong>Dia 0 — Inscrição</strong><br>
-    <span style="color:var(--txt2)">Formulário Google Forms com: nome, email, wallet Solana, Twitter, experiência com crypto (1-5), por que quer participar.</span>
-  </div>
-  <div class="timeline-item">
-    <strong>Dia 1 — Seleção e Convite</strong><br>
-    <span style="color:var(--txt2)">Selecionar 50 candidatos (diversificar por nível de experiência). Enviar email de boas-vindas com link do Discord privado e instruções de instalação.</span>
-  </div>
-  <div class="timeline-item">
-    <strong>Dia 2-3 — Onboarding</strong><br>
-    <span style="color:var(--txt2)">Tutorial em vídeo (2 min), tour guiado no app, primeiro scan obrigatório (com recompensa de badge).</span>
-  </div>
-  <div class="timeline-item">
-    <strong>Semana 1 — Exploração</strong><br>
-    <span style="color:var(--txt2)">Missões: scan 5 tokens, fazer 1 swap, compartilhar resultado no Twitter. Recompensa: pontos + badge.</span>
-  </div>
-  <div class="timeline-item">
-    <strong>Semana 2 — Feedback</strong><br>
-    <span style="color:var(--txt2)">Formulário de feedback estruturado, entrevista 1:1 com os 20 mais ativos, priorização de features.</span>
-  </div>
-  <div class="timeline-item">
-    <strong>Dia 14 — Recompensa e Conversão</strong><br>
-    <span style="color:var(--txt2)">Agradecimento público, badge "Founding Guardian", acesso vitalício premium. Convite para programa de embaixadores.</span>
-  </div>
-</div>
-
-<h3>🎮 Gamificação do Programa Beta</h3>
-<div class="card">
-  <table class="status-table">
-  <tr><th>Missão</th><th>Ação</th><th>Recompensa</th></tr>
-  <tr><td>🎯 Primeiro Scan</td><td>Escanear primeiro token</td><td>10 Shield Points + badge "Novato"</td></tr>
-  <tr><td>🔍 Analista</td><td>Escanear 10 tokens</td><td>50 SP + badge "Analista"</td></tr>
-  <tr><td>💱 Trader Seguro</td><td>Completar 1 swap</td><td>100 SP + badge "Trader"</td></tr>
-  <tr><td>🐛 Caçador de Bugs</td><td>Reportar bug válido</td><td>200 SP + menção no changelog</td></tr>
-  <tr><td>📢 Evangelista</td><td>Postar sobre o app no Twitter</td><td>150 SP + badge "Evangelista"</td></tr>
-  <tr><td>👥 Recrutador</td><td>Indicar amigo que se torna ativo</td><td>100 SP + badge "Recrutador"</td></tr>
-  <tr><td>🏆 Founding Guardian</td><td>Completar todas as missões</td><td>Acesso vitalício premium + NFT badge</td></tr>
+  <h1>4. Beta testers e KOLs</h1>
+  <p>O programa de beta testers e KOLs deve ser comunicado como validacao de produto, nao como garantia de completude. Ofertas como premium vitalicio, Shield Points, NFT badges ou token futuro sao roadmap/futuro ate existir implementacao e politica clara.</p>
+  <table>
+    <tr><th>Acao</th><th>Status</th><th>Observacao</th></tr>
+    <tr><td>Criar X/Twitter e Discord</td><td><span class="badge next">proximo</span></td><td>Usar "Bags Shield" na marca; "BagsShield" apenas como handle/logotipo.</td></tr>
+    <tr><td>Convite beta</td><td><span class="badge next">proximo</span></td><td>Foco em feedback honesto e bugs, nao promessa de app final.</td></tr>
+    <tr><td>Missoes/gamificacao</td><td><span class="badge future">futuro</span></td><td>Nao prometer pontos/recompensas como feature atual.</td></tr>
+    <tr><td>Product Hunt / DApp Store</td><td><span class="badge future">futuro</span></td><td>Depende de validacoes tecnicas e materiais reais.</td></tr>
   </table>
-</div>
 
-<!-- SEÇÃO 4: RETENÇÃO -->
-<h1>4. Estratégia de Retenção de Usuários</h1>
+  <h1>5. Solana Mobile / DApp Store</h1>
+  <p>A documentacao pode tratar Solana Mobile como oportunidade estrategica. O repo tem dependencias de Mobile Wallet Adapter, mas isso nao prova readiness de submissao. Antes de campanha de DApp Store, validar pacote/distribuicao, assets, politica de wallet, device QA e requisitos atuais da loja.</p>
 
-<div class="card">
-  <h3 style="margin-top:0; color:var(--cyan)">🎯 Por que Usuários Saem?</h3>
-  <ul>
-    <li><strong>Não encontram valor:</strong> "Scaneiei uma vez, agora o que faço?"</li>
-    <li><strong>Esquecem do app:</strong> Sem notificações ou razão para voltar</li>
-    <li><strong>UX confusa:</strong> Não entendem o score ou o que fazer com ele</li>
-    <li><strong>Sem comunidade:</strong> Não sentem pertencimento</li>
-  </ul>
-</div>
+  <h1>6. Copy segura para landing ou thread</h1>
+  <section class="card note">
+    <p><strong>Bags Shield helps Solana users see more before they sign.</strong></p>
+    <p>Scan token risk across multiple sources, review ShieldScore coverage, run pre-trade checks and verify evidence-backed states such as native protocol LP lock when proof is available.</p>
+    <p>No fake guarantees. No hidden claims. Proof, not promises.</p>
+  </section>
 
-<h3>🔧 Estratégias de Retenção</h3>
-
-<div class="grid-2">
-  <div class="card">
-    <h4 style="color:var(--green)">✅ Notificações Inteligentes (Push/Web)</h4>
-    <ul>
-      <li><strong>Alerta de risco:</strong> "⚠️ Token XYZ que você escaneou teve queda de 50% de liquidez"</li>
-      <li><strong>Novo token trending:</strong> "🔥 3 tokens novos estão bombando — escaneie antes de comprar"</li>
-      <li><strong>Weekly digest:</strong> "Seu resumo semanal: 5 tokens escaneados, 2 alertas de risco"</li>
-      <li><strong>Reengajamento:</strong> "Saudades! 👋 Tem 3 tokens novos esperando sua análise"</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h4 style="color:var(--green)">✅ Gamificação Contínua</h4>
-    <ul>
-      <li><strong>Streaks:</strong> "Você escaneou tokens 7 dias seguidos! 🔥"</li>
-      <li><strong>Leaderboard:</strong> Ranking de usuários por scans, swaps, bugs reportados</li>
-      <li><strong>Seasons:</strong> Cada mês um novo "Season" com missões exclusivas</li>
-      <li><strong>NFTs de conquista:</strong> Badges coleccionáveis na wallet (ex: "Caçador de Rugs", "Trader Seguro")</li>
-    </ul>
-  </div>
-</div>
-
-<div class="grid-2">
-  <div class="card">
-    <h4 style="color:var(--green)">✅ Conteúdo e Educação</h4>
-    <ul>
-      <li><strong>Blog integrado:</strong> "Como identificar honeypots", "Top 10 red flags"</li>
-      <li><strong>Newsletter semanal:</strong> Resumo de scams detectados, dicas de segurança</li>
-      <li><strong>Vídeos curtos:</strong> TikTok/Reels explicando casos reais (anônimos)</li>
-      <li><strong>AMA mensal:</strong> "Pergunte ao Security Team" no Discord/Twitter</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h4 style="color:var(--green)">✅ Comunidade e Pertencimento</strong></h4>
-    <ul>
-      <li><strong>Discord ativo:</strong> Canais #general, #alpha, #security-alerts, #sugestões</li>
-      <li><strong>Programa de Embaixadores:</strong> 20 "Shield Guardians" com benefícios exclusivos</li>
-      <li><strong>Votação comunitária:</strong> "Qual feature querem ver primeiro?" — dar voz aos usuários</li>
-      <li><strong>Hall da Fama:</strong> Destacar beta testers, bug hunters, embaixadores no app e site</li>
-    </ul>
-  </div>
-</div>
-
-<div class="tip">
-  <strong>Métricas de Retenção a Acompanhar:</strong> D1 (dia 1), D7, D30 retenção. Meta: D1 > 40%, D7 > 20%, D30 > 10%. Se estiver abaixo, investigar onboarding e primeiro valor.
-</div>
-
-<!-- SEÇÃO 5: CRONOGRAMA -->
-<h1>5. Cronograma de Lançamento (D-30 a D+90)</h1>
-
-<div class="timeline">
-  <div class="timeline-item done">
-    <strong>D-30 a D-15 — FASE PRÉ-LANÇAMENTO</strong><br>
-    <span style="color:var(--txt2)">
-    • Finalizar testes end-to-end do swap<br>
-    • Criar contas: Twitter @BagsShield, Discord, GitHub org<br>
-    • Postar 3 threads educativas no Twitter<br>
-    • Criar landing page simples (waitlist)<br>
-    • Identificar e contatar 20 micro-KOLs<br>
-    • Preparar materiais: screenshots, vídeo demo, press kit
-    </span>
-  </div>
-  
-  <div class="timeline-item pending">
-    <strong>D-14 a D-7 — BETA FECHADO</strong><br>
-    <span style="color:var(--txt2)">
-    • Abrir inscrições para beta (Google Forms)</br>
-    • Selecionar 50 beta testers<br>
-    • Onboarding via Discord privado<br>
-    • Coletar feedback diário<br>
-    • Iterar rapidamente (deploy diário se possível)<br>
-    • Preparar APK para DApp Store
-    </span>
-  </div>
-  
-  <div class="timeline-item pending">
-    <strong>D-7 a D-1 — HYPE E CONTAGEM REGRESSIVA</strong><br>
-    <span style="color:var(--txt2)">
-    • Contagem regressiva no Twitter (1 post por dia)<br>
-    • Teaser do app (GIFs/vídeos curtos)<br>
-    • KOLs começam a postar reviews<br>
-    • Submeter app na DApp Store<br>
-    • Preparar servidor para spike de tráfego<br>
-    • Criar "Launch Day Kit" para comunidade
-    </span>
-  </div>
-  
-  <div class="timeline-item future">
-    <strong>D-DAY — LANÇAMENTO 🚀</strong><br>
-    <span style="color:var(--txt2)">
-    • Post oficial no Twitter (thread de 5 tweets)<br>
-    • Anúncio no Discord + ativação de embaixadores<br>
-    • Product Hunt launch<br>
-    • Reddit posts (r/Solana, r/CryptoCurrency)<br>
-    • Email para lista de espera<br>
-    • Monitorar métricas em tempo real (Analytics)<br>
-    • Responder a TODO feedback nas primeiras 24h
-    </span>
-  </div>
-  
-  <div class="timeline-item future">
-    <strong>D+1 a D+7 — PÓS-LANÇAMENTO IMEDIATO</strong><br>
-    <span style="color:var(--txt2)">
-    • Daily standup para triar bugs e feedbacks</br>
-    • Hotfixes rápidos (deploy contínuo)<br>
-    • Agradecer publicamente a beta testers e KOLs<br>
-    • Publicar "Launch Recap" com métricas<br>
-    • Primeira newsletter para usuários<br>
-    • Iniciar programa de embaixadores
-    </span>
-  </div>
-  
-  <div class="timeline-item future">
-    <strong>D+8 a D+30 — CRESCIMENTO</strong><br>
-    <span style="color:var(--txt2)">
-    • 2-3 posts por dia no Twitter<br>
-    • 1 blog post por semana (SEO)<br>
-    • 1 AMA por semana (Twitter Spaces ou Discord)<br>
-    • Expandir para 30+ KOLs<br>
-    • Parcerias com wallets (Phantom, Solflare)<br>
-    • Solicitar destaque na DApp Store (contato com Solana Mobile)
-    </span>
-  </div>
-  
-  <div class="timeline-item future">
-    <strong>D+31 a D+90 — CONSOLIDAÇÃO</strong><br>
-    <span style="color:var(--txt2)">
-    • Analisar métricas: retenção, churn, NPS<br>
-    • Duplicar o que funcionou, cortar o que não<br>
-    • Lançar programa de afiliados<br>
-    • Preparar pitch para investidores (se desejado)<br>
-    • Planejar v2.0 com base no feedback<br>
-    • Meta: 5.000 usuários ativos mensais
-    </span>
-  </div>
-</div>
-
-<!-- SEÇÃO 6: CHECKLIST -->
-<h1>6. Checklist de Ações Imediatas</h1>
-
-<div class="grid-2">
-  <div class="card">
-    <h4 style="color:var(--cyan)">🚀 Esta Semana (D-30)</h4>
-    <ul class="checklist">
-      <li>Criar conta Twitter @BagsShield</li>
-      <li>Criar servidor Discord</li>
-      <li>Criar landing page (Carrd ou Notion)</li>
-      <li>Postar primeira thread no Twitter</li>
-      <li>Identificar 20 micro-KOLs (planilha)</li>
-      <li>Finalizar testes do swap</li>
-      <li>Preparar screenshots para DApp Store</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h4 style="color:var(--cyan)">📅 Próximas 2 Semanas (D-15)</h4>
-    <ul class="checklist">
-      <li>Contatar 10 primeiros KOLs</li>
-      <li>Abrir inscrições beta (Google Forms)</li>
-      <li>Criar vídeo demo (2 min)</li>
-      <li>Postar 3 threads no Twitter</li>
-      <li>Submeter app na DApp Store</li>
-      <li>Configurar analytics (Vercel + Google Analytics)</li>
-      <li>Criar email template para waitlist</li>
-    </ul>
-  </div>
-</div>
-
-<div class="card">
-  <h4 style="color:var(--cyan)">📋 Materiais Necessários (Assets)</h4>
-  <div class="grid-3">
-    <div>
-      <strong style="color:var(--green)">✅ Já temos</strong>
-      <ul>
-        <li>App funcional (scanner + swap)</li>
-        <li>Design system dark</li>
-        <li>API documentada</li>
-        <li>i18n (PT/EN)</li>
-      </ul>
-    </div>
-    <div>
-      <strong style="color:var(--amber)">⚠️ Precisa criar</strong>
-      <ul>
-        <li>Vídeo demo (2 min)</li>
-        <li>Screenshots DApp Store (8)</li>
-        <li>Feature graphic (1024x500)</li>
-        <li>Press kit (logo, cores, fonts)</li>
-        <li>Landing page</li>
-      </ul>
-    </div>
-    <div>
-      <strong style="color:var(--red)">❌ Não temos ainda</strong>
-      <ul>
-        <li>APK assinado (se for app nativo)</li>
-        <li>Integração Mobile Wallet Adapter</li>
-        <li>Notificações push</li>
-        <li>Sistema de pontos/gamificação</li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- CONCLUSÃO -->
-<h2>🎯 Resumo Executivo</h2>
-
-<div class="card" style="border-left:4px solid var(--green)">
-  <p><strong style="color:var(--green)">🚀 Plano de Lançamento: 30 dias</strong></p>
-  <ul>
-    <li><strong>Semana 1-2:</strong> Pré-lançamento (Twitter, Discord, KOLs, landing page)</li>
-    <li><strong>Semana 3:</strong> Beta fechado (50 testers, feedback, iteração)</li>
-    <li><strong>Semana 4:</strong> Lançamento público (Product Hunt, DApp Store, KOLs)</li>
-  </ul>
-  
-  <p><strong style="color:var(--green)">💰 Custo Total Estimado: R$ 0 - R$ 2.000</strong></p>
-  <ul>
-    <li>Twitter/Discord: R$ 0</li>
-    <li>KOLs: R$ 0 (troca por acesso premium)</li>
-    <li>Beta testers: R$ 0</li>
-    <li>DApp Store: ~0.05 SOL (~R$ 5)</li>
-    <li>Opcional: Twitter Ads R$ 500-1.000, Sorteio R$ 500</li>
-  </ul>
-  
-  <p><strong style="color:var(--green)">🎯 Metas de Lançamento:</strong></p>
-  <ul>
-    <li>Dia 1: 100 downloads</li>
-    <li>Semana 1: 500 usuários ativos</li>
-    <li>Mês 1: 2.000 usuários ativos</li>
-    <li>Mês 3: 5.000 usuários ativos + destaque DApp Store</li>
-  </ul>
-</div>
-
-<div class="footer">
-  Bags Shield Protocol — Plano de Lançamento e Marketing v1.0<br>
-  Maio 2026 — Confidencial
-</div>
-
-</div>
+  <footer class="card">
+    <p>Bags Shield - Plano de lancamento e marketing - Maio 2026</p>
+  </footer>
+</main>
 </body>
 </html>

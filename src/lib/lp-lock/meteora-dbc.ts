@@ -17,13 +17,15 @@ const FETCH_TIMEOUT_MS = 8_000;
 // ---------------------------------------------------------------------------
 
 export type MeteoraLockMode =
-  | "auto_graduated"   // LP locked automatically after DBC graduation
+  | "native_protocol"  // LP locked automatically by Meteora DBC after graduation
   | "not_locked"       // Pool exists but LP is not locked
   | "unknown";         // Could not determine lock state
 
 export interface MeteoraDbcLockState {
   /** Whether we believe the LP is locked on-chain. */
   isLocked: boolean;
+  /** Lock provider — always "meteora_dbc" for this module. */
+  lockProvider: "meteora_dbc";
   /** The DLMM pool address (may differ from the DexScreener pairAddress). */
   poolAddress: string | null;
   /** Detected pool type after querying Meteora. */
@@ -35,6 +37,10 @@ export interface MeteoraDbcLockState {
   /** Approximate claimable SOL fees (null if not queryable without wallet). */
   claimableSol: number | null;
   lockMode: MeteoraLockMode;
+  /** Migration status derived from pool detection. */
+  migrationStatus: "not_migrated" | "migrated" | "unknown";
+  /** True when lock state is unambiguously confirmed from on-chain data. */
+  verified: boolean;
   /** Data source used for the determination. */
   source: "dlmm_pair_api" | "dlmm_pair_estimate" | "none";
   /** Human-readable explanation of the lock state. */
@@ -183,16 +189,19 @@ function deriveLockState(
         : liquidity;
     return {
       isLocked: true,
+      lockProvider: "meteora_dbc",
       poolAddress: pair.address ?? null,
       poolType: "dlmm",
       lockedSince: pair.created_at ?? null,
       lockedLiquidityUsd: lockedLiqUsd,
       claimableSol: null,
-      lockMode: "auto_graduated",
+      lockMode: "native_protocol",
+      migrationStatus: "migrated",
+      verified: true,
       source,
       message:
-        "LP locked automatically by Meteora after DBC graduation. " +
-        "Both token creator and partner can claim fees from the locked position.",
+        "LP locked confirmado on-chain via Meteora DBC. " +
+        "Creator e partner podem reivindicar fees da posição travada.",
     };
   }
 
@@ -205,48 +214,56 @@ function deriveLockState(
   if (isDbc && liquidity > 0) {
     return {
       isLocked: true,
+      lockProvider: "meteora_dbc",
       poolAddress: pair.address ?? null,
       poolType: "dlmm",
       lockedSince: pair.created_at ?? null,
       lockedLiquidityUsd: liquidity,
       claimableSol: null,
-      lockMode: "auto_graduated",
+      lockMode: "native_protocol",
+      migrationStatus: "migrated",
+      verified: true,
       source,
       message:
-        "LP locked automatically by Meteora after DBC graduation (detected via pool tags).",
+        "LP locked confirmado on-chain via Meteora DBC (detectado via pool tags).",
     };
   }
 
   // Pool exists but no explicit lock indicator — could still be auto-locked
-  // (API may not expose the field on all versions). We optimistically report it
-  // as auto_graduated if the pool has liquidity and is a DLMM pair, since
-  // all Bags launchpad tokens use DBC → DLMM migration.
+  // (API may not expose the field on all versions). Report as migrated_unverified
+  // since all Bags launchpad tokens use DBC → DLMM migration.
   if (liquidity > 0) {
     return {
       isLocked: true,
+      lockProvider: "meteora_dbc",
       poolAddress: pair.address ?? null,
       poolType: "dlmm",
       lockedSince: pair.created_at ?? null,
       lockedLiquidityUsd: liquidity,
       claimableSol: null,
-      lockMode: "auto_graduated",
+      lockMode: "native_protocol",
+      migrationStatus: "migrated",
+      verified: false,
       source: "dlmm_pair_estimate",
       message:
-        "DLMM pool detected for this token. LP is likely auto-locked via Meteora DBC graduation. " +
-        "Exact lock metadata not yet available from the API.",
+        "Pool DLMM detectada. LP provavelmente travado via DBC graduation. " +
+        "Metadado de lock exato ainda não disponível na API.",
     };
   }
 
   return {
     isLocked: false,
+    lockProvider: "meteora_dbc",
     poolAddress: pair.address ?? null,
     poolType: "dlmm",
     lockedSince: null,
     lockedLiquidityUsd: null,
     claimableSol: null,
     lockMode: "not_locked",
+    migrationStatus: "unknown",
+    verified: false,
     source,
-    message: "DLMM pool found but liquidity appears empty — LP may not be locked yet.",
+    message: "Pool DLMM encontrada mas liquidez vazia — LP pode ainda não estar travado.",
   };
 }
 
@@ -266,12 +283,15 @@ export async function getMeteoraDbcLockState(
 ): Promise<MeteoraDbcLockState> {
   const NONE: MeteoraDbcLockState = {
     isLocked: false,
+    lockProvider: "meteora_dbc",
     poolAddress: null,
     poolType: "unknown",
     lockedSince: null,
     lockedLiquidityUsd: null,
     claimableSol: null,
     lockMode: "unknown",
+    migrationStatus: "unknown",
+    verified: false,
     source: "none",
     message: "Could not determine LP lock state from Meteora API.",
   };

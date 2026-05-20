@@ -3,395 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Relatório Técnico — Bags Shield | Para Agent Luna</title>
+<title>Relatorio Tecnico - Bags Shield | Agent Luna</title>
 <style>
 :root {
-  --bg: #080811; --bg1: #0D0D1A; --surface: rgba(255,255,255,0.05);
-  --border: rgba(255,255,255,0.08); --cyan: #4DD4FF; --purple: #9945FF;
-  --green: #00D68F; --red: #FF3B5C; --amber: #FFB340; --txt: #F0F0FF;
-  --txt2: #8888AA; --txt3: #666677; --radius: 1.25rem;
+  --bg:#080811; --bg1:#0d0d1a; --surface:rgba(255,255,255,.05);
+  --border:rgba(255,255,255,.10); --cyan:#4dd4ff; --purple:#9945ff;
+  --green:#00d68f; --red:#ff3b5c; --amber:#ffb340; --txt:#f0f0ff;
+  --txt2:#aaaac6; --txt3:#77778c; --radius:18px;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { box-sizing:border-box; }
 body {
-  background: var(--bg); color: var(--txt);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  line-height:1.6; padding: 2rem;
+  margin:0; background:var(--bg); color:var(--txt);
+  font-family:Segoe UI, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height:1.6; padding:32px;
 }
-.container { max-width: 1000px; margin: 0 auto; }
-h1 { color: var(--cyan); font-size: 2rem; margin-bottom: 0.5rem; }
-h2 { color: var(--purple); font-size: 1.4rem; margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-h3 { color: var(--amber); font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
-h4 { color: var(--cyan); font-size: 1rem; margin: 1.2rem 0 0.5rem; }
-p { margin-bottom: 1rem; color: var(--txt2); }
+.container { max-width:1040px; margin:0 auto; }
+.hero { text-align:center; padding:32px 0; border-bottom:1px solid var(--border); margin-bottom:28px; }
+.brand { font-size:30px; font-weight:800; color:var(--cyan); }
+.subtitle { color:var(--txt2); margin-top:8px; }
+.date { color:var(--txt3); font-size:13px; margin-top:4px; }
+h1 { color:var(--cyan); font-size:28px; margin:34px 0 14px; }
+h2 { color:var(--purple); font-size:21px; margin:28px 0 12px; }
+h3 { color:var(--amber); font-size:17px; margin:22px 0 10px; }
+p, li { color:var(--txt2); }
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:22px; margin:18px 0;
 }
-.badge {
-  display: inline-block; padding: 4px 12px;
-  border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-right: 8px;
-}
-.badge-green { background: rgba(0,214,143,0.15); color: var(--green); }
-.badge-amber { background: rgba(255,179,64,0.15); color: var(--amber); }
-.badge-red { background: rgba(255,59,92,0.15); color: var(--red); }
-.badge-cyan { background: rgba(77,212,255,0.15); color: var(--cyan); }
-.status-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-.status-table th { text-align: left; padding: 10px; color: var(--cyan); border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-.status-table td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-.status-table tr:hover { background: rgba(255,255,255,0.02); }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-.highlight { color: var(--cyan); font-weight: 600; }
-.warning { color: var(--amber); }
-.danger { color: var(--red); }
-.success { color: var(--green); }
-ul { margin-left: 1.5rem; margin-bottom: 1rem; }
-li { margin-bottom: 0.5rem; color: var(--txt2); }
-.tip {
-  background: rgba(77,212,255,0.08);
-  border: 1px solid rgba(77,212,255,0.2);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1rem 0;
-}
-.warning-box {
-  background: rgba(255,179,64,0.08);
-  border: 1px solid rgba(255,179,64,0.2);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1rem 0;
-}
-.critical-box {
-  background: rgba(255,59,92,0.08);
-  border: 1px solid rgba(255,59,92,0.2);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1rem 0;
-}
-.footer { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--txt3); font-size: 0.85rem; }
-.metric { display: inline-block; text-align: center; padding: 1rem; min-width: 120px; }
-.metric-value { font-size: 2rem; font-weight: 800; color: var(--cyan); }
-.metric-label { font-size: 0.8rem; color: var(--txt2); }
-.progress-bar {
-  width: 100%; height: 8px; background: var(--bg1); border-radius: 4px; overflow: hidden; margin: 8px 0;
-}
-.progress-fill {
-  height: 100%; border-radius: 4px;
-}
-.progress-green { background: var(--green); }
-.progress-amber { background: var(--amber); }
-.progress-red { background: var(--red); }
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.metric { text-align:center; background:var(--bg1); border:1px solid var(--border); border-radius:14px; padding:18px; }
+.metric strong { display:block; font-size:28px; color:var(--cyan); }
+.metric span { color:var(--txt2); font-size:13px; }
+table { width:100%; border-collapse:collapse; margin:14px 0; }
+th, td { border-bottom:1px solid var(--border); text-align:left; padding:10px; vertical-align:top; }
+th { color:var(--cyan); font-size:13px; }
+td { color:var(--txt2); font-size:14px; }
+.badge { display:inline-block; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700; }
+.ok { background:rgba(0,214,143,.14); color:var(--green); }
+.partial { background:rgba(255,179,64,.14); color:var(--amber); }
+.roadmap { background:rgba(153,69,255,.14); color:var(--purple); }
+.blocked { background:rgba(255,59,92,.14); color:var(--red); }
+.note { border-left:4px solid var(--cyan); }
+.warn { border-left:4px solid var(--amber); }
+.danger { border-left:4px solid var(--red); }
+code { color:var(--cyan); background:rgba(255,255,255,.06); padding:2px 5px; border-radius:5px; }
+@media (max-width:800px) { body{padding:18px}.grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-<div class="container">
+<main class="container">
+  <section class="hero">
+    <div class="brand">Bags Shield</div>
+    <div class="subtitle">Relatorio tecnico transparente para Agent Luna</div>
+    <div class="date">Revisado em 20 de Maio de 2026 - proof, not promises</div>
+  </section>
 
-<!-- CAPA -->
-<div style="text-align:center; padding: 2rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem;">
-  <div style="font-size: 50px; margin-bottom: 10px;">🛡️</div>
-  <div style="font-size: 28px; font-weight: 800; color: var(--cyan);">BagsShield</div>
-  <div style="font-size: 14px; color: var(--txt2); margin-top: 8px;">Relatório Técnico Completo — Para Agent Luna</div>
-  <div style="font-size: 12px; color: var(--txt3); margin-top: 4px;">Status do Projeto | O que Falta | Próximos Passos</div>
-  <div style="font-size: 12px; color: var(--txt3); margin-top: 4px;">Gerado em: 18 de Maio de 2026</div>
-</div>
-
-<!-- RESUMO EXECUTIVO -->
-<div class="card" style="border-left:4px solid var(--cyan)">
-  <h3 style="margin-top:0; color:var(--cyan)">📋 Resumo Executivo para Agent Luna</h3>
-  <p>O projeto <strong>Bags Shield</strong> está em <span class="highlight">~85% de conclusão</span>. O backend (API) está 100% funcional e passando no build. O frontend (app2) tem o core completo mas apresenta <span class="danger">problemas de build</span> por incompatibilidade de versão Node.js (v24 instalado vs v20 requerido). Não há bugs críticos de funcionalidade — os blockers são principalmente de infraestrutura e polimento.</p>
-  <div class="grid-3" style="margin-top:1rem">
-    <div style="text-align:center">
-      <div class="metric-value" style="color:var(--green)">85%</div>
-      <div class="metric-label">Conclusão Geral</div>
+  <section class="card note">
+    <h1>Resumo executivo</h1>
+    <p>Bags Shield deve ser descrito como uma plataforma Solana-native de transparencia, seguranca e qualidade para tokens. O produto combina scan multi-fonte, ShieldScore com cobertura, safe swap/pre-trade risk check, verificacao de LP lock nativo via protocolo e badges baseados em evidencia.</p>
+    <p>O estado atual e beta/parcial em fluxos on-chain sensiveis. Nao usar "100% pronto", "sem bugs criticos" ou "unico na Solana" sem evidencia externa e logs datados.</p>
+    <div class="grid">
+      <div class="metric"><strong>37</strong><span>route handlers locais em src/app/api</span></div>
+      <div class="metric"><strong>OK</strong><span>frontend craco build passou</span></div>
+      <div class="metric"><strong>Beta</strong><span>launchpad, LP lock verify e claims precisam teste real</span></div>
     </div>
-    <div style="text-align:center">
-      <div class="metric-value" style="color:var(--green)">100%</div>
-      <div class="metric-label">Backend (API)</div>
-    </div>
-    <div style="text-align:center">
-      <div class="metric-value" style="color:var(--amber)">~70%</div>
-      <div class="metric-label">Frontend (App)</div>
-    </div>
+  </section>
+
+  <h1>1. Validacao local desta revisao</h1>
+  <table>
+    <tr><th>Comando</th><th>Status</th><th>Observacao</th></tr>
+    <tr><td><code>npm run typecheck</code></td><td><span class="badge ok">passou</span></td><td>Backend TypeScript sem erro nesta verificacao.</td></tr>
+    <tr><td><code>npm run smoke</code></td><td><span class="badge ok">passou</span></td><td>Smoke local v0/AJV para scan e simulate. Nao cobre todo o app.</td></tr>
+    <tr><td><code>npm run test:launchpad</code></td><td><span class="badge partial">passou com ressalva</span></td><td>Wrapper 3/3; schema e SSRF indicam que testes completos exigem runner configurado.</td></tr>
+    <tr><td><code>npm run build</code> backend</td><td><span class="badge partial">inconclusivo</span></td><td><code>next build</code> iniciou e expirou em 240s sem erro explicito.</td></tr>
+    <tr><td><code>npx craco build</code> frontend</td><td><span class="badge ok">passou</span></td><td>Build otimizado do app2/frontend gerado com sucesso.</td></tr>
+  </table>
+
+  <h1>2. Estado por area</h1>
+  <table>
+    <tr><th>Area</th><th>Status</th><th>Narrativa correta</th></tr>
+    <tr><td>Scan multi-fonte</td><td><span class="badge partial">partial/beta</span></td><td>Ha rota, provedores e score engine. Falta matriz auditavel de indicadores antes de claim numerico como "50+".</td></tr>
+    <tr><td>ShieldScore</td><td><span class="badge partial">partial/beta</span></td><td>Score e badge devem ser acompanhados de cobertura/confianca. Nao e garantia anti-scam.</td></tr>
+    <tr><td>Safe swap / Jupiter</td><td><span class="badge partial">precisa teste real</span></td><td>Rotas e UI existem; falta teste mainnet controlado com wallet real antes de declarar pronto.</td></tr>
+    <tr><td>Launchpad Bags v2</td><td><span class="badge partial">partial/beta</span></td><td>Fluxo de metadata, fee quote, config, tx unsigned e send existe; precisa validacao real Bags/producao.</td></tr>
+    <tr><td>LP Lock</td><td><span class="badge partial">verify only</span></td><td>Bags Shield nao executa LP lock. Verifica lock nativo do protocolo, especialmente Meteora DBC, quando ha prova on-chain.</td></tr>
+    <tr><td>Fee claims</td><td><span class="badge partial">precisa posicao real</span></td><td>Rotas para positions e claim transactions existem; precisa wallet com claimable real.</td></tr>
+    <tr><td>Auth Google/X/Wallet</td><td><span class="badge partial">precisa callback real</span></td><td>Rotas existem; OAuth de producao precisa teste atualizado.</td></tr>
+    <tr><td>Portfolio</td><td><span class="badge partial">partial/beta</span></td><td>UI e integracoes parciais; qualquer dado placeholder deve ser tratado como mock/parcial.</td></tr>
+    <tr><td>Solana Mobile</td><td><span class="badge roadmap">roadmap/submissao</span></td><td>Dependencias existem; readiness de DApp Store exige pacote, assets e teste em device.</td></tr>
+  </table>
+
+  <h1>3. LP Lock - regra editorial obrigatoria</h1>
+  <div class="card warn">
+    <p><strong>Bags Shield nao executa LP lock.</strong> O sistema pode registrar intencao, detectar pool e verificar o lock nativo do protocolo quando houver evidencia. Estados <code>pending</code>, <code>unknown</code>, <code>pool_detected</code>, <code>monitor_only</code> ou <code>unverified</code> nao podem aparecer como Verified.</p>
+    <p>Para Meteora DBC, a mensagem correta e: Bags Shield verifica se ha evidencia nativa de lock DBC/DLMM. Se a pool existe mas a prova exata nao esta disponivel, o estado e parcial/unverified.</p>
   </div>
-</div>
 
-<!-- STATUS BACKEND -->
-<h1>1. Status do Backend (bags-shield-api)</h1>
-
-<div class="card">
-  <h4 style="color:var(--green); margin-top:0">✅ BUILD: PASSANDO</h4>
-  <p>O backend compila sem erros de TypeScript. Todas as 32 rotas API estão funcionais.</p>
-  <div style="background:var(--bg1); padding:0.8rem; border-radius:8px; font-family:monospace; font-size:0.8rem; color:var(--green)">
-    ✓ Compiled successfully<br>
-    ✓ Linting and checking validity of types<br>
-    ✓ Collecting page data<br>
-    ✓ Generating static pages (24/24)<br>
-    ✓ Finalizing page optimization
-  </div>
-</div>
-
-<h3>📡 Rotas API — Status Detalhado</h3>
-<table class="status-table">
-<tr><th>Rota</th><th>Status</th><th>% Completo</th><th>Observações</th></tr>
-<tr><td><strong>/api/scan</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>50+ indicadores, rate limiting, quota diária</td></tr>
-<tr><td><strong>/api/quote</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Integração Jupiter</td></tr>
-<tr><td><strong>/api/order</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Jupiter Ultra V2</td></tr>
-<tr><td><strong>/api/execute</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Execução de swap</td></tr>
-<tr><td><strong>/api/swap</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Build + sign transaction</td></tr>
-<tr><td><strong>/api/market/summary</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>CoinGecko + Jupiter fallback</td></tr>
-<tr><td><strong>/api/wallet/tokens</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>SPL + Token-2022 + NFT filter</td></tr>
-<tr><td><strong>/api/auth/*</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Google, Twitter, Wallet linking</td></tr>
-<tr><td><strong>/api/simulate</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Simulação de transações</td></tr>
-<tr><td><strong>/api/webhooks/helius</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Webhooks ativos</td></tr>
-<tr><td><strong>/api/rpc/*</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Proxy RPC</td></tr>
-<tr><td><strong>/api/launchpad/*</strong></td><td><span class="badge badge-amber">OK*</span></td><td>90%</td><td>Funcional, precisa de testes em produção</td></tr>
-<tr><td><strong>/api/creator</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Criação de tokens</td></tr>
-<tr><td><strong>/api/health</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Health check</td></tr>
-</table>
-
-<div class="tip">
-  <strong>Backend está PRONTO para produção.</strong> Todas as rotas críticas (scan, swap, auth, wallet) estão 100% funcionais. O launchpad é o único módulo que precisa de validação real, mas não é blocker para o lançamento inicial.
-</div>
-
-<!-- STATUS FRONTEND -->
-<h1>2. Status do Frontend (bags-shield-app2)</h1>
-
-<div class="critical-box">
-  <h4 style="color:var(--red); margin-top:0">❌ BUILD: FALHANDO</h4>
-  <p>O frontend <strong>não compila</strong> devido a incompatibilidade de versão Node.js. O projeto requer Node v20.x mas o ambiente atual tem v24.15.0. Isso causa erro no módulo <code>ajv/dist/compile/codegen</code> usado pelo webpack/react-scripts.</p>
-  <div style="background:var(--bg1); padding:0.8rem; border-radius:8px; font-family:monospace; font-size:0.8rem; color:var(--red)">
-    Error: Cannot find module 'ajv/dist/compile/codegen'<br>
-    Require stack: ...react-scripts/config/webpack.config.js<br>
-    Node.js v24.15.0<br>
-    npm warn EBADENGINE: required { node: "20.x" }, current { node: "v24.15.0" }
-  </div>
-</div>
-
-<h3>🖥️ Páginas — Status Detalhado</h3>
-<table class="status-table">
-<tr><th>Página/Componente</th><th>Status</th><th>% Completo</th><th>Observações</th></tr>
-<tr><td><strong>HomePage</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Design minimalista funcional</td></tr>
-<tr><td><strong>ScanPage + ScanLoading</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Fluxo completo de scan</td></tr>
-<tr><td><strong>ScanResultPage</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Score badge, pool cards, swap drawer</td></tr>
-<tr><td><strong>SwapPage</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Wallet detection, MAX button, Jupiter V2 flow</td></tr>
-<tr><td><strong>SwapDrawer</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Integrado na ScanResultPage</td></tr>
-<tr><td><strong>useJupiterSwap hook</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Quote + swap + sign + execute</td></tr>
-<tr><td><strong>SettingsPage</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>Idioma, RPC, tema</td></tr>
-<tr><td><strong>AuthCallback</strong></td><td><span class="badge badge-green">OK</span></td><td>100%</td><td>OAuth handlers</td></tr>
-<tr><td><strong>LaunchpadPage</strong></td><td><span class="badge badge-amber">PARCIAL</span></td><td>70%</td><td>UI pronta, falta polimento UX e testes</td></tr>
-<tr><td><strong>ProfilePage</strong></td><td><span class="badge badge-amber">PARCIAL</span></td><td>60%</td><td>Funcional básico, pode melhorar</td></tr>
-<tr><td><strong>PortfolioPage</strong></td><td><span class="badge badge-amber">PARCIAL</span></td><td>60%</td><td>Estrutura pronta, dados mockados</td></tr>
-<tr><td><strong>LaunchpadCreatePage</strong></td><td><span class="badge badge-amber">PARCIAL</span></td><td>70%</td><td>Formulário funcional, falta validações</td></tr>
-<tr><td><strong>LaunchpadReviewPage</strong></td><td><span class="badge badge-amber">PARCIAL</span></td><td>70%</td><td>Review de token, falta integração completa</td></tr>
-</table>
-
-<!-- O QUE FALTA -->
-<h1>3. O que Falta para Lançar</h1>
-
-<div class="grid-2">
-  <div class="critical-box">
-    <h4 style="color:var(--red); margin-top:0">🔴 CRÍTICO (Blockers)</h4>
-    <ul>
-      <li><strong>Fix build do frontend:</strong> Resolver incompatibilidade Node.js v24 vs v20. <span class="danger">Sem isso, não há deploy.</span></li>
-      <li><strong>Testar fluxo swap end-to-end:</strong> Confirmar que quote → order → execute funciona com wallet real em mainnet. <span class="danger">Risco financeiro se quebrar.</span></li>
-      <li><strong>Configurar variáveis de ambiente:</strong> Verificar se REACT_APP_API_BASE aponta para produção.</li>
-    </ul>
-  </div>
-  <div class="warning-box">
-    <h4 style="color:var(--amber); margin-top:0">🟡 ALTO (Importante)</h4>
-    <ul>
-      <li><strong>Criar conta Twitter @BagsShield</strong> — essencial para marketing</li>
-      <li><strong>Criar servidor Discord</strong> — comunidade e suporte</li>
-      <li><strong>Landing page simples</strong> — Carrd ou Notion para waitlist</li>
-      <li><strong>8 screenshots para DApp Store</strong> — obrigatório para submissão</li>
-      <li><strong>Vídeo demo (2 min)</strong> — para Product Hunt e KOLs</li>
-    </ul>
-  </div>
-</div>
-
-<div class="grid-2">
-  <div class="card" style="border-left:4px solid var(--cyan)">
-    <h4 style="color:var(--cyan); margin-top:0">🔵 MÉDIO (Polimento)</h4>
-    <ul>
-      <li>Melhorar UX do Launchpad (validações, feedback)</li>
-      <li>Completar ProfilePage com dados reais</li>
-      <li>Completar PortfolioPage com integração API</li>
-      <li>Adicionar loading states e skeletons</li>
-      <li>Revisar textos do i18n (PT/EN)</li>
-    </ul>
-  </div>
-  <div class="card" style="border-left:4px solid var(--txt3)">
-    <h4 style="color:var(--txt3); margin-top:0">⚪ BAIXO (Futuro)</h4>
-    <ul>
-      <li>Sistema de notificações push</li>
-      <li>Gamificação (Shield Points, badges)</li>
-      <li>Blog integrado (SEO)</li>
-      <li>Programa de embaixadores</li>
-      <li>Token nativo $BAGS</li>
-    </ul>
-  </div>
-</div>
-
-<!-- BUGS CONHECIDOS -->
-<h1>4. Bugs e Problemas Conhecidos</h1>
-
-<table class="status-table">
-<tr><th># </th><th>Problema</th><th>Severidade</th><th>Solução</th><th>Estimativa</th></tr>
-<tr><td>1</td><td>Build falha: Node.js v24 incompatível com react-scripts 5.0.1</td><td><span class="badge badge-red">CRÍTICO</span></td><td>Downgrade para Node v20 via nvm, ou atualizar react-scripts para v5.0.1+ com patch</td><td>2-4 horas</td></tr>
-<tr><td>2</td><td>Swap flow não testado em mainnet com wallet real</td><td><span class="badge badge-red">CRÍTICO</span></td><td>Testar com 0.001 SOL em mainnet, verificar assinatura e execução</td><td>2-3 horas</td></tr>
-<tr><td>3</td><td>CORS pode falhar em produção se domínios não estiverem na whitelist</td><td><span class="badge badge-amber">ALTO</span></td><td>Verificar e atualizar CORS_ORIGIN no Vercel para app.bagsshield.org</td><td>30 min</td></tr>
-<tr><td>4</td><td>Launchpad não tem validação de formulário completa</td><td><span class="badge badge-amber">ALTO</span></td><td>Adicionar validações Zod/yup nos campos obrigatórios</td><td>3-4 horas</td></tr>
-<tr><td>5</td><td>PortfolioPage mostra dados mockados, não integrados</td><td><span class="badge badge-amber">ALTO</span></td><td>Conectar com /api/wallet/tokens e calcular P&L</td><td>4-6 horas</td></tr>
-<tr><td>6</td><td>Não há testes automatizados (frontend nem backend)</td><td><span class="badge badge-amber">ALTO</span></td><td>Adicionar Jest + React Testing Library (frontend) e Jest (backend)</td><td>1-2 dias</td></tr>
-<tr><td>7</td><td>Rate limiting pode ser muito agressivo para usuários legítimos</td><td><span class="badge badge-amber">ALTO</span></td><td>Ajustar limites baseado em uso real, adicionar tier premium</td><td>2-3 horas</td></tr>
-<tr><td>8</td><td>Falta tratamento de erro global (Error Boundary)</td><td><span class="badge badge-amber">ALTO</span></td><td>Adicionar React Error Boundary + fallback UI</td><td>2-3 horas</td></tr>
-<tr><td>9</td><td>Não há analytics/métricas de uso</td><td><span class="badge badge-amber">ALTO</span></td><td>Adicionar Google Analytics 4 + Vercel Analytics</td><td>1-2 horas</td></tr>
-<tr><td>10</td><td>Design não é 100% responsivo em telas < 375px</td><td><span class="badge badge-amber">ALTO</span></td><td>Ajustar breakpoints e fontes para mobile pequeno</td><td>3-4 horas</td></tr>
-</table>
-
-<!-- PLANO DE AÇÃO -->
-<h1>5. Plano de Ação para Agent Luna</h1>
-
-<div class="card" style="border-left:4px solid var(--red)">
-  <h4 style="color:var(--red); margin-top:0">🚨 FASE 1: CORRIGIR BLOCKERS (Dias 1-3)</h4>
-  <p><strong>Prioridade máxima. Sem isso, não há lançamento.</strong></p>
-  <ol style="color:var(--txt2); margin-left:1.5rem">
-    <li><strong>[ ] Fix build frontend:</strong> Instalar Node v20 via nvm (Windows: nvm-windows). Comando: <code>nvm install 20.18.0 && nvm use 20.18.0</code>. Depois: <code>npm install && npm run build</code></li>
-    <li><strong>[ ] Testar swap em mainnet:</strong> Usar wallet de teste com 0.01 SOL. Fluxo: selecionar USDC → SOL, amount 0.001, obter quote, executar swap, verificar tx no Solscan.</li>
-    <li><strong>[ ] Verificar CORS:</strong> Confirmar que CORS_ORIGIN no Vercel inclui <code>https://app.bagsshield.org</code> e <code>http://localhost:3000</code></li>
-    <li><strong>[ ] Deploy backend:</strong> <code>git push origin main</code> (Vercel CI/CD deploya automaticamente)</li>
+  <h1>4. Blockers antes de claims fortes</h1>
+  <ol>
+    <li>Registrar build backend concluido ou diagnostico oficial do timeout.</li>
+    <li>Executar teste mainnet de swap com wallet real e valor pequeno, com assinatura e Solscan.</li>
+    <li>Validar Launchpad Bags v2 com payload real e sem launch mainnet nao aprovado.</li>
+    <li>Auditar fee-share e platform fee em transacao/config real.</li>
+    <li>Validar OAuth Google/X em producao.</li>
+    <li>Publicar matriz de indicadores do ShieldScore.</li>
   </ol>
-</div>
 
-<div class="card" style="border-left:4px solid var(--amber)">
-  <h4 style="color:var(--amber); margin-top:0">⚡ FASE 2: PREPARAR LANÇAMENTO (Dias 4-7)</h4>
-  <p><strong>Preparação de marketing e infraestrutura.</strong></p>
-  <ol style="color:var(--txt2); margin-left:1.5rem">
-    <li><strong>[ ] Criar Twitter @BagsShield:</strong> Bio: "Proteja seus tokens na Solana. Scanner de segurança + swap seguro. 🛡️" + link para app</li>
-    <li><strong>[ ] Criar Discord:</strong> Canais: #announcements, #general, #bugs, #sugestões, #beta-testers</li>
-    <li><strong>[ ] Criar landing page (Carrd.co):</strong> Gratuito, 1 página, email capture para waitlist</li>
-    <li><strong>[ ] Preparar screenshots DApp Store:</strong> 8 imagens 1080x1920 mostrando: home, scan input, scan loading, scan result, swap, confirm, success, settings</li>
-    <li><strong>[ ] Gravar vídeo demo (2 min):</strong> Screen recording mostrando scan de token suspeito + swap seguro. Usar OBS (gratuito).</li>
-    <li><strong>[ ] Configurar analytics:</strong> Google Analytics 4 + Vercel Analytics no projeto</li>
-  </ol>
-</div>
+  <h1>5. Mensagem para Agent Luna</h1>
+  <section class="card note">
+    <p>Agent Luna, o produto tem uma base forte, mas a comunicacao precisa ser precisa: vender evidencia, nao promessa. O marketing pode falar em transparencia Solana-native, scan multi-fonte, safe swap checks e verified badge baseado em prova. Nao deve prometer lock executado pelo Bags Shield, seguranca absoluta, "sem bugs criticos" ou completude sem build/smoke/tx/data.</p>
+    <p>Fonte de verdade recomendada: <code>docs/CURRENT_STATE.md</code>, <code>docs/ROADMAP_TRANSPARENTE.md</code> e <code>docs/SECURITY_TRANSPARENCY.md</code>.</p>
+  </section>
 
-<div class="card" style="border-left:4px solid var(--cyan)">
-  <h4 style="color:var(--cyan); margin-top:0">🚀 FASE 3: BETA FECHADO (Dias 8-14)</u></h4>
-  <p><strong>Testar com usuários reais antes do lançamento público.</strong></p>
-  <ol style="color:var(--txt2); margin-left:1.5rem">
-    <li><strong>[ ] Criar formulário Google Forms:</strong> Nome, email, wallet Solana, Twitter, experiência crypto (1-5)</li>
-    <li><strong>[ ] Postar convite no Twitter:</strong> "🛡️ Procuramos 50 beta testers para o Bags Shield! Scanner de tokens + swap seguro na Solana. Acesso vitalício premium para participantes. Link na bio."</li>
-    <li><strong>[ ] Selecionar 50 testers:</strong> Diversificar por nível de experiência (20 iniciantes, 20 intermediários, 10 avançados)</li>
-    <li><strong>[ ] Onboarding:</strong> Enviar email com link do Discord privado + instruções de instalação</li>
-    <li><strong>[ ] Coletar feedback:</strong> Formulário semanal + canal #feedback no Discord</li>
-    <li><strong>[ ] Iterar:</strong> Deploy diário de hotfixes baseado no feedback</li>
-  </ol>
-</div>
-
-<div class="card" style="border-left:4px solid var(--green)">
-  <h4 style="color:var(--green); margin-top:0">🎉 FASE 4: LANÇAMENTO PÚBLICO (Dia 15)</h4>
-  <p><strong>Dia D — Lançamento oficial.</strong></p>
-  <ol style="color:var(--txt2); margin-left:1.5rem">
-    <li><strong>[ ] Submeter na DApp Store:</strong> Usar <code>publish.solanamobile.com</code>. Requer: APK (se nativo) ou URL (se PWA), screenshots, descrição, ícone 512x512</li>
-    <li><strong>[ ] Post thread no Twitter (5 tweets):</strong> 1) Anúncio, 2) Demo GIF, 3) Features, 4) Segurança, 5) Link + CTA</li>
-    <li><strong>[ ] Product Hunt:</strong> Submeter com título "Bags Shield — Protect your Solana investments", descrição, screenshots, maker comment</li>
-    <li><strong>[ ] Reddit:</strong> Postar em r/Solana e r/CryptoCurrency (foco em educação, não promoção)</li>
-    <li><strong>[ ] Email waitlist:</strong> "🚀 Bags Shield está no ar!" com link direto para o app</li>
-    <li><strong>[ ] Monitorar:</strong> Vercel Analytics, Discord, Twitter mentions. Responder a TODO feedback em < 1h nas primeiras 24h</li>
-  </ol>
-</div>
-
-<!-- ESTIMATIVAS -->
-<h1>6. Estimativas de Tempo e Custo</h1>
-
-<div class="grid-3">
-  <div class="card" style="text-align:center">
-    <div class="metric-value" style="color:var(--green)">15 dias</div>
-    <div class="metric-label">Para Lançamento MVP</div>
-    <div style="font-size:0.8rem; color:var(--txt3); margin-top:8px">Incluindo beta fechado</div>
-  </div>
-  <div class="card" style="text-align:center">
-    <div class="metric-value" style="color:var(--cyan)">R$ 0-500</div>
-    <div class="metric-label">Custo de Lançamento</div>
-    <div style="font-size:0.8rem; color:var(--txt3); margin-top:8px">Marketing orgânico + DApp Store</div>
-  </div>
-  <div class="card" style="text-align:center">
-    <div class="metric-value" style="color:var(--purple)">40-60h</div>
-    <div class="metric-label">Trabalho Restante</div>
-    <div style="font-size:0.8rem; color:var(--txt3); margin-top:8px">Dev + marketing + polimento</div>
-  </div>
-</div>
-
-<table class="status-table">
-<tr><th>Tarefa</th><th>Tempo</th><th>Custo</th><th>Responsável</th></tr>
-<tr><td>Fix build (Node v20)</td><td>2-4h</td><td>R$ 0</td><td>Dev</td></tr>
-<tr><td>Testar swap mainnet</td><td>2-3h</td><td>0.01 SOL (~R$ 2)</td><td>Dev</td></tr>
-<tr><td>Criar Twitter + Discord</td><td>2h</td><td>R$ 0</td><td>Marketing</td></tr>
-<tr><td>Landing page (Carrd)</td><td>3h</td><td>R$ 0</td><td>Marketing</td></tr>
-<tr><td>Screenshots + vídeo demo</td><td>4h</td><td>R$ 0</td><td>Marketing</td></tr>
-<tr><td>Beta fechado (50 testers)</td><td>1 semana</td><td>R$ 0</td><td>Dev + Community</td></tr>
-<tr><td>Submeter DApp Store</td><td>2h</td><td>~0.05 SOL (~R$ 5)</td><td>Dev</td></tr>
-<tr><td>Product Hunt + Reddit</td><td>3h</td><td>R$ 0</td><td>Marketing</td></tr>
-<tr><td><strong>TOTAL</strong></td><td><strong>~15 dias</strong></td><td><strong>R$ 0-500</strong></td><td><strong>—</strong></td></tr>
-</table>
-
-<!-- CHECKLIST FINAL -->
-<h1>7. Checklist Final para Lançamento</h1>
-
-<div class="grid-2">
-  <div class="card">
-    <h4 style="color:var(--green)">✅ Já Está Pronto</h4>
-    <ul style="color:var(--green)">
-      <li>☑ Backend API (32 rotas, build passando)</li>
-      <li>☑ Scanner de tokens (50+ indicadores)</li>
-      <li>☑ Swap Jupiter V2 (order + execute)</li>
-      <li>☑ Autenticação (Google, Twitter, Wallet)</li>
-      <li>☑ Wallet integration (SPL, Token-2022)</li>
-      <li>☑ Design system dark completo</li>
-      <li>☑ i18n (PT/EN)</li>
-      <li>☑ CORS configurado</li>
-      <li>☑ Rate limiting + quota</li>
-      <li>☑ Deploy Vercel configurado</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h4 style="color:var(--red)">❌ Falta Fazer</h4>
-    <ul style="color:var(--red)">
-      <li>☐ Fix build frontend (Node v20)</li>
-      <li>☐ Testar swap em mainnet</li>
-      <li>☐ Criar Twitter @BagsShield</li>
-      <li>☐ Criar Discord server</li>
-      <li>☐ Landing page</li>
-      <li>☐ Screenshots DApp Store (8)</li>
-      <li>☐ Vídeo demo (2 min)</li>
-      <li>☐ Beta testers (50)</li>
-      <li>☐ Submeter DApp Store</li>
-      <li>☐ Product Hunt launch</li>
-    </ul>
-  </div>
-</div>
-
-<!-- CONCLUSÃO -->
-<div class="card" style="border-left:4px solid var(--cyan); margin-top:2rem">
-  <h3 style="color:var(--cyan); margin-top:0">📋 Mensagem para Agent Luna</h3>
-  <p><strong>Agent Luna,</strong></p>
-  <p>O projeto Bags Shield está <span class="highlight">85% completo</span>. O backend está 100% pronto para produção. O frontend tem todo o core funcional (scan, swap, auth, wallet) mas <span class="danger">não compila no momento</span> devido à incompatibilidade Node.js v24 vs v20.</p>
-  <p><strong>Ação prioritária:</strong> Instalar Node v20 e refazer o build. Isso resolve 90% dos problemas. Depois, testar o swap em mainnet com uma quantia pequena (0.001 SOL) para confirmar que o fluxo end-to-end funciona.</p>
-  <p><strong>Estimativa para lançamento:</strong> <span class="success">15 dias</span> (incluindo beta fechado de 1 semana). Custo estimado: <span class="success">R$ 0-500</span>.</p>
-  <p><strong>Não há bugs críticos de funcionalidade.</strong> Os problemas são de infraestrutura (build) e polimento (UX). O core do produto está sólido e diferenciado.</p>
-  <p style="text-align:right; color:var(--txt3); margin-top:1rem">— Relatório gerado por Verdent em 18/05/2026</p>
-</div>
-
-<div class="footer">
-  Bags Shield Protocol — Relatório Técnico para Agent Luna<br>
-  Maio 2026 — Confidencial
-</div>
-
-</div>
+  <footer class="card">
+    <p>Bags Shield - Relatorio tecnico para Agent Luna - Maio 2026</p>
+  </footer>
+</main>
 </body>
 </html>
