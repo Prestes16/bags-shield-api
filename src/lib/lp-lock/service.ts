@@ -4,7 +4,13 @@
  * This module only tracks launch intents and verifies observable pool data.
  * It does not create custody, does not sign transactions, and does not mark
  * liquidity as locked unless a real protocol locker can be verified.
+ *
+ * For tokens launched via Meteora DBC (Bags launchpad), LP is automatically
+ * locked on-chain after graduation. Use enrichLpLockRecordWithOnChainData()
+ * to fetch the real lock state from the Meteora DLMM API.
  */
+
+import { getMeteoraDbcLockState } from "./meteora-dbc";
 
 export type LpLockStatus =
   | "awaiting_pool"
@@ -264,4 +270,54 @@ export function enrichLpLockRecord(record: LpLockRecord) {
     lockMode,
     providerMessage,
   };
+}
+
+/**
+ * Async version of enrichLpLockRecord that additionally queries the Meteora
+ * DLMM API for real on-chain lock state when the pool type is Meteora.
+ *
+ * For non-Meteora pools, falls back to the synchronous enrichLpLockRecord().
+ */
+export async function enrichLpLockRecordWithOnChainData(record: LpLockRecord) {
+  const base = enrichLpLockRecord(record);
+
+  // Only query Meteora on-chain if the pool is Meteora-based
+  const isMeteora =
+    record.poolType === "meteora" ||
+    (record.poolAddress && record.poolAddress.length > 0 && !record.poolType);
+
+  if (!isMeteora) return base;
+
+  try {
+    const onChain = await getMeteoraDbcLockState(record.mint, record.poolAddress);
+
+    if (!onChain.isLocked) return base;
+
+    // Merge on-chain data — override lockMode and providerMessage with real state
+    return {
+      ...base,
+      // Update status if we now know LP is locked on-chain
+      status: (record.status === "pool_detected" || record.status === "awaiting_pool"
+        ? "locked"
+        : record.status) as LpLockStatus,
+      lockedLiquidityUsd: onChain.lockedLiquidityUsd ?? base.lockedLiquidityUsd,
+      lockMode: onChain.lockMode,
+      lockProviderAvailable: true,
+      canGenerateLockTx: false, // LP already locked automatically — no new TX needed
+      providerMessage: onChain.message,
+      // On-chain enrichments
+      onChain: {
+        provider: "meteora_dbc",
+        poolAddress: onChain.poolAddress,
+        poolType: onChain.poolType,
+        lockedSince: onChain.lockedSince,
+        lockedLiquidityUsd: onChain.lockedLiquidityUsd,
+        claimableSol: onChain.claimableSol,
+        source: onChain.source,
+      },
+    };
+  } catch {
+    // On-chain query failed — fall back to base enrichment
+    return base;
+  }
 }

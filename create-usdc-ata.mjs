@@ -106,4 +106,4 @@ console.log('✅  ATA criada com sucesso!');
 console.log('📝  Transação :', `https://solscan.io/tx/${txSig}`);
 console.log('🏦  ATA       :', `https://solscan.io/account/${ata.toBase58()}`);
 console.log('');
-console.log('✅  O backend agora vai coletar
+console.log('✅  O backend agora vai coletar fees em USDC em cada swap.');

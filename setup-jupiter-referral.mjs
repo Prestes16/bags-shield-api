@@ -250,4 +250,4 @@ console.log('  3. Redeploy o projeto');
 console.log('  4. Faça um swap de teste e confirme as fees no Solscan');
 console.log('');
 console.log('  Referral dashboard: https://referral.jup.ag/');
-console.log('════════════════════════════════════════════════════
+console.log('═══════════════════════════════════════════════════════════════');

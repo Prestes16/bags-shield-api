@@ -3,6 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import {
   detectPoolForMint,
   enrichLpLockRecord,
+  enrichLpLockRecordWithOnChainData,
   getLpLockCapabilities,
   getLpLockStatus,
   listLpLocksForWallet,
@@ -99,14 +100,24 @@ function protocolUnavailable(req: NextRequest, mint: string, status: string | un
   );
 }
 
-function responseFromRecord(record: LpLockRecord | null, pool?: Awaited<ReturnType<typeof detectPoolForMint>>) {
+async function responseFromRecord(
+  record: LpLockRecord | null,
+  pool?: Awaited<ReturnType<typeof detectPoolForMint>>,
+) {
   const capabilities = getLpLockCapabilities();
-  const enriched = record ? enrichLpLockRecord(record) : null;
+
+  // Use on-chain enrichment for Meteora pools; sync enrichment for others
+  const enriched = record
+    ? await enrichLpLockRecordWithOnChainData(record)
+    : null;
+
+  // If on-chain data shows LP is locked, merge pool data from on-chain if missing
+  const onChain = enriched && "onChain" in enriched ? enriched.onChain as Record<string, unknown> : null;
 
   return {
     success: true,
     mint: record?.mint ?? null,
-    status: record?.status ?? "not_requested",
+    status: enriched?.status ?? record?.status ?? "not_requested",
     pool: pool
       ? {
           poolAddress: pool.poolAddress,
@@ -114,7 +125,14 @@ function responseFromRecord(record: LpLockRecord | null, pool?: Awaited<ReturnTy
           type: pool.poolType,
           liquidityUsd: pool.liquidityUsd,
         }
-      : undefined,
+      : (onChain?.poolAddress
+          ? {
+              poolAddress: onChain.poolAddress as string,
+              poolType: (onChain.poolType as string) ?? "meteora",
+              type: (onChain.poolType as string) ?? "meteora",
+              liquidityUsd: (onChain.lockedLiquidityUsd as number | null) ?? 0,
+            }
+          : undefined),
     lockDays: record?.lockDays ?? null,
     lockTxSignature: record?.lockTxSignature ?? null,
     lockerProgram: record?.lockerProgram ?? null,
@@ -129,6 +147,7 @@ function responseFromRecord(record: LpLockRecord | null, pool?: Awaited<ReturnTy
     lockProviderAvailable: enriched?.lockProviderAvailable ?? capabilities.providerConfigured,
     lockMode: enriched?.lockMode ?? capabilities.mode,
     providerMessage: enriched?.providerMessage ?? capabilities.message,
+    onChain: onChain ?? null,
     capabilities,
   };
 }
@@ -179,7 +198,7 @@ export async function POST(req: NextRequest) {
       });
 
       return json(req, {
-        ...responseFromRecord(record, pool),
+        ...(await responseFromRecord(record, pool)),
         lpLockScheduled: {
           status: record?.status ?? (pool ? "pool_detected" : "awaiting_pool"),
           lockDays,
@@ -200,7 +219,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return json(req, responseFromRecord(record, pool));
+      return json(req, await responseFromRecord(record, pool));
     }
 
     if (action === "generate_tx" || action === "withdraw" || action === "extend") {
@@ -252,9 +271,11 @@ export async function GET(req: NextRequest) {
   }
 
   const records = await listLpLocksForWallet(wallet);
+  // Enrich all records with on-chain Meteora data (parallel fetches)
+  const enriched = await Promise.all(records.map(enrichLpLockRecordWithOnChainData));
   return json(req, {
     success: true,
-    locks: records.map(enrichLpLockRecord),
+    locks: enriched,
     capabilities: getLpLockCapabilities(),
   });
 }
