@@ -15,12 +15,12 @@ import {
   applyNoStore,
   applySecurityHeaders,
   SafeLogger,
-} from "@/src/lib/security";
-import { handlePreflight } from "@/src/lib/security/cors";
+} from "@/lib/security";
+import { handlePreflight } from "@/lib/security/cors";
 import {
   launchpadSendRequestSchema,
   validateLaunchpadInput,
-} from "@/src/lib/launchpad/schemas";
+} from "@/lib/launchpad/schemas";
 
 export const runtime = "nodejs";
 

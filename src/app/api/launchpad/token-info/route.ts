@@ -15,16 +15,16 @@ import {
   applyNoStore,
   applySecurityHeaders,
   SafeLogger,
-} from "@/src/lib/security";
-import { handlePreflight } from "@/src/lib/security/cors";
+} from "@/lib/security";
+import { handlePreflight } from "@/lib/security/cors";
 import {
   bagsTokenInfoRequestSchema,
   validateLaunchpadInput,
-} from "@/src/lib/launchpad/schemas";
+} from "@/lib/launchpad/schemas";
 import {
   createTokenInfo,
   type BagsTokenInfoRequest,
-} from "@/src/lib/launchpad/bags-client";
+} from "@/lib/launchpad/bags-client";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
 export const runtime = "nodejs";

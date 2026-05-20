@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { applyCorsHeaders, handlePreflight } from '@/src/lib/security/cors';
+import { applyCorsHeaders, handlePreflight } from '@/lib/security/cors';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

@@ -6,9 +6,9 @@ import {
   applyNoStore,
   applySecurityHeaders,
   SafeLogger,
-} from "@/src/lib/security";
-import { handlePreflight } from "@/src/lib/security/cors";
-import { getClaimablePositions } from "@/src/lib/launchpad/bags-client";
+} from "@/lib/security";
+import { handlePreflight } from "@/lib/security/cors";
+import { getClaimablePositions } from "@/lib/launchpad/bags-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

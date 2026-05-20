@@ -12,11 +12,11 @@ import {
   checkRateLimitByIp,
   checkIdempotencyKey,
   SafeLogger,
-} from '@/src/lib/security';
-import { handlePreflight } from '@/src/lib/security/cors';
-import { checkLaunchpadEnabled, setupSecurityHeaders } from '@/src/lib/launchpad/middleware';
-import { shieldProofManifestSchema, validateLaunchpadInput } from '@/src/lib/launchpad/schemas';
-import type { ShieldProofManifest } from '@/src/lib/launchpad/types';
+} from '@/lib/security';
+import { handlePreflight } from '@/lib/security/cors';
+import { checkLaunchpadEnabled, setupSecurityHeaders } from '@/lib/launchpad/middleware';
+import { shieldProofManifestSchema, validateLaunchpadInput } from '@/lib/launchpad/schemas';
+import type { ShieldProofManifest } from '@/lib/launchpad/types';
 import { createHmac, createHash } from 'crypto';
 
 interface ManifestRequest {

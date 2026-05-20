@@ -15,17 +15,17 @@ import {
   applyNoStore,
   applySecurityHeaders,
   SafeLogger,
-} from "@/src/lib/security";
-import { handlePreflight } from "@/src/lib/security/cors";
+} from "@/lib/security";
+import { handlePreflight } from "@/lib/security/cors";
 import {
   bagsCreateLaunchTransactionRequestSchema,
   validateLaunchpadInput,
-} from "@/src/lib/launchpad/schemas";
+} from "@/lib/launchpad/schemas";
 import {
   createLaunchTransaction,
   type BagsCreateLaunchTransactionRequest,
-} from "@/src/lib/launchpad/bags-client";
-import { buildLaunchpadFeeQuote } from "@/src/lib/launchpad/fees";
+} from "@/lib/launchpad/bags-client";
+import { buildLaunchpadFeeQuote } from "@/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 
 const ROUTE = "/api/launchpad/create-launch-transaction";

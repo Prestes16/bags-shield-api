@@ -12,16 +12,16 @@ import {
   checkRateLimitByIp,
   checkIdempotencyKey,
   SafeLogger,
-} from "@/src/lib/security";
-import { handlePreflight } from "@/src/lib/security/cors";
+} from "@/lib/security";
+import { handlePreflight } from "@/lib/security/cors";
 import {
   validateLaunchpadInput,
   launchConfigDraftSchema,
-} from "@/src/lib/launchpad/schemas";
-import { checkLaunchpadEnabled, setupSecurityHeaders } from "@/src/lib/launchpad/middleware";
+} from "@/lib/launchpad/schemas";
+import { checkLaunchpadEnabled, setupSecurityHeaders } from "@/lib/launchpad/middleware";
 import { getLaunchpadMode } from "@/lib/env";
-import { stubPreflightReport } from "@/src/lib/launchpad/stub";
-import type { LaunchConfigDraft, PreflightReport } from "@/src/lib/launchpad/types";
+import { stubPreflightReport } from "@/lib/launchpad/stub";
+import type { LaunchConfigDraft, PreflightReport } from "@/lib/launchpad/types";
 
 interface PreflightRequest {
   config: LaunchConfigDraft;
