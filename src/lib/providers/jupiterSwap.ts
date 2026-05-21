@@ -4,7 +4,7 @@
  */
 import { fetchGuard } from './fetchGuard';
 import { circuitAllow, circuitFailure, circuitSuccess } from './circuitBreaker';
-import { getExistingFeeCollectorTokenAccount } from '@/lib/solana/fees';
+import { getFeeCollectorTokenAccount, APP_FEE_BPS } from '@/lib/solana/fees';
 
 const CB_KEY = 'jupiter:swap';
 const BASE = 'https://lite-api.jup.ag/swap/v1';
@@ -37,6 +37,8 @@ export async function fetchJupiterSwap(params: JupiterSwapParams): Promise<Jupit
   const inputMint = String(params.quoteResponse?.inputMint ?? '');
   const outputMint = String(params.quoteResponse?.outputMint ?? '');
 
+  // Prefer the non-SOL side so Jupiter can retain the fee token.
+  // Fall back to WSOL when both sides are native.
   const feeMintCandidates =
     inputMint === NATIVE_SOL_MINT
       ? [outputMint, inputMint]
@@ -47,25 +49,25 @@ export async function fetchJupiterSwap(params: JupiterSwapParams): Promise<Jupit
 
   for (const mint of feeMintCandidates) {
     if (!mint) continue;
-    const acc = (await getExistingFeeCollectorTokenAccount(mint)) ?? undefined;
-    if (acc) {
-      feeAccount = acc;
+    try {
+      feeAccount = getFeeCollectorTokenAccount(mint);
       feeMintUsed = mint;
       break;
+    } catch {
+      // invalid mint — skip
     }
   }
 
+  // Always preserve the platformFee fields that Jupiter embedded in the quote.
+  // Never strip them: stripping means zero fees even when the ATA exists.
   let quoteResponse = params.quoteResponse;
-
-  if (!feeAccount) {
-    const { platformFee, platformFeeBps, feeBps, ...rest } = params.quoteResponse ?? {};
-    quoteResponse = rest;
-    console.warn(
-      `[fees] No compatible fee collector token account for pair ${inputMint} -> ${outputMint}; stripping platform fee and proceeding without app fee.`
-    );
-  } else {
-    console.info(`[fees] Using feeAccount for mint ${feeMintUsed}`);
+  if (!quoteResponse?.platformFeeBps && feeAccount) {
+    // Patch in the fee bps if the client-provided quote is missing it
+    // (e.g. when called server-side without a prior /api/quote call).
+    quoteResponse = { ...quoteResponse, platformFeeBps: APP_FEE_BPS };
   }
+
+  console.info(`[fees] feeAccount=${feeAccount ?? 'none'} mint=${feeMintUsed ?? 'none'} pair=${inputMint}->${outputMint}`);
 
   const payload: any = {
     quoteResponse,
