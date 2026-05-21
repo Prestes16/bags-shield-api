@@ -151,17 +151,26 @@ export async function GET(req: NextRequest) {
       const feeApplied = returnedReferralAccount === referralAccount && returnedFeeBps >= feeBps;
 
       if (!feeApplied) {
-        console.warn(
-          `[order] referral fee not applied; feeBps=${returnedFeeBps || 'missing'} feeMint=${data?.feeMint ?? 'unknown'} referral=${returnedReferralAccount ?? 'missing'}`,
-        );
+        const endpoint = new URL(`${JUPITER_SWAP_BASE}/order`);
+        const diagnostics = {
+          requestedReferralAccount: referralAccount ?? null,
+          returnedReferralAccount: returnedReferralAccount ?? null,
+          requestedFeeBps: feeBps,
+          upstreamFeeBps: Number.isFinite(returnedFeeBps) ? returnedFeeBps : null,
+          feeMint: typeof data?.feeMint === 'string' ? data.feeMint : null,
+          mode: typeof data?.mode === 'string' ? data.mode : null,
+          router: typeof data?.router === 'string' ? data.router : null,
+          platformFeeFeeBps: data?.platformFee?.feeBps ?? null,
+          platformFeeAmount: data?.platformFee?.amount ?? null,
+          jupiterOrderEndpoint: `${endpoint.hostname}${endpoint.pathname}`,
+        };
+
+        console.warn('[order] referral fee not applied', diagnostics);
         return fail(
           'Jupiter did not apply the Bags Shield swap fee; swap disabled to avoid silent zero-fee execution.',
           502,
           'SWAP_FEE_NOT_APPLIED',
-          {
-            upstreamFeeBps: Number.isFinite(returnedFeeBps) ? returnedFeeBps : null,
-            feeMint: typeof data?.feeMint === 'string' ? data.feeMint : null,
-          },
+          diagnostics,
         );
       }
     }
