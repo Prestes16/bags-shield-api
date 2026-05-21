@@ -7,7 +7,8 @@ import { circuitAllow, circuitFailure, circuitSuccess } from './circuitBreaker';
 import { getFeeCollectorTokenAccount, APP_FEE_BPS } from '@/lib/solana/fees';
 
 const CB_KEY = 'jupiter:swap';
-const BASE = 'https://lite-api.jup.ag/swap/v1';
+const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
+const BASE = JUPITER_API_KEY ? 'https://api.jup.ag/swap/v1' : 'https://lite-api.jup.ag/swap/v1';
 const NATIVE_SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 export interface JupiterSwapParams {
@@ -84,7 +85,11 @@ export async function fetchJupiterSwap(params: JupiterSwapParams): Promise<Jupit
 
   const r = await fetchGuard<unknown>(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+    },
     body: JSON.stringify(payload),
     timeoutMs: 15_000,
   });

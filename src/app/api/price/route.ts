@@ -25,6 +25,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const JUPITER_PRICE_URL = 'https://api.jup.ag/price/v2';
+const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
 const TIMEOUT_MS = 5_000;
 const MAX_IDS = 100;
 
@@ -72,7 +73,10 @@ export async function GET(request: NextRequest) {
   try {
     const upstreamUrl = `${JUPITER_PRICE_URL}?ids=${ids.join(',')}`;
     const upstreamRes = await fetch(upstreamUrl, {
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+        ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+      },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: 'no-store',
     });
@@ -110,10 +114,5 @@ export async function GET(request: NextRequest) {
       502,
       requestId,
     );
-  }
-};
-  }
-}
-;
   }
 }

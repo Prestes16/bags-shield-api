@@ -47,6 +47,7 @@ function jsonResponse(
 
 // Mint address do SOL (wrapped) para preço via Jupiter
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
+const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
 
 /**
  * Busca preço do SOL via Jupiter Price API v2.
@@ -56,7 +57,14 @@ async function fetchSolMarketData(): Promise<{ solPrice: number; volume24h: numb
   try {
     const res = await fetch(
       `https://api.jup.ag/price/v2?ids=${SOL_MINT}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(4000) },
+      {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(4000),
+        headers: {
+          Accept: 'application/json',
+          ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+        },
+      },
     );
     if (!res.ok) return null;
     const data = await res.json();

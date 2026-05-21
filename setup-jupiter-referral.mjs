@@ -212,7 +212,10 @@ for (const { symbol, mint } of FEE_MINTS) {
   try {
     console.log(`⏳  ${symbol} — inicializando...`);
     const provider = new ReferralProvider(connection);
-    const result = await provider.initializeReferralTokenAccount({
+    const initializeReferralTokenAccount =
+      provider.initializeReferralTokenAccountV2 ?? provider.initializeReferralTokenAccount;
+
+    const result = await initializeReferralTokenAccount.call(provider, {
       payerPubKey: payer.publicKey,
       referralAccountPubKey,
       mint,

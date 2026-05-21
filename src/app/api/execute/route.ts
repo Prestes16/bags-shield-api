@@ -12,7 +12,8 @@ import { checkRateLimitByIp, getClientIp } from '@/lib/security/rateLimit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const JUP_V2_BASE = 'https://api.jup.ag/ultra/v1';
+const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
+const JUP_V2_BASE = JUPITER_API_KEY ? 'https://api.jup.ag/swap/v2' : 'https://api.jup.ag/ultra/v1';
 const RATE_LIMIT  = { windowMs: 60_000, max: 15 };
 
 const ExecuteSchema = z.object({
@@ -63,7 +64,11 @@ export async function POST(req: NextRequest) {
   try {
     const upstream = await fetch(`${JUP_V2_BASE}/execute`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+      },
       body: JSON.stringify(payload),
       cache: 'no-store',
     });

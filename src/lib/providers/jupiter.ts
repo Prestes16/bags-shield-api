@@ -9,7 +9,8 @@ import { cacheGet, cacheSet, cacheKey, getTtlMs } from './cache';
 
 const PROVIDER = 'jupiter';
 const CB_KEY = 'jupiter:quote';
-const BASE = 'https://lite-api.jup.ag/swap/v1';
+const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
+const BASE = JUPITER_API_KEY ? 'https://api.jup.ag/swap/v1' : 'https://lite-api.jup.ag/swap/v1';
 
 export interface JupiterQuoteParams {
   inputMint: string;
@@ -63,7 +64,10 @@ export async function fetchJupiterQuote(params: JupiterQuoteParams): Promise<Jup
 
   const result = await fetchGuard<unknown>(url, {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers: {
+      Accept: 'application/json',
+      ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+    },
     timeoutMs: 10_000,
   });
 
