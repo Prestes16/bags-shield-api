@@ -17,7 +17,7 @@ LAUNCHPAD_MODE=real
 
 # Configuração Bags API (necessário para modo real)
 BAGS_API_BASE=https://public-api-v2.bags.fm/api/v1
-BAGS_API_KEY=sua-chave-api-aqui
+BAGS_API_KEY=
 ```
 
 ### 2. Modo Stub vs Real
@@ -37,7 +37,7 @@ LAUNCHPAD_MODE=stub
 LAUNCHPAD_ENABLED=true
 LAUNCHPAD_MODE=real
 BAGS_API_BASE=https://public-api-v2.bags.fm/api/v1
-BAGS_API_KEY=sua-chave-real
+BAGS_API_KEY=
 ```
 - ✅ Chamadas reais para Bags API
 - ✅ Cria tokens reais
@@ -85,7 +85,7 @@ LAUNCHPAD_ENABLED=true
 **Solução**:
 ```bash
 LAUNCHPAD_MODE=real
-BAGS_API_KEY=sua-chave
+BAGS_API_KEY=
 ```
 
 ### Erro "BAGS_NOT_CONFIGURED"
@@ -95,7 +95,7 @@ BAGS_API_KEY=sua-chave
 **Solução**: Configure ambos:
 ```bash
 BAGS_API_BASE=https://public-api-v2.bags.fm/api/v1
-BAGS_API_KEY=sua-chave
+BAGS_API_KEY=
 ```
 
 ### URLs de imagem rejeitadas
@@ -116,7 +116,7 @@ LAUNCHPAD_MODE=real
 
 # Bags API
 BAGS_API_BASE=https://public-api-v2.bags.fm/api/v1
-BAGS_API_KEY=sua-chave-api-aqui
+BAGS_API_KEY=
 BAGS_TIMEOUT_MS=15000
 
 # Opcional: Allowlist

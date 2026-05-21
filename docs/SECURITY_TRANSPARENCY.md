@@ -84,7 +84,7 @@ Rules:
 
 For Meteora DBC, the correct message is:
 
-> Bags Shield checks whether native Meteora DBC/DLMM lock evidence is available. If the pool exists but exact lock evidence is unavailable, the result is partial or unverified, not a verified lock.
+> Bags Shield starts with Meteora DBC graduation/lock states and related Meteora pool evidence where applicable. If the pool exists but exact native lock evidence is unavailable, the result is partial or unverified, not a verified lock.
 
 ## Wallet and Signing Model
 
@@ -130,4 +130,3 @@ No hidden fees. No fake discounts. No fee claim without transaction/config evide
 ## Approved Public Narrative
 
 > Bags Shield is built around proof, not promises. It gives Solana users a clearer view of token quality using multi-source scan, ShieldScore with coverage, safe swap checks and evidence-based verification such as native protocol LP lock checks.
-

@@ -17,7 +17,6 @@ import {
   fetchHeliusAsset,
   fetchBirdeyeTokenOverview,
   fetchDexScreenerTokenPairs,
-  fetchMeteoraPairsForMint,
   type SourceMetaItem,
 } from '@/lib/providers';
 import { checkOrcaLpLock } from '@/lib/providers/orca';
@@ -48,6 +47,19 @@ const PAYWALL_PRICING = {
     { id: 'pack10', labelKey: 'scan.paywall.pack',   descKey: 'scan.paywall.packDesc',   priceSOL: 0.01,  credits: 10 },
     { id: 'weekly', labelKey: 'scan.paywall.weekly', descKey: 'scan.paywall.weeklyDesc', priceSOL: 0.05,  credits: -1 }, // -1 = unlimited 7 days
   ],
+};
+
+const CANONICAL_ASSETS: Record<string, { symbol: string; name: string; category: 'native' | 'stablecoin' }> = {
+  So11111111111111111111111111111111111111112: {
+    symbol: 'SOL',
+    name: 'Wrapped SOL',
+    category: 'native',
+  },
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: {
+    symbol: 'USDC',
+    name: 'USD Coin',
+    category: 'stablecoin',
+  },
 };
 
 /**
@@ -511,7 +523,18 @@ function heliusNotConfigured(requestId: string, req: NextRequest): NextResponse 
 }
 
 function isSourceDisabled(s: SourceMetaItem): boolean {
-  return s.quality?.includes('DISABLED') === true || (s.error?.toLowerCase?.() ?? '').includes('disabled');
+  return (
+    s.quality?.includes('DISABLED') === true ||
+    s.quality?.includes('SKIPPED_ECONOMY') === true ||
+    (s.error?.toLowerCase?.() ?? '').includes('disabled') ||
+    (s.error?.toLowerCase?.() ?? '').includes('skipped')
+  );
+}
+
+function sourceState(s: SourceMetaItem): 'ok' | 'disabled' | 'degraded' {
+  if (isSourceDisabled(s)) return 'disabled';
+  if (!s.ok || s.quality?.some((q) => ['DEGRADED', 'TIMEOUT'].includes(q))) return 'degraded';
+  return 'ok';
 }
 
 function formatUpstreamsHeaderFromSources(sources: SourceMetaItem[]): string {
@@ -520,6 +543,52 @@ function formatUpstreamsHeaderFromSources(sources: SourceMetaItem[]): string {
     return `${s.name}=${s.ok ? 'ok' : 'down'}`;
   });
   return parts.join('; ') || 'helius=ok';
+}
+
+function buildCanonicalAssetContext(mint: string) {
+  const asset = CANONICAL_ASSETS[mint];
+  if (!asset) return null;
+
+  return {
+    code: 'CANONICAL_ASSET_CONTEXT',
+    title: 'Canonical asset context',
+    detail:
+      'Canonical asset detected. Some authority or metadata checks may not map to meme-token risk assumptions.',
+    severity: 'LOW' as const,
+    evidence: {
+      mint,
+      symbol: asset.symbol,
+      name: asset.name,
+      category: asset.category,
+      note: 'Small explicit registry for canonical assets only; score is not overridden.',
+    },
+  };
+}
+
+function disabledMeteoraScannerSource(): SourceMetaItem {
+  return {
+    name: 'meteora',
+    ok: false,
+    latencyMs: 0,
+    fetchedAt: new Date().toISOString(),
+    quality: ['DISABLED', 'SCANNER_RELIABILITY'],
+    error: 'Disabled for scanner reliability',
+  };
+}
+
+function optionalTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(fallback), timeoutMs);
+    promise
+      .then((value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        resolve(fallback);
+      });
+  });
 }
 
 /** Extracts token info from Helius getAsset result (optional chaining, never crashes). */
@@ -651,26 +720,46 @@ async function runLocalScan(
   const fetchStart = Date.now();
 
   // ── API Economy Mode ─────────────────────────────────────────────────────
-  // DexScreener + Meteora are free — always call in parallel.
+  // DexScreener is free and always called; Meteora scan is disabled for reliability.
   // Helius is paid (on-chain only, no alternative) — always call.
   // Birdeye is paid — only call if DexScreener has no price data.
-  const [heliusR, dexscreenerR, meteoraR] = await Promise.all([
+  const primaryFetchStart = Date.now();
+  const [heliusR, dexscreenerR] = await Promise.all([
     fetchHeliusAsset(mint),
     fetchDexScreenerTokenPairs(mint),
-    fetchMeteoraPairsForMint(mint),
   ]);
+  const primaryFetchMs = Date.now() - primaryFetchStart;
+  const meteoraR = disabledMeteoraScannerSource();
 
   // Only hit Birdeye when DexScreener returned no price (saves credits)
   const dsPairsRaw = (dexscreenerR.data as Record<string, unknown>)?.pairs;
   const dsHasPrice = Array.isArray(dsPairsRaw) && dsPairsRaw.length > 0 &&
     dsPairsRaw.some((p: Record<string, unknown>) => p?.priceUsd != null);
+  const birdeyeStart = Date.now();
   const birdeyeR = dsHasPrice
     ? { ok: false, latencyMs: 0, data: undefined, quality: ['SKIPPED_ECONOMY'], error: 'Skipped: DexScreener has price' }
     : await fetchBirdeyeTokenOverview(mint);
+  const birdeyeFetchMs = Date.now() - birdeyeStart;
 
   // Orca LP lock check — runs after DexScreener so it has pool addresses.
   // Fail-safe: never throws, never blocks the main scan result.
-  const orcaR = await checkOrcaLpLock(dexscreenerR.data).catch(() => undefined);
+  const orcaStart = Date.now();
+  const orcaR = await optionalTimeout(
+    checkOrcaLpLock(dexscreenerR.data),
+    6_000,
+    {
+      ok: false,
+      latencyMs: 6_000,
+      locked: null,
+      lockerProgram: null,
+      lockedPositions: 0,
+      totalPositions: 0,
+      lockedLiquidityUsd: null,
+      error: 'Optional Orca lock check timed out',
+      quality: ['TIMEOUT', 'OPTIONAL_CHECK'],
+    },
+  );
+  const orcaCheckMs = Date.now() - orcaStart;
 
   const fetchMs = Date.now() - fetchStart;
 
@@ -744,6 +833,23 @@ async function runLocalScan(
   const enabledSources = sources.filter((s) => !isSourceDisabled(s));
   const coverageSourcesOk = enabledSources.filter((s) => s.ok).length;
   const coverageSourcesTotal = enabledSources.length;
+  const disabledSources = sources
+    .filter((s) => sourceState(s) === 'disabled')
+    .map((s) => ({
+      name: s.name,
+      reason: s.error ?? (s.quality?.includes('SKIPPED_ECONOMY') ? 'Skipped by economy mode' : 'Disabled'),
+      quality: s.quality ?? [],
+    }));
+  const degradedSources = sources
+    .filter((s) => sourceState(s) === 'degraded')
+    .map((s) => ({
+      name: s.name,
+      reason: s.error ?? 'Unavailable',
+      quality: s.quality ?? [],
+    }));
+  const cacheState = sources.some((s) => s.quality?.includes('CACHE_HIT'))
+    ? 'PARTIAL_HIT'
+    : 'MISS';
 
   const birdeyeExtras = birdeyeR.ok ? extractBirdeyeExtras(birdeyeR.data) : {};
   const lpLocked =
@@ -760,6 +866,10 @@ async function runLocalScan(
         lockedLiquidityUsd: orcaR.lockedLiquidityUsd,
       }
     : null;
+  const canonicalAssetContext = buildCanonicalAssetContext(mint);
+  const reasons = canonicalAssetContext
+    ? [...engineResult.reasons, canonicalAssetContext]
+    : engineResult.reasons;
 
   const responseData = {
     success: true,
@@ -769,7 +879,15 @@ async function runLocalScan(
       score: engineResult.score,
       badge: engineResult.badge,
       confidence: engineResult.confidence,
-      reasons: engineResult.reasons,
+      reasons,
+      canonicalAsset: canonicalAssetContext
+        ? {
+            symbol: canonicalAssetContext.evidence.symbol,
+            name: canonicalAssetContext.evidence.name,
+            category: canonicalAssetContext.evidence.category,
+            note: canonicalAssetContext.detail,
+          }
+        : null,
       signals: {
         // Raw engine signals
         data_conflict: signals.dataConflict,
@@ -823,13 +941,22 @@ async function runLocalScan(
       coverage: {
         sourcesOk: coverageSourcesOk,
         sourcesTotal: coverageSourcesTotal,
+        enabledSourcesOk: coverageSourcesOk,
+        enabledSourcesTotal: coverageSourcesTotal,
+        configuredSourcesTotal: sources.length,
+        disabledSources,
+        degradedSources,
         degraded: coverageSourcesOk < coverageSourcesTotal,
+        label: `${coverageSourcesOk}/${coverageSourcesTotal} enabled sources OK`,
       },
       timingMs: {
         total: totalMs,
         fetch: fetchMs,
+        fetchProviders: primaryFetchMs,
+        birdeye: birdeyeFetchMs,
+        optionalChecks: orcaCheckMs,
         compute: computeMs,
-        cache: 'MISS',
+        cache: cacheState,
       },
     },
   };
@@ -895,7 +1022,7 @@ async function processScanRequest(data: z.infer<typeof ScanRequestSchema>, reque
   const API_BASE = getApiBase();
   const useProxy = !!process.env.BAGS_SHIELD_API_BASE?.trim() && !wouldProxyToSelf(API_BASE, req.url);
 
-  // Local scan: Helius + DexScreener + Birdeye + Meteora (todos por igual, Promise.allSettled)
+  // Local scan: Helius + DexScreener + optional Birdeye. Meteora scan remains disabled for reliability.
   if (!useProxy) {
     return runLocalScan(data, requestId, req);
   }

@@ -143,7 +143,7 @@ Veja [SETUP.md](./SETUP.md) para configuração completa.
 ```bash
 LAUNCHPAD_ENABLED=true
 LAUNCHPAD_MODE=real
-BAGS_API_KEY=sua-chave
+BAGS_API_KEY=
 ```
 
 ## Testes

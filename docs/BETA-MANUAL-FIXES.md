@@ -8,7 +8,7 @@ Use este documento para conferir e, se necessário, corrigir manualmente itens q
 
 - **Onde:** Variáveis de ambiente (`.env`, `.env.local` ou painel Vercel).
 - **O que fazer:** Defina **uma** das duas:
-  - `HELIUS_RPC_URL=https://mainnet.helius-rpc.com/?api-key=SUA_CHAVE`
+  - `HELIUS_RPC_URL=https://mainnet.helius-rpc.com/?api-key=REDACTED`
   - ou `HELIUS_API_KEY=SUA_CHAVE`
 - **Importante:** Não commitar a chave real no repositório. O `.env.example` contém apenas placeholders.
 

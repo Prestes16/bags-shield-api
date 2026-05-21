@@ -434,7 +434,7 @@ ALLOWED_IMAGE_DOMAINS=example.com,cdn.example.com
 
 # Required for real mode
 BAGS_API_BASE=https://public-api-v2.bags.fm/api/v1
-BAGS_API_KEY=your-api-key
+BAGS_API_KEY=
 
 # Optional: HMAC secret for manifest signing
 LAUNCHPAD_HMAC_SECRET=your-secret-key

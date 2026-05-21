@@ -130,7 +130,7 @@ ALLOWED_IMAGE_DOMAINS=example.com,cdn.example.com
 LAUNCHPAD_ENABLED=true
 LAUNCHPAD_MODE=real
 BAGS_API_BASE=https://public-api-v2.bags.fm/api/v1
-BAGS_API_KEY=your-secure-api-key
+BAGS_API_KEY=
 ALLOWED_IMAGE_DOMAINS=ipfs.io,arweave.net,your-cdn.com
 LAUNCHPAD_HMAC_SECRET=your-hmac-secret
 ```
