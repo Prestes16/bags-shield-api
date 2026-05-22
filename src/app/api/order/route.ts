@@ -163,6 +163,8 @@ export async function GET(req: NextRequest) {
           platformFeeFeeBps: data?.platformFee?.feeBps ?? null,
           platformFeeAmount: data?.platformFee?.amount ?? null,
           jupiterOrderEndpoint: `${endpoint.hostname}${endpoint.pathname}`,
+          manualFeeAvailable: true,
+          manualFeeQuoteEndpoint: '/api/swap/manual-fee/quote',
         };
 
         console.warn('[order] referral fee not applied', diagnostics);
