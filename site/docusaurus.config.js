@@ -7,11 +7,11 @@ const darkCodeTheme = prism.themes.dracula;
 const config = {
   title: 'Bags Shield',
   tagline: 'Solana Intelligence Layer',
-  // URL DE PRODUÇÃO CORRETA (Cloudflare Pages)
+  // URL de producao correta (Cloudflare Pages)
   url: 'https://bags-shield.pages.dev',
   baseUrl: '/',
 
-  // Evita quebra de build por links mortos temporários
+  // Evita quebra de build por links mortos temporarios
   onBrokenLinks: 'warn',
   markdown: {
     hooks: {
@@ -33,7 +33,7 @@ const config = {
       {
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          // "Edit this page" aponta para o GitHub; edições lá + novo deploy atualizam o site
+          // "Edit this page" points to GitHub; edits there plus a new deploy update the site.
           editUrl: 'https://github.com/Prestes16/bags-shield-api/edit/main/site/',
           routeBasePath: 'docs',
         },
@@ -53,11 +53,6 @@ const config = {
         { to: 'https://app.bagsshield.org', label: 'Launch App', position: 'right', className: 'navbar-cta' },
         { href: 'https://github.com/Prestes16/bags-shield-site', label: 'GitHub', position: 'right' },
       ],
-    },
-    footer: {
-      style: 'dark',
-      // Sintaxe segura para evitar erro de encoding no Windows
-      copyright: 'Copyright © ' + new Date().getFullYear() + ' Bags Shield. Built for Solana.',
     },
     prism: { theme: lightCodeTheme, darkTheme: darkCodeTheme },
   },
