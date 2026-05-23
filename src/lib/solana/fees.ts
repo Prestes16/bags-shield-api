@@ -35,6 +35,24 @@ function buildFeeCollector(): PublicKey {
 
 export const APP_FEE_COLLECTOR_OWNER: PublicKey = buildFeeCollector();
 
+export const WSOL_MINT = 'So11111111111111111111111111111111111111112';
+export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+export const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
+export const JUP_MINT = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN';
+
+const FEE_ACCOUNT_ENV_BY_MINT: Record<string, string> = {
+  [USDC_MINT]: 'JUPITER_FEE_ACCOUNT_USDC',
+  [WSOL_MINT]: 'JUPITER_FEE_ACCOUNT_WSOL',
+  [USDT_MINT]: 'JUPITER_FEE_ACCOUNT_USDT',
+  [JUP_MINT]: 'JUPITER_FEE_ACCOUNT_JUP',
+};
+
+export type PlatformFeeAccount = {
+  feeMint: string;
+  feeAccount: string;
+  source: 'env' | 'collector_ata';
+};
+
 export function getSolanaRpcUrl(): string {
   const rpc = (process.env.SOLANA_RPC_URL ?? '').trim();
   if (!rpc) {
@@ -51,6 +69,96 @@ export function getFeeCollectorTokenAccount(mint: string): string {
     true,
   );
   return ata.toBase58();
+}
+
+function getConfiguredFeeAccount(mint: string): PlatformFeeAccount {
+  const normalizedMint = new PublicKey(mint).toBase58();
+  const envName = FEE_ACCOUNT_ENV_BY_MINT[normalizedMint];
+  const configured = envName ? (process.env[envName] ?? '').trim() : '';
+
+  if (configured) {
+    return {
+      feeMint: normalizedMint,
+      feeAccount: new PublicKey(configured).toBase58(),
+      source: 'env',
+    };
+  }
+
+  return {
+    feeMint: normalizedMint,
+    feeAccount: getFeeCollectorTokenAccount(normalizedMint),
+    source: 'collector_ata',
+  };
+}
+
+export async function validateFeeTokenAccount(
+  connection: Connection,
+  feeMint: string,
+  feeAccount: string,
+): Promise<{ valid: boolean; reason?: string }> {
+  const expectedMint = new PublicKey(feeMint).toBase58();
+  const expectedOwner = APP_FEE_COLLECTOR_OWNER.toBase58();
+  const accountPk = new PublicKey(feeAccount);
+  const accountInfo = await connection.getParsedAccountInfo(accountPk, 'confirmed');
+
+  if (!accountInfo.value) return { valid: false, reason: 'fee account does not exist' };
+
+  const data = accountInfo.value.data as any;
+  const parsed = data?.parsed;
+  const info = parsed?.info;
+
+  if (!parsed || parsed.type !== 'account') {
+    return { valid: false, reason: 'fee account is not a parsed token account' };
+  }
+
+  if (data.program !== 'spl-token' && data.program !== 'spl-token-2022') {
+    return { valid: false, reason: 'fee account is not owned by a token program' };
+  }
+
+  if (info?.mint !== expectedMint) {
+    return { valid: false, reason: 'fee account mint mismatch' };
+  }
+
+  if (info?.owner !== expectedOwner) {
+    return { valid: false, reason: 'fee account owner mismatch' };
+  }
+
+  return { valid: true };
+}
+
+export async function resolvePlatformFeeAccount(
+  connection: Connection,
+  inputMint: string,
+  outputMint: string,
+): Promise<PlatformFeeAccount> {
+  const candidates = Array.from(
+    new Set([
+      new PublicKey(outputMint).toBase58(),
+      new PublicKey(inputMint).toBase58(),
+    ]),
+  );
+  const failures: string[] = [];
+
+  for (const mint of candidates) {
+    let candidate: PlatformFeeAccount;
+    try {
+      candidate = getConfiguredFeeAccount(mint);
+    } catch (e: any) {
+      failures.push(`${mint}: ${e?.message ?? 'invalid fee account'}`);
+      continue;
+    }
+
+    const validation = await validateFeeTokenAccount(
+      connection,
+      candidate.feeMint,
+      candidate.feeAccount,
+    );
+
+    if (validation.valid) return candidate;
+    failures.push(`${candidate.feeMint}: ${validation.reason}`);
+  }
+
+  throw new Error(`No valid Jupiter fee account for this pair. ${failures.join('; ')}`);
 }
 
 export async function getExistingFeeCollectorTokenAccount(mint: string): Promise<string | null> {
