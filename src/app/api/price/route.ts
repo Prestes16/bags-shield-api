@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { PublicKey } from '@solana/web3.js';
 import {
   getOrGenerateRequestId,
   applyCorsHeaders,
@@ -28,6 +29,36 @@ const JUPITER_PRICE_URL = 'https://api.jup.ag/price/v2';
 const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
 const TIMEOUT_MS = 5_000;
 const MAX_IDS = 100;
+
+function isValidMint(id: string): boolean {
+  try {
+    return new PublicKey(id).toBase58() === id;
+  } catch {
+    return false;
+  }
+}
+
+function priceSuccessBody(
+  ids: string[],
+  prices: Record<string, unknown>,
+  requestId: string,
+  warnings: string[] = [],
+  timeTaken?: unknown,
+) {
+  const missing = ids.filter((id) => prices[id] == null);
+  return {
+    success: true,
+    data: prices,
+    ...(timeTaken != null ? { timeTaken } : {}),
+    response: {
+      prices,
+      missing,
+      partial: warnings.length > 0 || missing.length > 0,
+      warnings,
+    },
+    meta: { requestId },
+  };
+}
 
 export async function OPTIONS(request: NextRequest) {
   const response = new NextResponse(null, { status: 204 });
@@ -69,6 +100,20 @@ export async function GET(request: NextRequest) {
 
   // Sanitize: split by comma, trim, dedupe, limit
   const ids = [...new Set(rawIds.split(',').map(s => s.trim()).filter(Boolean))].slice(0, MAX_IDS);
+  const invalidIds = ids.filter((id) => !isValidMint(id));
+  if (ids.length === 0 || invalidIds.length > 0) {
+    return jsonResponse(
+      request,
+      {
+        success: false,
+        error: 'INVALID_IDS',
+        message: 'All ids must be valid Solana mint public keys',
+        issues: invalidIds.map((id) => ({ id, message: 'Invalid Solana public key' })),
+      },
+      400,
+      requestId,
+    );
+  }
 
   try {
     const upstreamUrl = `${JUPITER_PRICE_URL}?ids=${ids.join(',')}`;
@@ -86,32 +131,22 @@ export async function GET(request: NextRequest) {
       console.warn(`[price/proxy] Jupiter returned ${upstreamRes.status}:`, text.slice(0, 200));
       return jsonResponse(
         request,
-        {
-          success: false,
-          error: 'UPSTREAM_ERROR',
-          message: `Jupiter Price API returned ${upstreamRes.status}`,
-          data: {},
-        },
-        502,
+        priceSuccessBody(ids, {}, requestId, [`price upstream unavailable (${upstreamRes.status})`]),
+        200,
         requestId,
       );
     }
 
     const json = await upstreamRes.json();
-    // Pass through the Jupiter response shape unchanged
-    return jsonResponse(request, { success: true, ...json }, 200, requestId);
+    const prices = json?.data && typeof json.data === 'object' ? json.data : {};
+    return jsonResponse(request, priceSuccessBody(ids, prices, requestId, [], json?.timeTaken), 200, requestId);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn('[price/proxy] fetch failed:', msg);
     return jsonResponse(
       request,
-      {
-        success: false,
-        error: 'FETCH_ERROR',
-        message: msg,
-        data: {},
-      },
-      502,
+      priceSuccessBody(ids, {}, requestId, ['price upstream unavailable']),
+      200,
       requestId,
     );
   }
