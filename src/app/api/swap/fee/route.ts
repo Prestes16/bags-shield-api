@@ -38,6 +38,7 @@ const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
 const JUPITER_BUILD_URL = 'https://api.jup.ag/swap/v2/build';
 const COMPUTE_BUDGET_PROGRAM_ID = 'ComputeBudget111111111111111111111111111111';
 const MAX_COMPUTE_UNIT_LIMIT = 1_400_000;
+const MAX_SOLANA_RAW_TX_BYTES = 1232;
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 const FeeSwapSchema = z
@@ -95,6 +96,34 @@ type BuildResponse = {
     blockhash?: number[] | string;
     lastValidBlockHeight?: number;
   };
+};
+
+type RouteAttemptConfig = {
+  label: string;
+  restrictIntermediateTokens?: boolean;
+  maxAccounts?: number;
+  onlyDirectRoutes?: boolean;
+};
+
+type RouteAttemptMeta = {
+  attempt: string;
+  restrictIntermediateTokens: boolean | null;
+  maxAccounts: number | null;
+  onlyDirectRoutes: boolean | null;
+  rawTxLength: number | null;
+  encodedTxLength: number | null;
+  routeHops: number | null;
+  upstreamStatus: number | null;
+  error: string | null;
+};
+
+type SwapCandidate = {
+  build: BuildResponse;
+  swapTransaction: string;
+  rawTxLength: number;
+  encodedTxLength: number;
+  routeHops: number | null;
+  attempt: RouteAttemptConfig;
 };
 
 function bytesToBase58(bytes: Uint8Array): string {
@@ -221,6 +250,52 @@ function validateFeeApplied(build: BuildResponse, feeAccount: string, feeBps: nu
   return null;
 }
 
+function getRouteHops(routePlan: unknown): number | null {
+  return Array.isArray(routePlan) ? routePlan.length : null;
+}
+
+function describeAttempt(
+  attempt: RouteAttemptConfig,
+): Omit<
+  RouteAttemptMeta,
+  'rawTxLength' | 'encodedTxLength' | 'routeHops' | 'upstreamStatus' | 'error'
+> {
+  return {
+    attempt: attempt.label,
+    restrictIntermediateTokens: attempt.restrictIntermediateTokens ?? null,
+    maxAccounts: attempt.maxAccounts ?? null,
+    onlyDirectRoutes: attempt.onlyDirectRoutes ?? null,
+  };
+}
+
+function buildAttemptParams(baseParams: URLSearchParams, attempt: RouteAttemptConfig): URLSearchParams {
+  const params = new URLSearchParams(baseParams);
+  if (typeof attempt.restrictIntermediateTokens === 'boolean') {
+    params.set('restrictIntermediateTokens', String(attempt.restrictIntermediateTokens));
+  }
+  if (typeof attempt.maxAccounts === 'number') {
+    params.set('maxAccounts', String(attempt.maxAccounts));
+  }
+  if (typeof attempt.onlyDirectRoutes === 'boolean') {
+    params.set('onlyDirectRoutes', String(attempt.onlyDirectRoutes));
+  }
+  return params;
+}
+
+function routeAttemptMeta(
+  attempt: RouteAttemptConfig,
+  details: Partial<Omit<RouteAttemptMeta, 'attempt' | 'restrictIntermediateTokens' | 'maxAccounts' | 'onlyDirectRoutes'>>,
+): RouteAttemptMeta {
+  return {
+    ...describeAttempt(attempt),
+    rawTxLength: details.rawTxLength ?? null,
+    encodedTxLength: details.encodedTxLength ?? null,
+    routeHops: details.routeHops ?? null,
+    upstreamStatus: details.upstreamStatus ?? null,
+    error: details.error ?? null,
+  };
+}
+
 function fail(
   req: NextRequest,
   requestId: string,
@@ -234,6 +309,29 @@ function fail(
       success: false,
       error: code ? { code, message: msg, ...(details ?? {}) } : msg,
       meta: { requestId },
+    },
+    { status, headers: { 'X-Request-Id': requestId } },
+  );
+  applyCorsHeaders(req, res);
+  applyNoStore(res);
+  applySecurityHeaders(res);
+  return res;
+}
+
+function failWithMeta(
+  req: NextRequest,
+  requestId: string,
+  msg: string,
+  status: number,
+  code: string,
+  meta: Record<string, unknown>,
+  details?: Record<string, unknown>,
+) {
+  const res = NextResponse.json(
+    {
+      success: false,
+      error: { code, message: msg, ...(details ?? {}) },
+      meta: { requestId, ...meta },
     },
     { status, headers: { 'X-Request-Id': requestId } },
   );
@@ -330,7 +428,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const params = new URLSearchParams({
+  const baseParams = new URLSearchParams({
     inputMint,
     outputMint,
     amount,
@@ -341,76 +439,146 @@ export async function POST(req: NextRequest) {
   });
 
   const t0 = Date.now();
-  let build: BuildResponse;
-  try {
-    const upstream = await fetch(`${JUPITER_BUILD_URL}?${params}`, {
-      headers: {
-        Accept: 'application/json',
-        'x-api-key': JUPITER_API_KEY,
-      },
-      cache: 'no-store',
-    });
-    const data = await upstream.json().catch(() => null);
+  const routeAttempts: RouteAttemptConfig[] = [
+    { label: 'normal' },
+    { label: 'restrict-intermediate', restrictIntermediateTokens: true },
+    { label: 'max-accounts-48', restrictIntermediateTokens: true, maxAccounts: 48 },
+    { label: 'max-accounts-40', restrictIntermediateTokens: true, maxAccounts: 40 },
+    { label: 'max-accounts-32', restrictIntermediateTokens: true, maxAccounts: 32 },
+    { label: 'direct-only', onlyDirectRoutes: true },
+  ];
+  const attempts: RouteAttemptMeta[] = [];
+  let candidate: SwapCandidate | null = null;
+  let lastFeeValidationError: string | null = null;
 
-    if (!upstream.ok) {
-      const clientError = upstream.status >= 400 && upstream.status < 500;
-      return fail(
+  for (const attempt of routeAttempts) {
+    const attemptParams = buildAttemptParams(baseParams, attempt);
+
+    try {
+      const upstream = await fetch(`${JUPITER_BUILD_URL}?${attemptParams}`, {
+        headers: {
+          Accept: 'application/json',
+          'x-api-key': JUPITER_API_KEY,
+        },
+        cache: 'no-store',
+      });
+      const data = await upstream.json().catch(() => null);
+
+      if (!upstream.ok) {
+        attempts.push(
+          routeAttemptMeta(attempt, {
+            upstreamStatus: upstream.status,
+            error: data?.error ?? data?.message ?? `Jupiter build error (${upstream.status})`,
+          }),
+        );
+        continue;
+      }
+
+      const build = data as BuildResponse;
+      const routeHops = getRouteHops(build.routePlan);
+      const feeValidationError = validateFeeApplied(build, feeAccount, feeBps);
+      if (feeValidationError) {
+        lastFeeValidationError = feeValidationError;
+        attempts.push(routeAttemptMeta(attempt, { routeHops, error: feeValidationError }));
+        continue;
+      }
+
+      const transaction = buildUnsignedTransaction(build, userPublicKey);
+      const requiredSignatures = transaction.message.header.numRequiredSignatures;
+      const requiredSigner = transaction.message.staticAccountKeys[0]?.toBase58();
+      if (requiredSignatures !== 1 || requiredSigner !== userPublicKey) {
+        return fail(
+          req,
+          requestId,
+          'Jupiter transaction requires an unexpected signer set; swap disabled.',
+          502,
+          'JUPITER_BUILD_INVALID_SIGNERS',
+          { requiredSignatures, requiredSigner },
+        );
+      }
+
+      const serialized = Buffer.from(transaction.serialize());
+      const swapTransaction = serialized.toString('base64');
+      const rawTxLength = serialized.length;
+      const encodedTxLength = swapTransaction.length;
+
+      if (rawTxLength > MAX_SOLANA_RAW_TX_BYTES) {
+        attempts.push(
+          routeAttemptMeta(attempt, {
+            rawTxLength,
+            encodedTxLength,
+            routeHops,
+            error: 'swap transaction exceeds Solana raw transaction size limit',
+          }),
+        );
+        console.warn('[swap-fee] Jupiter route transaction too large', {
+          requestId,
+          attempt: attempt.label,
+          rawTxLength,
+          encodedTxLength,
+          routeHops,
+          maxAccounts: attempt.maxAccounts ?? null,
+          restrictIntermediateTokens: attempt.restrictIntermediateTokens ?? null,
+          onlyDirectRoutes: attempt.onlyDirectRoutes ?? null,
+        });
+        continue;
+      }
+
+      attempts.push(routeAttemptMeta(attempt, { rawTxLength, encodedTxLength, routeHops }));
+      candidate = {
+        build,
+        swapTransaction,
+        rawTxLength,
+        encodedTxLength,
+        routeHops,
+        attempt,
+      };
+      break;
+    } catch (e: any) {
+      attempts.push(
+        routeAttemptMeta(attempt, {
+          error: e?.message ?? 'Jupiter build unavailable',
+        }),
+      );
+    }
+  }
+
+  if (!candidate) {
+    const latencyMs = Date.now() - t0;
+    if (lastFeeValidationError) {
+      return failWithMeta(
         req,
         requestId,
-        data?.error ?? data?.message ?? `Jupiter build error (${upstream.status})`,
-        clientError ? 422 : 502,
-        clientError ? 'JUPITER_BUILD_REJECTED' : 'JUPITER_BUILD_UNAVAILABLE',
+        'Jupiter did not include the Bags Shield platform fee; swap disabled to avoid zero-fee execution.',
+        502,
+        'SWAP_FEE_NOT_APPLIED',
+        { latencyMs, source: 'jupiter-v2-build', attempts },
+        {
+          requestedFeeBps: feeBps,
+          feeMint,
+          feeAccount,
+          reason: lastFeeValidationError,
+        },
       );
     }
 
-    build = data as BuildResponse;
-  } catch (e: any) {
-    return fail(req, requestId, e?.message ?? 'Jupiter build unavailable', 502, 'UPSTREAM_ERROR');
-  }
-
-  const feeValidationError = validateFeeApplied(build, feeAccount, feeBps);
-  if (feeValidationError) {
-    return fail(
+    return failWithMeta(
       req,
       requestId,
-      'Jupiter did not include the Bags Shield platform fee; swap disabled to avoid zero-fee execution.',
-      502,
-      'SWAP_FEE_NOT_APPLIED',
-      {
-        requestedFeeBps: feeBps,
-        feeMint,
-        feeAccount,
-        reason: feeValidationError,
-      },
-    );
-  }
-
-  let transaction: VersionedTransaction;
-  try {
-    transaction = buildUnsignedTransaction(build, userPublicKey);
-  } catch (e: any) {
-    return fail(req, requestId, e?.message ?? 'Failed to assemble Jupiter transaction', 502, 'JUPITER_BUILD_INVALID');
-  }
-
-  const requiredSignatures = transaction.message.header.numRequiredSignatures;
-  const requiredSigner = transaction.message.staticAccountKeys[0]?.toBase58();
-  if (requiredSignatures !== 1 || requiredSigner !== userPublicKey) {
-    return fail(
-      req,
-      requestId,
-      'Jupiter transaction requires an unexpected signer set; swap disabled.',
-      502,
-      'JUPITER_BUILD_INVALID_SIGNERS',
-      { requiredSignatures, requiredSigner },
+      'A rota encontrada gerou uma transação grande demais. Tente um valor menor, outro token ou uma rota direta.',
+      422,
+      'SWAP_ROUTE_TX_TOO_LARGE',
+      { latencyMs, source: 'jupiter-v2-build', attempts },
     );
   }
 
   const latencyMs = Date.now() - t0;
+  const { build } = candidate;
   const res = NextResponse.json(
     {
       success: true,
       response: {
-        swapTransaction: Buffer.from(transaction.serialize()).toString('base64'),
+        swapTransaction: candidate.swapTransaction,
         inputMint: build.inputMint ?? inputMint,
         outputMint: build.outputMint ?? outputMint,
         inAmount: build.inAmount ?? amount,
@@ -434,7 +602,16 @@ export async function POST(req: NextRequest) {
         blockhash: getBlockhash(build),
         lastValidBlockHeight: build.blockhashWithMetadata?.lastValidBlockHeight ?? null,
       },
-      meta: { requestId, latencyMs, source: 'jupiter-v2-build' },
+      meta: {
+        requestId,
+        latencyMs,
+        source: 'jupiter-v2-build',
+        selectedAttempt: candidate.attempt.label,
+        rawTxLength: candidate.rawTxLength,
+        encodedTxLength: candidate.encodedTxLength,
+        routeHops: candidate.routeHops,
+        attempts,
+      },
     },
     { status: 200, headers: { 'X-Request-Id': requestId, 'Cache-Control': 'no-store' } },
   );
