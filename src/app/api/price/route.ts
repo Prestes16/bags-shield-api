@@ -25,10 +25,13 @@ import {
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const JUPITER_PRICE_URL = 'https://api.jup.ag/price/v2';
+// Jupiter Price API V3 docs: https://dev.jup.ag/docs/price
+// V3 returns a root object keyed by mint with usdPrice as the canonical USD price.
+const JUPITER_PRICE_V3_URL = 'https://api.jup.ag/price/v3';
+const JUPITER_PRICE_V2_FALLBACK_URL = 'https://api.jup.ag/price/v2';
 const JUPITER_API_KEY = (process.env.JUPITER_API_KEY ?? '').trim();
 const TIMEOUT_MS = 5_000;
-const MAX_IDS = 100;
+const MAX_IDS = 50;
 
 function isValidMint(id: string): boolean {
   try {
@@ -53,11 +56,69 @@ function priceSuccessBody(
     response: {
       prices,
       missing,
-      partial: warnings.length > 0 || missing.length > 0,
+      partial: missing.length > 0,
       warnings,
     },
     meta: { requestId },
   };
+}
+
+function toNumber(value: unknown): number | null {
+  const price = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(price) ? price : null;
+}
+
+function normalizePriceEntry(entry: unknown): Record<string, unknown> | null {
+  if (entry == null) return null;
+
+  if (typeof entry === 'number' || typeof entry === 'string') {
+    const price = toNumber(entry);
+    return price == null ? null : { price };
+  }
+
+  if (typeof entry !== 'object') return null;
+  const record = entry as Record<string, unknown>;
+  const price = toNumber(record.price ?? record.usdPrice ?? record.value);
+  if (price == null) return null;
+
+  return {
+    ...record,
+    price,
+  };
+}
+
+function normalizePriceMap(ids: string[], json: unknown): Record<string, unknown> {
+  const root = json && typeof json === 'object' ? (json as Record<string, unknown>) : {};
+  const source = root.data && typeof root.data === 'object'
+    ? (root.data as Record<string, unknown>)
+    : root;
+  const prices: Record<string, unknown> = {};
+
+  for (const id of ids) {
+    const normalized = normalizePriceEntry(source[id]);
+    if (normalized) prices[id] = normalized;
+  }
+
+  return prices;
+}
+
+async function fetchJupiterPrices(endpoint: string, ids: string[]) {
+  const upstreamUrl = `${endpoint}?ids=${ids.join(',')}`;
+  const upstreamRes = await fetch(upstreamUrl, {
+    headers: {
+      Accept: 'application/json',
+      ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+    },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    cache: 'no-store',
+  });
+
+  if (!upstreamRes.ok) {
+    const text = await upstreamRes.text().catch(() => '');
+    throw new Error(`HTTP ${upstreamRes.status}${text ? `: ${text.slice(0, 200)}` : ''}`);
+  }
+
+  return upstreamRes.json();
 }
 
 export async function OPTIONS(request: NextRequest) {
@@ -116,38 +177,35 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const upstreamUrl = `${JUPITER_PRICE_URL}?ids=${ids.join(',')}`;
-    const upstreamRes = await fetch(upstreamUrl, {
-      headers: {
-        Accept: 'application/json',
-        ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
-      },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      cache: 'no-store',
-    });
+    const json = await fetchJupiterPrices(JUPITER_PRICE_V3_URL, ids);
+    const prices = normalizePriceMap(ids, json);
+    return jsonResponse(request, priceSuccessBody(ids, prices, requestId), 200, requestId);
+  } catch (e: unknown) {
+    const v3Msg = e instanceof Error ? e.message : String(e);
+    console.warn('[price/proxy] Jupiter Price V3 failed:', v3Msg);
 
-    if (!upstreamRes.ok) {
-      const text = await upstreamRes.text().catch(() => '');
-      console.warn(`[price/proxy] Jupiter returned ${upstreamRes.status}:`, text.slice(0, 200));
+    try {
+      const fallbackJson = await fetchJupiterPrices(JUPITER_PRICE_V2_FALLBACK_URL, ids);
+      const prices = normalizePriceMap(ids, fallbackJson);
+      const timeTaken =
+        fallbackJson && typeof fallbackJson === 'object'
+          ? (fallbackJson as Record<string, unknown>).timeTaken
+          : undefined;
       return jsonResponse(
         request,
-        priceSuccessBody(ids, {}, requestId, [`price upstream unavailable (${upstreamRes.status})`]),
+        priceSuccessBody(ids, prices, requestId, ['price v3 unavailable; used v2 fallback'], timeTaken),
+        200,
+        requestId,
+      );
+    } catch (fallbackError: unknown) {
+      const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      console.warn('[price/proxy] Jupiter Price fallback failed:', fallbackMsg);
+      return jsonResponse(
+        request,
+        priceSuccessBody(ids, {}, requestId, ['price upstream unavailable']),
         200,
         requestId,
       );
     }
-
-    const json = await upstreamRes.json();
-    const prices = json?.data && typeof json.data === 'object' ? json.data : {};
-    return jsonResponse(request, priceSuccessBody(ids, prices, requestId, [], json?.timeTaken), 200, requestId);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn('[price/proxy] fetch failed:', msg);
-    return jsonResponse(
-      request,
-      priceSuccessBody(ids, {}, requestId, ['price upstream unavailable']),
-      200,
-      requestId,
-    );
   }
 }
