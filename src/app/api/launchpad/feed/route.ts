@@ -98,6 +98,7 @@ interface EnrichedLaunch {
   volume24h: number | null;
   liquidityUsd: number | null;
   verified: boolean;
+  launchSource: "bags-shield";
 }
 
 // ── DexScreener batch enrichment ─────────────────────────────────────────
@@ -112,6 +113,7 @@ async function enrichWithMarketData(
     volume24h: null,
     liquidityUsd: null,
     verified: false,
+    launchSource: "bags-shield" as const,
   }));
 
   // Track DexScreener images keyed by mint address

@@ -20,7 +20,7 @@ const ALLOWED_ORIGINS = [
 const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
   'Access-Control-Allow-Headers':
-    'Content-Type,Authorization,X-Api-Key,X-Request-Id,Idempotency-Key,x-api-key',
+    'Content-Type,Authorization,X-Api-Key,X-Request-Id,Idempotency-Key,x-api-key,solana-client,x-solana-client,accept',
   'Access-Control-Expose-Headers': 'X-Request-Id,X-RateLimit-Remaining',
   'Access-Control-Max-Age': '86400',
 };
