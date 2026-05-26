@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getSupabaseRest,
+  mapDbLaunchToFeedItem,
+  type LaunchFeedItem,
+  type UserLaunchRow,
+} from "@/lib/launchpad/launch-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,29 +61,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return {
-    base: url.replace(/\/+$/, "") + "/rest/v1",
-    headers: {
-      apikey: key,
-      authorization: `Bearer ${key}`,
-      "content-type": "application/json",
-    },
-  };
-}
-
 type Filter = "recent" | "top" | "verified" | "volume_asc" | "volume_desc";
-
-interface LaunchRow {
-  mint: string;
-  name: string | null;
-  symbol: string | null;
-  image_url: string | null;
-  created_at: string;
-}
 
 interface DexPair {
   chainId: string;
@@ -87,24 +71,18 @@ interface DexPair {
   info?: { imageUrl?: string };
 }
 
-interface EnrichedLaunch {
-  mint: string;
-  name: string | null;
-  symbol: string | null;
-  image_url: string | null;
-  created_at: string;
+interface EnrichedLaunch extends LaunchFeedItem {
   score: number | null;
   risk_level: string | null;
   volume24h: number | null;
   liquidityUsd: number | null;
   verified: boolean;
-  launchSource: "bags-shield";
 }
 
 // ── DexScreener batch enrichment ─────────────────────────────────────────
 
 async function enrichWithMarketData(
-  launches: LaunchRow[]
+  launches: LaunchFeedItem[]
 ): Promise<EnrichedLaunch[]> {
   const results: EnrichedLaunch[] = launches.map((l) => ({
     ...l,
@@ -169,7 +147,7 @@ async function enrichWithMarketData(
   }
 
   // Fetch scores from user_scans (latest per mint)
-  const sb = getSupabase();
+  const sb = getSupabaseRest();
   const scoreMap = new Map<string, { score: number; risk_level: string }>();
   if (sb && mints.length > 0) {
     try {
@@ -233,27 +211,50 @@ export async function GET(req: NextRequest) {
     return json({ success: true, filter, launches: cached });
   }
 
-  const sb = getSupabase();
+  const sb = getSupabaseRest();
   if (!sb) {
     return json({ success: true, filter, launches: [] });
   }
 
   try {
-    // Fetch launches from Supabase (recent 100 to have enough for all filters)
+    // Fetch only rows with provenance columns. If the migration has not been
+    // applied yet, PostgREST returns an error and the feed stays fail-closed.
+    const selectFields = [
+      "mint",
+      "name",
+      "symbol",
+      "image_url",
+      "created_at",
+      "creator_wallet",
+      "launch_wallet",
+      "tx_signature",
+      "launch_status",
+      "origin",
+      "app_created",
+      "is_demo",
+      "is_imported",
+      "confirmed_at",
+      "metadata_uri",
+      "config_key",
+    ].join(",");
     const res = await fetch(
-      `${sb.base}/user_launches?select=mint,name,symbol,image_url,created_at&order=created_at.desc&limit=100`,
+      `${sb.base}/user_launches?select=${selectFields}&order=created_at.desc&limit=100`,
       { headers: sb.headers }
     );
     if (!res.ok) {
+      console.warn("[launchpad/feed] provenance columns unavailable; returning empty feed");
       return json({ success: true, filter, launches: [] });
     }
 
-    const rows = (await res.json()) as LaunchRow[];
+    const rows = (await res.json()) as UserLaunchRow[];
+    const realLaunches = rows
+      .map(mapDbLaunchToFeedItem)
+      .filter((row): row is LaunchFeedItem => Boolean(row));
 
     // Deduplicate by mint (keep most recent)
     const seen = new Set<string>();
-    const unique: LaunchRow[] = [];
-    for (const r of rows) {
+    const unique: LaunchFeedItem[] = [];
+    for (const r of realLaunches) {
       if (!seen.has(r.mint)) {
         seen.add(r.mint);
         unique.push(r);

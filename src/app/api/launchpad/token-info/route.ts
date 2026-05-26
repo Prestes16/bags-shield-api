@@ -26,6 +26,7 @@ import {
   type BagsTokenInfoRequest,
 } from "@/lib/launchpad/bags-client";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
+import { upsertUserLaunchProvenance } from "@/lib/launchpad/launch-registry";
 
 export const runtime = "nodejs";
 
@@ -210,6 +211,8 @@ export async function POST(req: NextRequest) {
     websiteUrl?: string;
     twitterHandle?: string;
     telegramHandle?: string;
+    wallet?: string;
+    launchWallet?: string;
   };
   let imageFile: File | undefined;
 
@@ -324,6 +327,8 @@ export async function POST(req: NextRequest) {
       twitter: getFormString(formData, "twitter"),
       discord: getFormString(formData, "discord"),
       website: getFormString(formData, "website"),
+      wallet: getFormString(formData, "wallet"),
+      launchWallet: getFormString(formData, "launchWallet"),
     });
 
     if (!validation.ok) {
@@ -413,6 +418,28 @@ export async function POST(req: NextRequest) {
     const upstreamResponse = bagsResult.response as Record<string, unknown>;
     const metadataUri = pickMetadataUri(upstreamResponse, tokenInfo.metadataUrl);
     const tokenMint = pickTokenMint(upstreamResponse);
+    const launchWallet = tokenInfo.wallet || tokenInfo.launchWallet;
+
+    if (tokenMint && launchWallet) {
+      const persisted = await upsertUserLaunchProvenance({
+        mint: tokenMint,
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol,
+        imageUrl: tokenInfo.imageUrl,
+        creatorWallet: launchWallet,
+        launchWallet,
+        metadataUri,
+        launchStatus: "token_info_created",
+      });
+      if (!persisted) {
+        SafeLogger.warn("Launchpad token-info provenance was not persisted", {
+          requestId,
+          endpoint: ROUTE,
+          tokenMint,
+          hasWallet: true,
+        });
+      }
+    }
 
     return jsonResponse(
       req,

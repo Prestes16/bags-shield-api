@@ -27,6 +27,7 @@ import {
 } from "@/lib/launchpad/bags-client";
 import { buildLaunchpadFeeQuote } from "@/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
+import { upsertUserLaunchProvenance } from "@/lib/launchpad/launch-registry";
 
 const ROUTE = "/api/launchpad/create-launch-transaction";
 
@@ -291,6 +292,23 @@ export async function POST(req: NextRequest) {
         },
         { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
       );
+    }
+
+    const persisted = await upsertUserLaunchProvenance({
+      mint: input.tokenMint,
+      creatorWallet: input.wallet,
+      launchWallet: input.wallet,
+      metadataUri: finalIpfs,
+      configKey: input.configKey,
+      launchStatus: "transaction_created",
+    });
+    if (!persisted) {
+      SafeLogger.warn("Launchpad transaction provenance was not persisted", {
+        requestId,
+        endpoint: ROUTE,
+        tokenMint: input.tokenMint,
+        hasWallet: Boolean(input.wallet),
+      });
     }
 
     return jsonResponse(

@@ -21,6 +21,7 @@ import {
   launchpadSendRequestSchema,
   validateLaunchpadInput,
 } from "@/lib/launchpad/schemas";
+import { updateUserLaunchSubmitted } from "@/lib/launchpad/launch-registry";
 
 export const runtime = "nodejs";
 
@@ -194,6 +195,10 @@ export async function POST(req: NextRequest) {
   const input = ("data" in validation ? validation.data : {}) as {
     signedTransaction: string;
     encoding: "base64" | "base58";
+    tokenMint?: string;
+    mint?: string;
+    wallet?: string;
+    launchWallet?: string;
   };
 
   let rawTransaction: Uint8Array;
@@ -222,6 +227,24 @@ export async function POST(req: NextRequest) {
       skipPreflight: false,
       maxRetries: 3,
     });
+
+    const provenanceMint = input.tokenMint || input.mint;
+    const provenanceWallet = input.wallet || input.launchWallet;
+    if (provenanceMint) {
+      const persisted = await updateUserLaunchSubmitted({
+        mint: provenanceMint,
+        wallet: provenanceWallet,
+        txSignature: signature,
+      });
+      if (!persisted) {
+        SafeLogger.warn("Launchpad submitted provenance was not persisted", {
+          requestId,
+          endpoint: ROUTE,
+          tokenMint: provenanceMint,
+          hasWallet: Boolean(provenanceWallet),
+        });
+      }
+    }
 
     return jsonResponse(
       req,

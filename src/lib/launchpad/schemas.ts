@@ -295,6 +295,8 @@ export const bagsTokenInfoRequestSchema = z
     telegramHandle: optionalTrimmedString,
     twitterHandle: optionalTrimmedString,
     websiteUrl: optionalTrimmedString,
+    wallet: solanaAddressSchema.optional(),
+    launchWallet: solanaAddressSchema.optional(),
   })
   .strict();
 
@@ -429,6 +431,10 @@ export const launchpadSendRequestSchema = z
   .object({
     signedTransaction: z.string().min(32, 'signedTransaction é obrigatória').max(100000),
     encoding: z.enum(['base64', 'base58']).default('base64'),
+    tokenMint: solanaAddressSchema.optional(),
+    mint: solanaAddressSchema.optional(),
+    wallet: solanaAddressSchema.optional(),
+    launchWallet: solanaAddressSchema.optional(),
   })
   .strict();
 
