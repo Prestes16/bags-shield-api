@@ -14,8 +14,9 @@ function base64url(buf: Uint8Array): string {
 
 export async function GET() {
   const clientId = process.env.TWITTER_CLIENT_ID;
-  const callbackBase = process.env.AUTH_CALLBACK_BASE || "https://api.bagsshield.org";
+  const callbackBase = (process.env.AUTH_CALLBACK_BASE || "https://api.bagsshield.org").replace(/\/+$/, "");
   if (!clientId) {
+    console.error("[auth/twitter] TWITTER_CLIENT_ID not set — OAuth disabled");
     return NextResponse.json({ success: false, error: "Twitter OAuth not configured" }, { status: 503 });
   }
 

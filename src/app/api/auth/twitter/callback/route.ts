@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const frontendUrl = process.env.FRONTEND_URL || "https://app.bagsshield.org";
-  const callbackBase = process.env.AUTH_CALLBACK_BASE || "https://api.bagsshield.org";
+  const frontendUrl = (process.env.FRONTEND_URL || "https://app.bagsshield.org").replace(/\/+$/, "");
+  const callbackBase = (process.env.AUTH_CALLBACK_BASE || "https://api.bagsshield.org").replace(/\/+$/, "");
 
   try {
     const code = req.nextUrl.searchParams.get("code");

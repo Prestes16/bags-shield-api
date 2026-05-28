@@ -6,13 +6,16 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const callbackBase = process.env.AUTH_CALLBACK_BASE || "https://api.bagsshield.org";
+  const callbackBase = (process.env.AUTH_CALLBACK_BASE || "https://api.bagsshield.org").replace(/\/+$/, "");
   if (!clientId) {
+    console.error("[auth/google] GOOGLE_CLIENT_ID not set — OAuth disabled");
     return NextResponse.json({ success: false, error: "Google OAuth not configured" }, { status: 503 });
   }
 
   const nonce = crypto.randomUUID();
   const redirectUri = `${callbackBase}/api/auth/google/callback`;
+  // Log for Vercel Function logs — paste this URI into Google Cloud Console
+  console.log("[auth/google] redirect_uri:", redirectUri);
 
   const params = new URLSearchParams({
     client_id: clientId,

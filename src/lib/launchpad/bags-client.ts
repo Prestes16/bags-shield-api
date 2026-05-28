@@ -398,11 +398,11 @@ export async function createLaunchTransaction(
 export async function getClaimablePositions(
   wallet: string,
 ): Promise<BagsResult<BagsClaimablePosition[]>> {
-  return bagsGetFetch<BagsClaimablePosition[]>("/fee-share/user-positions", { wallet });
+  return bagsGetFetch<BagsClaimablePosition[]>("/token-launch/claimable-positions", { wallet });
 }
 
 export async function getClaimTransactionsV3(
   req: BagsClaimTransactionsV3Request,
 ): Promise<BagsResult<BagsClaimTransaction[]>> {
-  return bagsJsonFetch<BagsClaimTransaction[]>("/fee-share/claim-v3", req);
+  return bagsJsonFetch<BagsClaimTransaction[]>("/token-launch/claim-txs/v3", req);
 }
