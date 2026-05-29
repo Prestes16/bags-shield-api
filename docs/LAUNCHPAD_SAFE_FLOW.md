@@ -107,3 +107,26 @@ When public writes are paused, valid calls to `/api/launchpad/create-config` and
 `/api/launchpad/create-launch-transaction` return
 `LAUNCHPAD_SAFE_MODE_PAUSED`. Invalid payloads still return validation errors so
 negative smokes continue to prove schema behavior.
+
+## Partner Config Path
+
+Bags supports partner configurations for collecting partner fees from launches.
+This is the candidate path for reactivating public launches without asking each
+creator to sign a separate fee-share config transaction.
+
+Current rules:
+
+1. The partner wallet is the official Bags Shield fee-share wallet:
+   `7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi`.
+2. A partner key/config must be created outside the public user flow by an
+   admin/operator flow.
+3. A normal user must never sign a partner/config creation transaction.
+4. `LAUNCHPAD_PARTNER_CONFIG` is optional and read-only for diagnostics.
+5. If `LAUNCHPAD_PARTNER_WALLET` is set, it must equal the official Bags Shield
+   wallet.
+6. `LAUNCHPAD_PUBLIC_WRITES_ENABLED` remains false until the final launch flow is
+   validated end to end.
+
+The read-only endpoint `/api/launchpad/partner-config/status` reports whether
+`LAUNCHPAD_PARTNER_CONFIG` is present and valid. It does not call Bags write
+endpoints, return transactions, sign, broadcast, or enable launches.
