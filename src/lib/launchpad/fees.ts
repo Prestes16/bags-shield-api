@@ -2,6 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 
 export const DEFAULT_LAUNCHPAD_TREASURY_WALLET =
   "7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi";
+export const BAGS_SHIELD_FEE_SHARE_WALLET = DEFAULT_LAUNCHPAD_TREASURY_WALLET;
 
 const DEFAULTS = {
   feesEnabled: true,
@@ -114,6 +115,12 @@ export function getLaunchpadFeeSettings(): LaunchpadFeeSettings {
     envString("LAUNCHPAD_TREASURY_WALLET") || DEFAULT_LAUNCHPAD_TREASURY_WALLET,
     "LAUNCHPAD_TREASURY_WALLET",
   );
+
+  if (treasuryWallet !== BAGS_SHIELD_FEE_SHARE_WALLET) {
+    throw new Error(
+      `LAUNCHPAD_FEE_SHARE_WALLET_NOT_CONFIGURED: LAUNCHPAD_TREASURY_WALLET must be ${BAGS_SHIELD_FEE_SHARE_WALLET}`,
+    );
+  }
 
   const settings: LaunchpadFeeSettings = {
     feesEnabled: envBoolean("LAUNCHPAD_FEES_ENABLED", DEFAULTS.feesEnabled),

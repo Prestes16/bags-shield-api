@@ -251,6 +251,12 @@ export async function POST(req: NextRequest) {
 
     const upstreamResponse = bagsResult.response as Record<string, unknown>;
     const configKey = pickConfigKey(upstreamResponse);
+    const transactions = Array.isArray(upstreamResponse.transactions) ? upstreamResponse.transactions : [];
+    const bundles = Array.isArray(upstreamResponse.bundles) ? upstreamResponse.bundles : [];
+    const hasTransactions = transactions.length > 0;
+    const hasBundles = bundles.length > 0;
+    const needsCreation = upstreamResponse.needsCreation === true || hasTransactions || hasBundles;
+    const publicFlowSafe = !hasTransactions && !hasBundles;
 
     return jsonResponse(
       req,
@@ -261,6 +267,19 @@ export async function POST(req: NextRequest) {
           ...upstreamResponse,
           configKey,
           meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
+          needsCreation,
+          hasTransactions,
+          hasBundles,
+          publicFlowSafe,
+          safety: {
+            publicFlowSafe,
+            needsCreation,
+            hasTransactions,
+            hasBundles,
+            reason: publicFlowSafe
+              ? "Fee-share config does not require a separate public-flow signature."
+              : "Fee-share config returned separate transactions/bundles and is unsafe for public launch flow while Safety Gate is active.",
+          },
           feeShare: {
             feesEnabled: feeShare.feesEnabled,
             treasuryWallet: feeShare.treasuryWallet,

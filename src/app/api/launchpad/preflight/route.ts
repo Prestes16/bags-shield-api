@@ -1,30 +1,94 @@
 /**
  * POST /api/launchpad/preflight
- * 
- * Validates LaunchConfigDraft and calls /api/scan and /api/simulate internally.
- * Returns PreflightReport with validation results.
+ *
+ * Read-only Launchpad safety preflight. This endpoint never signs, never
+ * broadcasts, never returns a transaction for signing, and never persists a
+ * token as created/launched.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
 import {
   getOrGenerateRequestId,
   safeJsonParse,
   checkRateLimitByIp,
   checkIdempotencyKey,
+  applyCorsHeaders,
+  applyNoStore,
+  applySecurityHeaders,
   SafeLogger,
 } from "@/lib/security";
 import { handlePreflight } from "@/lib/security/cors";
-import {
-  validateLaunchpadInput,
-  launchConfigDraftSchema,
-} from "@/lib/launchpad/schemas";
-import { checkLaunchpadEnabled, setupSecurityHeaders } from "@/lib/launchpad/middleware";
 import { getLaunchpadMode } from "@/lib/env";
-import { stubPreflightReport } from "@/lib/launchpad/stub";
-import type { LaunchConfigDraft, PreflightReport } from "@/lib/launchpad/types";
+import { buildLaunchpadFeeQuote } from "@/lib/launchpad/fees";
+import {
+  buildLaunchpadFeeSharePlan,
+  validateFeeSharePlan,
+  type FeeSharePlanCheck,
+} from "@/lib/launchpad/fee-share-plan";
 
-interface PreflightRequest {
-  config: LaunchConfigDraft;
+const ROUTE = "/api/launchpad/preflight";
+
+interface SafePreflightRequest {
+  wallet?: string;
+  creatorWallet?: string;
+  launchWallet?: string;
+  initialBuyLamports?: number;
+  verified?: boolean;
+  tokenDraft?: {
+    name?: string;
+    symbol?: string;
+    description?: string;
+    metadataUri?: string;
+  };
+  config?: {
+    launchWallet?: string;
+    token?: {
+      name?: string;
+      symbol?: string;
+      description?: string;
+      metadataUri?: string;
+    };
+  };
+}
+
+function jsonResponse(req: NextRequest, requestId: string, body: unknown, init?: ResponseInit) {
+  const res = NextResponse.json(body, init);
+  applyCorsHeaders(req, res);
+  applyNoStore(res);
+  applySecurityHeaders(res);
+  res.headers.set("X-Request-Id", requestId);
+  return res;
+}
+
+function normalizePublicKey(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    return new PublicKey(value.trim()).toBase58();
+  } catch {
+    return null;
+  }
+}
+
+function safeLamports(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function appendSafetyChecks(checks: FeeSharePlanCheck[]) {
+  return [
+    ...checks,
+    {
+      id: "tips_disabled",
+      ok: true,
+      message: "Tips are disabled by default",
+    },
+    {
+      id: "no_partial_config_tx",
+      ok: true,
+      message: "No config transaction will be requested in public flow",
+    },
+  ];
 }
 
 export async function OPTIONS(req: NextRequest) {
@@ -33,27 +97,17 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
-  let requestId = getOrGenerateRequestId(req.headers);
-
-  // Check feature flag
-  const featureCheck = checkLaunchpadEnabled(req, "/api/launchpad/preflight");
-  if (featureCheck) return featureCheck;
-
-  // Apply security headers
-  let res = setupSecurityHeaders(req, requestId);
-
-  // Rate limiting by IP
+  const requestId = getOrGenerateRequestId(req.headers);
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const route = "/api/launchpad/preflight";
-  const rateLimitCheck = checkRateLimitByIp(ip, route);
+  const rateLimitCheck = checkRateLimitByIp(ip, ROUTE);
+
   if (!rateLimitCheck.allowed) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "TOO_MANY_REQUESTS",
-          message: "Rate limit exceeded",
-        },
+        error: { code: "TOO_MANY_REQUESTS", message: "Rate limit exceeded" },
         meta: { requestId },
       },
       {
@@ -64,16 +118,17 @@ export async function POST(req: NextRequest) {
           "X-RateLimit-Remaining": "0",
           "X-RateLimit-Reset": String(rateLimitCheck.resetAt),
         },
-      }
+      },
     );
   }
 
-  // Idempotency check (optional)
   const idempotencyKey = req.headers.get("Idempotency-Key");
   if (idempotencyKey) {
-    const idempotencyCheck = checkIdempotencyKey(idempotencyKey, route);
+    const idempotencyCheck = checkIdempotencyKey(idempotencyKey, ROUTE);
     if (idempotencyCheck && !idempotencyCheck.allowed) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
+        requestId,
         {
           success: false,
           error: {
@@ -82,177 +137,152 @@ export async function POST(req: NextRequest) {
           },
           meta: { requestId },
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
   }
 
-  // Content-Type check
   const contentType = req.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "UNSUPPORTED_MEDIA_TYPE",
-          message: "Content-Type must be application/json",
-        },
-        issues: [
-          {
-            path: "headers.content-type",
-            message: "Expected application/json",
-          },
-        ],
+        error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Content-Type must be application/json" },
+        issues: [{ path: "headers.content-type", message: "Expected application/json" }],
         meta: { requestId },
       },
-      { status: 415 }
+      { status: 415 },
     );
   }
 
-  // Safe JSON parsing
   let bodyText: string;
   try {
     bodyText = await req.text();
   } catch (error) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "BAD_REQUEST",
-          message: "Failed to read request body",
-        },
-        issues: [
-          {
-            path: "<root>",
-            message: error instanceof Error ? error.message : "Unknown error",
-          },
-        ],
+        error: { code: "BAD_REQUEST", message: "Failed to read request body" },
+        issues: [{ path: "<root>", message: error instanceof Error ? error.message : "Unknown error" }],
         meta: { requestId },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const parseResult = safeJsonParse<PreflightRequest>(bodyText);
+  const parseResult = safeJsonParse<SafePreflightRequest>(bodyText);
   if (!parseResult.success) {
-    return NextResponse.json(
+    return jsonResponse(
+      req,
+      requestId,
       {
         success: false,
-        error: {
-          code: "BAD_REQUEST",
-          message: parseResult.error || "Invalid JSON",
-        },
+        error: { code: "BAD_REQUEST", message: parseResult.error || "Invalid JSON" },
         issues: parseResult.issues || [],
         meta: { requestId },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  // Validate config schema
-  const validation = validateLaunchpadInput(
-    launchConfigDraftSchema,
-    parseResult.data.config
-  );
-  if (!validation.ok) {
-    const report: PreflightReport = {
-      isValid: false,
-      issues: ("issues" in validation ? validation.issues : []).map((issue) => ({
-        ...issue,
-        severity: "error" as const,
-      })),
-      warnings: [],
-      validatedAt: new Date().toISOString(),
+  const body = parseResult.data || {};
+  const wallet = normalizePublicKey(body.wallet || body.launchWallet || body.config?.launchWallet);
+  const creatorWallet = normalizePublicKey(body.creatorWallet || wallet);
+
+  if (!wallet || !creatorWallet) {
+    return jsonResponse(
+      req,
       requestId,
-    };
-
-    return NextResponse.json(
       {
-        success: true,
-        response: report,
-        meta: {
-          requestId,
-          elapsedMs: Date.now() - startTime,
-        },
+        success: false,
+        error: { code: "VALIDATION_FAILED", message: "wallet and creatorWallet must be valid Solana public keys" },
+        issues: [{ path: "wallet", message: "wallet or launchWallet is required" }],
+        meta: { requestId },
       },
-      { status: 200 }
+      { status: 400 },
     );
   }
 
-  const config = validation.data;
+  const initialBuyLamports = safeLamports(body.initialBuyLamports);
+  const verified = body.verified === true;
 
-  const mode = getLaunchpadMode();
-  const elapsedMs = Date.now() - startTime;
+  try {
+    const feeShare = buildLaunchpadFeeSharePlan({ creatorWallet });
+    const feeQuote = buildLaunchpadFeeQuote({
+      wallet,
+      verified,
+      initialBuyLamports,
+      extraTipLamports: 0,
+    });
+    const checks = appendSafetyChecks(validateFeeSharePlan(feeShare));
+    const failedChecks = checks.filter((check) => !check.ok);
+    const launchAllowed = false;
+    const safetyStatus = failedChecks.length > 0 ? "blocked_partial_config" : "paused";
+    const reason = failedChecks.length > 0
+      ? "Launchpad fee-share configuration is not safe for public launch flow."
+      : "Launchpad is paused while Bags Shield hardens the final transaction flow. No partial SOL-spending config transaction will be requested.";
 
-  // Use stub mode if configured
-  if (mode === "stub") {
-    SafeLogger.info("Using stub mode for preflight", {
+    SafeLogger.info("Launchpad safety preflight completed", {
       requestId,
-      endpoint: "/api/launchpad/preflight",
-      mode: "stub",
+      endpoint: ROUTE,
+      launchAllowed,
+      safetyStatus,
+      mode: getLaunchpadMode(),
+      failedChecks: failedChecks.map((check) => check.id),
     });
 
-    const report = stubPreflightReport(config as LaunchConfigDraft, requestId);
-
-    return NextResponse.json(
-      {
-        success: true,
-        response: report,
-        meta: {
-          requestId,
-          elapsedMs,
-          mode: "stub",
-        },
-      },
-      { status: 200 }
-    );
-  }
-
-  // Real mode: Additional business logic validations
-  const issues: PreflightReport["issues"] = [];
-  const warnings: PreflightReport["warnings"] = [];
-
-  // Additional business logic validations
-  if (config.token.imageUrl && !config.token.imageUrl.startsWith("https://")) {
-    warnings.push({
-      path: "token.imageUrl",
-      message: "HTTPS is recommended for image URLs",
-    });
-  }
-
-  if (!config.token.description || config.token.description.length < 10) {
-    warnings.push({
-      path: "token.description",
-      message: "Description should be at least 10 characters for better visibility",
-    });
-  }
-
-  SafeLogger.info("Preflight validation completed", {
-    requestId,
-    endpoint: "/api/launchpad/preflight",
-    isValid: issues.length === 0,
-    issuesCount: issues.length,
-    warningsCount: warnings.length,
-    elapsedMs,
-  });
-
-  const report: PreflightReport = {
-    isValid: issues.length === 0,
-    issues,
-    warnings,
-    validatedAt: new Date().toISOString(),
-    requestId,
-  };
-
-  return NextResponse.json(
-    {
+    return jsonResponse(req, requestId, {
       success: true,
-      response: report,
+      response: {
+        launchAllowed,
+        safetyStatus,
+        reason,
+        mode: getLaunchpadMode(),
+        tokenDraft: body.tokenDraft || body.config?.token || null,
+        feeShare,
+        tips: {
+          enabled: false,
+          tipWallet: null,
+          tipLamports: 0,
+        },
+        estimatedCosts: {
+          initialBuyLamports,
+          totalPlatformFeeLamports: feeQuote.totalPlatformFeeLamports,
+          networkFeeLamportsEstimate: null,
+          partialConfigSpendAllowed: false,
+        },
+        checks,
+      },
       meta: {
         requestId,
-        elapsedMs,
+        elapsedMs: Date.now() - startTime,
       },
-    },
-    { status: 200 }
-  );
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Launchpad fee-share plan unavailable";
+    const code = message.includes("LAUNCHPAD_FEE_SHARE_WALLET_NOT_CONFIGURED")
+      ? "LAUNCHPAD_FEE_SHARE_WALLET_NOT_CONFIGURED"
+      : "LAUNCHPAD_PREFLIGHT_FAILED";
+
+    SafeLogger.error("Launchpad safety preflight failed", error, {
+      requestId,
+      endpoint: ROUTE,
+      code,
+    });
+
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: { code, message },
+        meta: { requestId, elapsedMs: Date.now() - startTime },
+      },
+      { status: 503 },
+    );
+  }
 }
