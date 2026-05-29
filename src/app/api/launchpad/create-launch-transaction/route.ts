@@ -46,6 +46,11 @@ function getUpstreamString(details: Record<string, unknown> | undefined, key: st
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function getUpstreamAttempts(details: Record<string, unknown> | undefined) {
+  const attempts = details?.attempts;
+  return Array.isArray(attempts) ? attempts : undefined;
+}
+
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
 }
@@ -289,12 +294,14 @@ export async function POST(req: NextRequest) {
       const upstreamStatus = getUpstreamStatus(bagsResult.error.details);
       const upstreamCode = getUpstreamString(bagsResult.error.details, "upstreamCode");
       const upstreamMessage = getUpstreamString(bagsResult.error.details, "upstreamMessage");
+      const attempts = getUpstreamAttempts(bagsResult.error.details);
       SafeLogger.error("Bags create-launch-transaction request failed", undefined, {
         requestId,
         endpoint: ROUTE,
         errorCode: bagsResult.error.code,
         upstreamStatus,
         upstreamCode,
+        attempts,
         wallet: input.wallet,
         tokenMint: input.tokenMint,
         hasIpfs: Boolean(finalIpfs),
@@ -314,12 +321,14 @@ export async function POST(req: NextRequest) {
             upstreamStatus,
             upstreamCode,
             upstreamMessage,
+            attempts,
           },
           meta: {
             requestId,
             upstream: "bags",
             upstreamStatus,
             upstreamCode,
+            attempts,
             elapsedMs: Date.now() - startTime,
           },
         },

@@ -123,7 +123,6 @@ export interface BagsClaimTransaction {
   encoding?: "base58" | "base64";
   description?: string;
 }
-
 // ── GET helper ────────────────────────────────────────────────────────────────
 
 async function bagsGetFetch<T>(
@@ -154,12 +153,13 @@ async function bagsGetFetch<T>(
     const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
 
     if (!res.ok) {
+      const upstreamError = record?.error ?? record?.message ?? data;
       return {
         success: false,
         error: {
           code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
-          message: sanitizeUpstreamError(record?.error ?? record?.message ?? data),
-          details: { status: res.status, statusText: res.statusText },
+          message: sanitizeUpstreamError(upstreamError),
+          details: buildUpstreamErrorDetails(upstreamError, res.status, res.statusText),
         },
       };
     }
@@ -347,12 +347,13 @@ async function bagsFormFetch<T>(path: string, formData: FormData): Promise<BagsR
     const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
 
     if (!res.ok) {
+      const upstreamError = record?.error ?? record?.message ?? data;
       return {
         success: false,
         error: {
           code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
-          message: sanitizeUpstreamError(record?.error ?? record?.message ?? data),
-          details: { status: res.status, statusText: res.statusText },
+          message: sanitizeUpstreamError(upstreamError),
+          details: buildUpstreamErrorDetails(upstreamError, res.status, res.statusText),
         },
       };
     }
@@ -414,31 +415,78 @@ export async function createFeeShareConfig(
   return bagsJsonFetch<BagsFeeShareConfigResponse>("/fee-share/config", req);
 }
 
+type LaunchTransactionBodyShape = "api-reference" | "sdk-guide";
+
 function buildCreateLaunchTransactionBody(
   req: BagsCreateLaunchTransactionRequest,
+  shape: LaunchTransactionBodyShape,
 ): Record<string, unknown> {
-  const metadataUrl = req.metadataUrl || req.ipfs;
-  const launchWallet = req.launchWallet || req.wallet;
-
-  return {
-    metadataUrl,
+  const metadataUri = req.ipfs || req.metadataUrl;
+  const wallet = req.wallet || req.launchWallet;
+  const common = {
     tokenMint: req.tokenMint,
-    launchWallet,
     initialBuyLamports: req.initialBuyLamports,
     configKey: req.configKey,
     ...(req.tipWallet && req.tipLamports && req.tipLamports > 0
       ? { tipWallet: req.tipWallet, tipLamports: req.tipLamports }
       : {}),
   };
+
+  return shape === "sdk-guide"
+    ? { ...common, metadataUrl: metadataUri, launchWallet: wallet }
+    : { ...common, ipfs: metadataUri, wallet };
+}
+
+function shouldRetryLaunchBodyShape(error: BagsError) {
+  const status = typeof error.details?.status === "number" ? error.details.status : undefined;
+  if (status !== 400 && status !== 422) return false;
+
+  const message = String(error.details?.upstreamMessage || error.message || "");
+  return /metadataUrl|launchWallet|ipfs|wallet|required|unknown|unexpected|validation|invalid body|bad request/i.test(message);
+}
+
+function launchAttemptSummary(shape: LaunchTransactionBodyShape, result: BagsResult<unknown>) {
+  if (!("error" in result)) return { shape, success: true };
+  return {
+    shape,
+    success: false,
+    code: result.error.code,
+    upstreamStatus: result.error.details?.status,
+    upstreamCode: result.error.details?.upstreamCode,
+    upstreamMessage: result.error.details?.upstreamMessage || result.error.message,
+  };
 }
 
 export async function createLaunchTransaction(
   req: BagsCreateLaunchTransactionRequest,
 ): Promise<BagsResult<BagsCreateLaunchTransactionResponse>> {
-  return bagsJsonFetch<BagsCreateLaunchTransactionResponse>(
+  const primaryShape: LaunchTransactionBodyShape = "api-reference";
+  const first = await bagsJsonFetch<BagsCreateLaunchTransactionResponse>(
     "/token-launch/create-launch-transaction",
-    buildCreateLaunchTransactionBody(req),
+    buildCreateLaunchTransactionBody(req, primaryShape),
   );
+  if (!("error" in first) || !shouldRetryLaunchBodyShape(first.error)) return first;
+
+  const fallbackShape: LaunchTransactionBodyShape = "sdk-guide";
+  const second = await bagsJsonFetch<BagsCreateLaunchTransactionResponse>(
+    "/token-launch/create-launch-transaction",
+    buildCreateLaunchTransactionBody(req, fallbackShape),
+  );
+  if (!("error" in second)) return second;
+
+  return {
+    success: false,
+    error: {
+      ...second.error,
+      details: {
+        ...(second.error.details || {}),
+        attempts: [
+          launchAttemptSummary(primaryShape, first),
+          launchAttemptSummary(fallbackShape, second),
+        ],
+      },
+    },
+  };
 }
 
 export async function getClaimablePositions(
