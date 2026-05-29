@@ -419,7 +419,7 @@ export const bagsCreateLaunchTransactionRequestSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['ipfs'],
-        message: 'ipfs ou metadataUri Ã© obrigatÃ³rio',
+        message: 'ipfs ou metadataUri é obrigatório',
       });
     }
   });

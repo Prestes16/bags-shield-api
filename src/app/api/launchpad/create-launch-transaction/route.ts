@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         error: { code: "VALIDATION_FAILED", message: "Request validation failed" },
-        issues: [{ path: "ipfs", message: "ipfs ou metadataUri Ã© obrigatÃ³rio" }],
+        issues: [{ path: "ipfs", message: "ipfs or metadataUri is required" }],
         meta: { requestId },
       },
       { status: 400 },
@@ -247,12 +247,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const feeFields = feeQuote.feesEnabled && feeQuote.totalTipLamports > 0
-      ? {
-          tipWallet: feeQuote.treasuryWallet,
-          tipLamports: feeQuote.totalTipLamports,
-        }
-      : {};
+    const feeFields: { tipWallet?: string; tipLamports?: number } =
+      feeQuote.feesEnabled && feeQuote.totalTipLamports > 0
+        ? {
+            tipWallet: feeQuote.treasuryWallet,
+            tipLamports: feeQuote.totalTipLamports,
+          }
+        : {};
+
+    SafeLogger.warn("Bags create-launch-transaction payload shape", {
+      requestId,
+      endpoint: ROUTE,
+      hasIpfs: Boolean(finalIpfs),
+      ipfsLength: finalIpfs?.length ?? 0,
+      initialBuyLamports: input.initialBuyLamports,
+      hasTokenMint: Boolean(input.tokenMint),
+      hasWallet: Boolean(input.wallet),
+      hasConfigKey: Boolean(input.configKey),
+      hasTipWallet: Boolean(feeFields.tipWallet),
+      tipLamports: feeFields.tipLamports ?? 0,
+    });
 
     const bagsResult = await createLaunchTransaction({
       ipfs: finalIpfs,
@@ -290,7 +304,13 @@ export async function POST(req: NextRequest) {
           },
           meta: { requestId, upstream: "bags", upstreamStatus, elapsedMs: Date.now() - startTime },
         },
-        { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
+        {
+          status: bagsResult.error.code === "BAGS_NOT_CONFIGURED"
+            ? 503
+            : upstreamStatus === 400 || upstreamStatus === 422
+              ? upstreamStatus
+              : 502,
+        },
       );
     }
 
