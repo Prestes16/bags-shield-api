@@ -89,8 +89,10 @@ export interface BagsFeeShareConfigResponse {
 
 export interface BagsCreateLaunchTransactionRequest {
   ipfs?: string;
+  metadataUrl?: string;
   tokenMint: string;
   wallet: string;
+  launchWallet?: string;
   initialBuyLamports: number;
   configKey: string;
   tipWallet?: string;
@@ -204,6 +206,31 @@ function sanitizeUpstreamError(value: unknown): string {
   return "Bags API request failed";
 }
 
+function sanitizeUpstreamCode(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const code = record.code ?? record.errorCode ?? record.name;
+  if (typeof code !== "string") return undefined;
+  const compact = code.trim().slice(0, 120);
+  return compact || undefined;
+}
+
+function buildUpstreamErrorDetails(
+  value: unknown,
+  status: number,
+  statusText: string,
+): Record<string, unknown> {
+  const upstreamCode = sanitizeUpstreamCode(value);
+  const upstreamMessage = sanitizeUpstreamError(value);
+
+  return {
+    status,
+    statusText,
+    ...(upstreamCode ? { upstreamCode } : {}),
+    ...(upstreamMessage ? { upstreamMessage } : {}),
+  };
+}
+
 function getConfig(): BagsResult<{ base: string; apiKey: string; timeoutMs: number }> {
   const base = getBagsBase();
   const apiKey = getBagsApiKey();
@@ -257,12 +284,13 @@ async function bagsJsonFetch<T>(path: string, body: unknown): Promise<BagsResult
     const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
 
     if (!res.ok) {
+      const upstreamError = record?.error ?? record?.message ?? data;
       return {
         success: false,
         error: {
           code: res.status === 429 ? "UPSTREAM_RATE_LIMITED" : "UPSTREAM_BAD_RESPONSE",
-          message: sanitizeUpstreamError(record?.error ?? record?.message ?? data),
-          details: { status: res.status, statusText: res.statusText },
+          message: sanitizeUpstreamError(upstreamError),
+          details: buildUpstreamErrorDetails(upstreamError, res.status, res.statusText),
         },
       };
     }
@@ -386,12 +414,30 @@ export async function createFeeShareConfig(
   return bagsJsonFetch<BagsFeeShareConfigResponse>("/fee-share/config", req);
 }
 
+function buildCreateLaunchTransactionBody(
+  req: BagsCreateLaunchTransactionRequest,
+): Record<string, unknown> {
+  const metadataUrl = req.metadataUrl || req.ipfs;
+  const launchWallet = req.launchWallet || req.wallet;
+
+  return {
+    metadataUrl,
+    tokenMint: req.tokenMint,
+    launchWallet,
+    initialBuyLamports: req.initialBuyLamports,
+    configKey: req.configKey,
+    ...(req.tipWallet && req.tipLamports && req.tipLamports > 0
+      ? { tipWallet: req.tipWallet, tipLamports: req.tipLamports }
+      : {}),
+  };
+}
+
 export async function createLaunchTransaction(
   req: BagsCreateLaunchTransactionRequest,
 ): Promise<BagsResult<BagsCreateLaunchTransactionResponse>> {
   return bagsJsonFetch<BagsCreateLaunchTransactionResponse>(
     "/token-launch/create-launch-transaction",
-    req,
+    buildCreateLaunchTransactionBody(req),
   );
 }
 

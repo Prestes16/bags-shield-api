@@ -41,6 +41,11 @@ function getUpstreamStatus(details?: Record<string, unknown>) {
   return typeof status === "number" ? status : undefined;
 }
 
+function getUpstreamString(details: Record<string, unknown> | undefined, key: string) {
+  const value = details?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
 }
@@ -271,9 +276,10 @@ export async function POST(req: NextRequest) {
     });
 
     const bagsResult = await createLaunchTransaction({
-      ipfs: finalIpfs,
+      metadataUrl: finalIpfs,
       tokenMint: input.tokenMint,
       wallet: input.wallet,
+      launchWallet: input.wallet,
       initialBuyLamports: input.initialBuyLamports,
       configKey: input.configKey,
       ...feeFields,
@@ -281,11 +287,14 @@ export async function POST(req: NextRequest) {
 
     if ("error" in bagsResult) {
       const upstreamStatus = getUpstreamStatus(bagsResult.error.details);
+      const upstreamCode = getUpstreamString(bagsResult.error.details, "upstreamCode");
+      const upstreamMessage = getUpstreamString(bagsResult.error.details, "upstreamMessage");
       SafeLogger.error("Bags create-launch-transaction request failed", undefined, {
         requestId,
         endpoint: ROUTE,
         errorCode: bagsResult.error.code,
         upstreamStatus,
+        upstreamCode,
         wallet: input.wallet,
         tokenMint: input.tokenMint,
         hasIpfs: Boolean(finalIpfs),
@@ -303,8 +312,16 @@ export async function POST(req: NextRequest) {
             code: "BAGS_CREATE_LAUNCH_TRANSACTION_FAILED",
             message: bagsResult.error.message,
             upstreamStatus,
+            upstreamCode,
+            upstreamMessage,
           },
-          meta: { requestId, upstream: "bags", upstreamStatus, elapsedMs: Date.now() - startTime },
+          meta: {
+            requestId,
+            upstream: "bags",
+            upstreamStatus,
+            upstreamCode,
+            elapsedMs: Date.now() - startTime,
+          },
         },
         {
           status: bagsResult.error.code === "BAGS_NOT_CONFIGURED"
