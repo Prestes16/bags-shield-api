@@ -130,3 +130,39 @@ Current rules:
 The read-only endpoint `/api/launchpad/partner-config/status` reports whether
 `LAUNCHPAD_PARTNER_CONFIG` is present and valid. It does not call Bags write
 endpoints, return transactions, sign, broadcast, or enable launches.
+
+## Admin Partner Config Creation
+
+The admin-only endpoint `/api/launchpad/partner-config/create-tx` can request a
+Bags partner-config creation transaction for the official Bags Shield partner
+wallet:
+
+```text
+7ZybPucnSryE5BydcARdc4Q2gz1SaospMVRyQ2LCeyRi
+```
+
+This endpoint is not used by App2 and is protected by:
+
+```text
+x-admin-secret: <LAUNCHPAD_ADMIN_SECRET>
+```
+
+It only calls the Bags admin preparation endpoint:
+
+```text
+POST /fee-share/partner-config/creation-tx
+```
+
+It does not sign, send, broadcast, call `/api/launchpad/send`, or enable public
+launches. The returned transaction must be inspected and handled only as an
+admin operation outside the public user flow.
+
+After the partner config creation transaction is confirmed by an admin, set:
+
+```text
+LAUNCHPAD_PARTNER_CONFIG=<confirmed partner config public key>
+```
+
+Even after `LAUNCHPAD_PARTNER_CONFIG` is present, `publicLaunchSafe` remains
+`false` and `LAUNCHPAD_PUBLIC_WRITES_ENABLED` must remain false until the final
+launch flow is validated end to end.

@@ -101,6 +101,14 @@ export interface BagsCreateLaunchTransactionRequest {
 
 export type BagsCreateLaunchTransactionResponse = string;
 
+export type BagsPartnerConfigCreationTxResponse =
+  | string
+  | {
+      transaction?: string;
+      blockhash?: unknown;
+      [key: string]: unknown;
+    };
+
 // ── Fee-claim types ──────────────────────────────────────────────────────────
 
 export interface BagsClaimablePosition {
@@ -413,6 +421,15 @@ export async function createFeeShareConfig(
   req: BagsFeeShareConfigRequest,
 ): Promise<BagsResult<BagsFeeShareConfigResponse>> {
   return bagsJsonFetch<BagsFeeShareConfigResponse>("/fee-share/config", req);
+}
+
+export async function createPartnerConfigCreationTx(
+  partnerWallet: string,
+): Promise<BagsResult<BagsPartnerConfigCreationTxResponse>> {
+  return bagsJsonFetch<BagsPartnerConfigCreationTxResponse>(
+    "/fee-share/partner-config/creation-tx",
+    { partnerWallet },
+  );
 }
 
 type LaunchTransactionBodyShape = "api-reference" | "sdk-guide";
