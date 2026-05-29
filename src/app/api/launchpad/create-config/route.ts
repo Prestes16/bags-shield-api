@@ -27,6 +27,11 @@ import {
 } from "@/lib/launchpad/bags-client";
 import { buildLaunchpadFeeShare } from "@/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
+import {
+  isLaunchpadPublicWritesPaused,
+  LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
+  LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
+} from "@/lib/launchpad/safety";
 
 const ROUTE = "/api/launchpad/create-config";
 
@@ -189,6 +194,26 @@ export async function POST(req: NextRequest) {
         meta: { requestId },
       },
       { status: 400 },
+    );
+  }
+
+  if (isLaunchpadPublicWritesPaused()) {
+    SafeLogger.warn("Launchpad create-config blocked by server-side Safety Gate", {
+      requestId,
+      endpoint: ROUTE,
+    });
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: {
+          code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
+          message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
+        },
+        meta: { requestId, elapsedMs: Date.now() - startTime },
+      },
+      { status: 423 },
     );
   }
 

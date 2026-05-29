@@ -94,3 +94,16 @@ Swap launch lists.
 Launchpad remains paused. The Safety Gate in App2 must stay active until Bags
 Shield has a final-transaction-only launch path or a safe atomic bundle flow
 that cannot create partial SOL spend without a launched token.
+
+Server-side public write endpoints are also paused by default. The environment
+variable below must stay unset/false in production until the final safe launch
+flow is reactivated:
+
+```text
+LAUNCHPAD_PUBLIC_WRITES_ENABLED=false
+```
+
+When public writes are paused, valid calls to `/api/launchpad/create-config` and
+`/api/launchpad/create-launch-transaction` return
+`LAUNCHPAD_SAFE_MODE_PAUSED`. Invalid payloads still return validation errors so
+negative smokes continue to prove schema behavior.
