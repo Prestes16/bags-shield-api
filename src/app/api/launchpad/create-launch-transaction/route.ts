@@ -260,10 +260,12 @@ export async function POST(req: NextRequest) {
       endpoint: ROUTE,
       hasIpfs: Boolean(finalIpfs),
       ipfsLength: finalIpfs?.length ?? 0,
+      ipfsPrefix: finalIpfs?.slice(0, 12) ?? "",
       initialBuyLamports: input.initialBuyLamports,
       hasTokenMint: Boolean(input.tokenMint),
       hasWallet: Boolean(input.wallet),
       hasConfigKey: Boolean(input.configKey),
+      configKeyLength: input.configKey?.length ?? 0,
       hasTipWallet: Boolean(feeFields.tipWallet),
       tipLamports: feeFields.tipLamports ?? 0,
     });

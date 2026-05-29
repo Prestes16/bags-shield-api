@@ -79,6 +79,24 @@ interface EnrichedLaunch extends LaunchFeedItem {
   verified: boolean;
 }
 
+const LAUNCH_STATUS_RANK: Record<string, number> = {
+  launched: 2,
+  confirmed: 1,
+};
+
+function confirmedTimestamp(launch: LaunchFeedItem) {
+  const time = Date.parse(launch.confirmedAt || launch.created_at || "");
+  return Number.isFinite(time) ? time : 0;
+}
+
+function isBetterLaunch(candidate: LaunchFeedItem, current?: LaunchFeedItem) {
+  if (!current) return true;
+  const candidateRank = LAUNCH_STATUS_RANK[candidate.launchStatus] ?? 0;
+  const currentRank = LAUNCH_STATUS_RANK[current.launchStatus] ?? 0;
+  if (candidateRank !== currentRank) return candidateRank > currentRank;
+  return confirmedTimestamp(candidate) > confirmedTimestamp(current);
+}
+
 // ── DexScreener batch enrichment ─────────────────────────────────────────
 
 async function enrichWithMarketData(
@@ -251,15 +269,12 @@ export async function GET(req: NextRequest) {
       .map(mapDbLaunchToFeedItem)
       .filter((row): row is LaunchFeedItem => Boolean(row));
 
-    // Deduplicate by mint (keep most recent)
-    const seen = new Set<string>();
-    const unique: LaunchFeedItem[] = [];
+    // Deduplicate by mint and keep the strongest confirmed/launched proof.
+    const byMint = new Map<string, LaunchFeedItem>();
     for (const r of realLaunches) {
-      if (!seen.has(r.mint)) {
-        seen.add(r.mint);
-        unique.push(r);
-      }
+      if (isBetterLaunch(r, byMint.get(r.mint))) byMint.set(r.mint, r);
     }
+    const unique = [...byMint.values()].sort((a, b) => confirmedTimestamp(b) - confirmedTimestamp(a));
 
     // Enrich with market data + scores
     const enriched = await enrichWithMarketData(unique);

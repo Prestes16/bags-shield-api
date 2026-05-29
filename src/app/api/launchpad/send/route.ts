@@ -21,13 +21,18 @@ import {
   launchpadSendRequestSchema,
   validateLaunchpadInput,
 } from "@/lib/launchpad/schemas";
-import { updateUserLaunchSubmitted } from "@/lib/launchpad/launch-registry";
+import {
+  updateUserLaunchConfirmed,
+  updateUserLaunchSubmitted,
+} from "@/lib/launchpad/launch-registry";
 
 export const runtime = "nodejs";
 
 const ROUTE = "/api/launchpad/send";
 const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const BASE58_MAP = new Map(BASE58_ALPHABET.split("").map((char, index) => [char, index]));
+const CONFIRMATION_ATTEMPTS = 12;
+const CONFIRMATION_INTERVAL_MS = 1000;
 
 export async function OPTIONS(req: NextRequest) {
   return handlePreflight(req, ["POST"]);
@@ -84,6 +89,41 @@ function decodeBase58(value: string): Uint8Array {
 function decodeSignedTransaction(value: string, encoding: "base64" | "base58") {
   if (encoding === "base58") return decodeBase58(value);
   return Uint8Array.from(Buffer.from(value, "base64"));
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForSignatureConfirmation(connection: Connection, signature: string) {
+  for (let attempt = 0; attempt < CONFIRMATION_ATTEMPTS; attempt += 1) {
+    const status = await connection.getSignatureStatuses([signature], {
+      searchTransactionHistory: false,
+    });
+    const value = status.value[0];
+
+    if (value?.err) {
+      return {
+        confirmed: false,
+        failed: true,
+        confirmationStatus: value.confirmationStatus ?? null,
+      };
+    }
+
+    if (value?.confirmationStatus === "confirmed" || value?.confirmationStatus === "finalized") {
+      return {
+        confirmed: true,
+        failed: false,
+        confirmationStatus: value.confirmationStatus,
+      };
+    }
+
+    if (attempt < CONFIRMATION_ATTEMPTS - 1) {
+      await sleep(CONFIRMATION_INTERVAL_MS);
+    }
+  }
+
+  return { confirmed: false, failed: false, confirmationStatus: null };
 }
 
 export async function POST(req: NextRequest) {
@@ -230,18 +270,73 @@ export async function POST(req: NextRequest) {
 
     const provenanceMint = input.tokenMint || input.mint;
     const provenanceWallet = input.wallet || input.launchWallet;
+    let launchStatus: "submitted" | "confirmed" = "submitted";
+    let confirmationStatus: string | null = null;
     if (provenanceMint) {
-      const persisted = await updateUserLaunchSubmitted({
+      const submittedPersisted = await updateUserLaunchSubmitted({
         mint: provenanceMint,
         wallet: provenanceWallet,
         txSignature: signature,
       });
-      if (!persisted) {
+      if (!submittedPersisted) {
         SafeLogger.warn("Launchpad submitted provenance was not persisted", {
           requestId,
           endpoint: ROUTE,
           tokenMint: provenanceMint,
           hasWallet: Boolean(provenanceWallet),
+        });
+      }
+
+      try {
+        const confirmation = await waitForSignatureConfirmation(connection, signature);
+        confirmationStatus = confirmation.confirmationStatus;
+
+        if (confirmation.failed) {
+          SafeLogger.warn("Launchpad transaction landed with an on-chain error", {
+            requestId,
+            endpoint: ROUTE,
+            tokenMint: provenanceMint,
+            signature,
+            confirmationStatus,
+          });
+          return jsonResponse(
+            req,
+            requestId,
+            {
+              success: false,
+              error: {
+                code: "TRANSACTION_FAILED",
+                message: "Launch transaction failed on-chain",
+              },
+              meta: { requestId, signature, confirmationStatus, elapsedMs: Date.now() - startTime },
+            },
+            { status: 502 },
+          );
+        }
+
+        if (confirmation.confirmed) {
+          launchStatus = "confirmed";
+          const confirmedPersisted = await updateUserLaunchConfirmed({
+            mint: provenanceMint,
+            wallet: provenanceWallet,
+            txSignature: signature,
+            confirmedAt: new Date().toISOString(),
+          });
+          if (!confirmedPersisted) {
+            SafeLogger.warn("Launchpad confirmed provenance was not persisted", {
+              requestId,
+              endpoint: ROUTE,
+              tokenMint: provenanceMint,
+              hasWallet: Boolean(provenanceWallet),
+            });
+          }
+        }
+      } catch (confirmationError) {
+        SafeLogger.warn("Launchpad confirmation polling failed; keeping submitted status", {
+          requestId,
+          endpoint: ROUTE,
+          tokenMint: provenanceMint,
+          error: confirmationError instanceof Error ? confirmationError.message : String(confirmationError),
         });
       }
     }
@@ -251,8 +346,8 @@ export async function POST(req: NextRequest) {
       requestId,
       {
         success: true,
-        response: { signature },
-        meta: { requestId, elapsedMs: Date.now() - startTime },
+        response: { signature, launchStatus, confirmationStatus },
+        meta: { requestId, signature, launchStatus, confirmationStatus, elapsedMs: Date.now() - startTime },
       },
       { status: 200 },
     );

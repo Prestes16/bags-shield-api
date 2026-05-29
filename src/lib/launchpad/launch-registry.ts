@@ -1,10 +1,8 @@
 const LAUNCHPAD_ORIGIN = "bags-shield-launchpad";
 
 const REAL_LAUNCH_STATUSES = new Set([
-  "token_info_created",
-  "transaction_created",
-  "submitted",
   "confirmed",
+  "launched",
 ]);
 
 export interface SupabaseRest {
@@ -56,7 +54,7 @@ export interface LaunchProvenanceInput {
   launchWallet?: string | null;
   metadataUri?: string | null;
   configKey?: string | null;
-  launchStatus: "token_info_created" | "transaction_created" | "submitted" | "confirmed";
+  launchStatus: "token_info_created" | "transaction_created" | "submitted" | "confirmed" | "launched";
   txSignature?: string | null;
   confirmedAt?: string | null;
 }
@@ -96,6 +94,8 @@ export function isRealBagsShieldLaunch(row: UserLaunchRow) {
   const status = cleanString(row.launch_status);
   const creatorWallet = cleanString(row.creator_wallet);
   const launchWallet = cleanString(row.launch_wallet);
+  const txSignature = cleanString(row.tx_signature);
+  const confirmedAt = cleanString(row.confirmed_at);
 
   if (!mint) return false;
   if (!truthy(row.app_created)) return false;
@@ -103,12 +103,7 @@ export function isRealBagsShieldLaunch(row: UserLaunchRow) {
   if (!isFalse(row.is_demo) || !isFalse(row.is_imported)) return false;
   if (!creatorWallet && !launchWallet) return false;
   if (!status || !REAL_LAUNCH_STATUSES.has(status)) return false;
-
-  if (status === "confirmed") {
-    return Boolean(cleanString(row.tx_signature) && cleanString(row.confirmed_at));
-  }
-
-  return true;
+  return Boolean(txSignature && confirmedAt);
 }
 
 export function mapDbLaunchToFeedItem(row: UserLaunchRow): LaunchFeedItem | null {
@@ -212,5 +207,25 @@ export async function updateUserLaunchSubmitted(input: {
     launchWallet: wallet,
     txSignature: input.txSignature,
     launchStatus: "submitted",
+  });
+}
+
+export async function updateUserLaunchConfirmed(input: {
+  mint?: string | null;
+  wallet?: string | null;
+  txSignature: string;
+  confirmedAt?: string | null;
+}) {
+  const mint = cleanString(input.mint);
+  const wallet = cleanString(input.wallet);
+  if (!mint) return false;
+
+  return upsertUserLaunchProvenance({
+    mint,
+    creatorWallet: wallet,
+    launchWallet: wallet,
+    txSignature: input.txSignature,
+    confirmedAt: input.confirmedAt || new Date().toISOString(),
+    launchStatus: "confirmed",
   });
 }
