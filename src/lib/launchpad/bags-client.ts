@@ -506,6 +506,129 @@ export async function createLaunchTransaction(
   };
 }
 
+// ── Admin diagnostic ─────────────────────────────────────────────────────────
+
+export interface PartnerConfigDiagnosticResult {
+  variant: string;
+  payloadKeys: string[];
+  ok: boolean;
+  status: number | undefined;
+  upstreamCode: string | undefined;
+  upstreamMessage: string | undefined;
+  hasTransaction: boolean;
+  transactionLength: number | null;
+  blockhashPresent: boolean;
+}
+
+/** Extract the first transaction-like string from a response object. Never returned to callers. */
+function pickTxFromRecord(record: Record<string, unknown> | null): string | null {
+  if (!record) return null;
+  for (const key of ["transaction", "tx", "serializedTransaction"]) {
+    const v = record[key];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+/**
+ * Admin-safe probe: calls POST /fee-share/partner-config/creation-tx with an
+ * arbitrary body and returns only diagnostic metadata. Never exposes the API
+ * key, never returns the transaction value, never signs or sends.
+ */
+export async function probePartnerConfigCreationTx(
+  variant: string,
+  body: Record<string, unknown>,
+): Promise<PartnerConfigDiagnosticResult> {
+  const config = getConfig();
+  const payloadKeys = Object.keys(body);
+
+  if ("error" in config) {
+    return {
+      variant,
+      payloadKeys,
+      ok: false,
+      status: undefined,
+      upstreamCode: "BAGS_NOT_CONFIGURED",
+      upstreamMessage: config.error.message,
+      hasTransaction: false,
+      transactionLength: null,
+      blockhashPresent: false,
+    };
+  }
+
+  const { base, apiKey, timeoutMs } = config.response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${base}/fee-share/partner-config/creation-tx`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    const data = await readJsonOrText(res);
+    const record =
+      data && typeof data === "object" && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : null;
+
+    // Transaction detection -- value is never returned to caller
+    let tx: string | null = null;
+    if (typeof data === "string" && data.trim()) {
+      tx = data.trim();
+    } else {
+      tx = pickTxFromRecord(record);
+    }
+
+    // Error info from non-2xx responses
+    const upstreamError = record?.error ?? record?.message ?? data;
+    const upstreamCode = res.ok
+      ? undefined
+      : sanitizeUpstreamCode(upstreamError) ??
+        (typeof record?.code === "string" ? record.code.slice(0, 120) : undefined);
+    const upstreamMessage = res.ok ? undefined : sanitizeUpstreamError(upstreamError);
+
+    // Blockhash detection
+    const blockhashPresent =
+      record != null && "blockhash" in record && record.blockhash != null;
+
+    return {
+      variant,
+      payloadKeys,
+      ok: res.ok,
+      status: res.status,
+      upstreamCode,
+      upstreamMessage,
+      hasTransaction: tx !== null,
+      transactionLength: tx !== null ? tx.length : null,
+      blockhashPresent,
+    };
+  } catch (err) {
+    return {
+      variant,
+      payloadKeys,
+      ok: false,
+      status: undefined,
+      upstreamCode: "REQUEST_FAILED",
+      upstreamMessage:
+        err instanceof Error && err.name === "AbortError"
+          ? "Bags API request timed out"
+          : "Bags API request failed",
+      hasTransaction: false,
+      transactionLength: null,
+      blockhashPresent: false,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function getClaimablePositions(
   wallet: string,
 ): Promise<BagsResult<BagsClaimablePosition[]>> {
