@@ -36,10 +36,13 @@ const DIAGNOSTIC_VARIANTS: Array<{
   label: string;
   buildBody: (wallet: string) => Record<string, unknown>;
 }> = [
-  { label: "A_partnerWallet",    buildBody: (w) => ({ partnerWallet: w }) },
-  { label: "B_wallet",           buildBody: (w) => ({ wallet: w }) },
-  { label: "C_partner",          buildBody: (w) => ({ partner: w }) },
-  { label: "D_partnerAuthority", buildBody: (w) => ({ partnerAuthority: w }) },
+  { label: "A_partnerWallet",            buildBody: (w) => ({ partnerWallet: w }) },
+  { label: "B_wallet",                   buildBody: (w) => ({ wallet: w }) },
+  { label: "C_partner",                  buildBody: (w) => ({ partner: w }) },
+  { label: "D_partnerAuthority",         buildBody: (w) => ({ partnerAuthority: w }) },
+  { label: "E_partnerWallet_payer",      buildBody: (w) => ({ partnerWallet: w, payer: w }) },
+  { label: "F_partnerWallet_admin",      buildBody: (w) => ({ partnerWallet: w, admin: w }) },
+  { label: "G_partnerWallet_authority",  buildBody: (w) => ({ partnerWallet: w, authority: w }) },
 ];
 
 function jsonResponse(

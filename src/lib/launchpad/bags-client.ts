@@ -518,6 +518,7 @@ export interface PartnerConfigDiagnosticResult {
   hasTransaction: boolean;
   transactionLength: number | null;
   blockhashPresent: boolean;
+  rawResponseHint: string | undefined;
 }
 
 /** Extract the first transaction-like string from a response object. Never returned to callers. */
@@ -553,6 +554,7 @@ export async function probePartnerConfigCreationTx(
       hasTransaction: false,
       transactionLength: null,
       blockhashPresent: false,
+      rawResponseHint: undefined,
     };
   }
 
@@ -572,11 +574,14 @@ export async function probePartnerConfigCreationTx(
       cache: "no-store",
     });
 
-    const data = await readJsonOrText(res);
+    const rawText = await res.text();
+    let data: unknown = null;
+    try { data = rawText ? JSON.parse(rawText) : null; } catch { data = rawText || null; }
     const record =
       data && typeof data === "object" && !Array.isArray(data)
         ? (data as Record<string, unknown>)
         : null;
+    const rawResponseHint = rawText ? rawText.slice(0, 300) : "(empty body)";
 
     // Transaction detection -- value is never returned to caller
     let tx: string | null = null;
@@ -608,6 +613,7 @@ export async function probePartnerConfigCreationTx(
       hasTransaction: tx !== null,
       transactionLength: tx !== null ? tx.length : null,
       blockhashPresent,
+      rawResponseHint: res.ok ? undefined : rawResponseHint,
     };
   } catch (err) {
     return {
@@ -623,6 +629,7 @@ export async function probePartnerConfigCreationTx(
       hasTransaction: false,
       transactionLength: null,
       blockhashPresent: false,
+      rawResponseHint: undefined,
     };
   } finally {
     clearTimeout(timeout);
