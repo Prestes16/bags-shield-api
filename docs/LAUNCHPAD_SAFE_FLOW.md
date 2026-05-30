@@ -157,6 +157,11 @@ It does not sign, send, broadcast, call `/api/launchpad/send`, or enable public
 launches. The returned transaction must be inspected and handled only as an
 admin operation outside the public user flow.
 
+`LAUNCHPAD_ADMIN_AUTH_DEBUG=1` is a temporary diagnostic flag for admin-secret
+mismatch troubleshooting on this endpoint. When enabled, a rejected admin secret
+may return only input lengths and short SHA-256 prefixes; it never exposes the
+raw secret. Keep this flag disabled after diagnosis.
+
 After the partner config creation transaction is confirmed by an admin, set:
 
 ```text

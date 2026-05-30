@@ -6,7 +6,7 @@
  * the public App2 Launchpad flow.
  */
 
-import { timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import {
@@ -48,6 +48,10 @@ function secretEquals(value: string, expected: string) {
   const valueBytes = Buffer.from(value);
   const expectedBytes = Buffer.from(expected);
   return valueBytes.length === expectedBytes.length && timingSafeEqual(valueBytes, expectedBytes);
+}
+
+function sha256Prefix(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 12);
 }
 
 function parsePublicKey(value: string, field: string) {
@@ -132,6 +136,29 @@ export async function POST(req: NextRequest) {
   }
 
   if (!secretEquals(providedSecret, adminSecret)) {
+    const error: {
+      code: string;
+      message: string;
+      debug?: {
+        providedLength: number;
+        expectedLength: number;
+        providedSha256Prefix: string;
+        expectedSha256Prefix: string;
+      };
+    } = {
+      code: "ADMIN_REQUIRED",
+      message: "Admin authorization is required",
+    };
+
+    if (process.env.LAUNCHPAD_ADMIN_AUTH_DEBUG === "1") {
+      error.debug = {
+        providedLength: providedSecret.length,
+        expectedLength: adminSecret.length,
+        providedSha256Prefix: sha256Prefix(providedSecret),
+        expectedSha256Prefix: sha256Prefix(adminSecret),
+      };
+    }
+
     SafeLogger.warn("Launchpad partner-config admin secret rejected", {
       requestId,
       endpoint: ROUTE,
@@ -141,10 +168,7 @@ export async function POST(req: NextRequest) {
       requestId,
       {
         success: false,
-        error: {
-          code: "ADMIN_REQUIRED",
-          message: "Admin authorization is required",
-        },
+        error,
         meta: { requestId },
       },
       { status: 403 },
