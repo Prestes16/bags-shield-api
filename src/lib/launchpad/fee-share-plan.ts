@@ -17,12 +17,14 @@ export interface LaunchpadFeeSharePlan {
   bagsShieldBps: number;
   claimersArray: string[];
   basisPointsArray: number[];
+  deduplicated: boolean;
 }
 
 export interface FeeSharePlanCheck {
   id: string;
   ok: boolean;
   message: string;
+  warning?: boolean;
 }
 
 function normalizePublicKey(value: string, field: string) {
@@ -55,6 +57,12 @@ export function buildLaunchpadFeeSharePlan(input: LaunchpadFeeSharePlanInput): L
     throw new Error("LAUNCHPAD_FEE_SHARE_WALLET_NOT_CONFIGURED");
   }
 
+  // Role-based BPS — always reflects the fee contract, independent of deduplication.
+  const creatorBps = settings.feesEnabled ? settings.creatorShareBps : 10000;
+  const bagsShieldBps = settings.feesEnabled ? settings.bagsShieldShareBps : 0;
+  const deduplicated = settings.feesEnabled && creatorWallet === bagsShieldWallet;
+
+  // Effective on-chain claimers — naturally deduplicated via Map when same wallet.
   const bpsByWallet = new Map<string, number>();
   if (settings.feesEnabled) {
     addBps(bpsByWallet, creatorWallet, settings.creatorShareBps);
@@ -65,8 +73,6 @@ export function buildLaunchpadFeeSharePlan(input: LaunchpadFeeSharePlanInput): L
 
   const claimersArray = [...bpsByWallet.keys()];
   const basisPointsArray = claimersArray.map((wallet) => bpsByWallet.get(wallet) || 0);
-  const creatorBps = bpsByWallet.get(creatorWallet) || 0;
-  const bagsShieldBps = bagsShieldWallet ? bpsByWallet.get(bagsShieldWallet) || 0 : 0;
   const totalBps = basisPointsArray.reduce((total, value) => total + value, 0);
 
   const plan: LaunchpadFeeSharePlan = {
@@ -78,6 +84,7 @@ export function buildLaunchpadFeeSharePlan(input: LaunchpadFeeSharePlanInput): L
     bagsShieldBps,
     claimersArray,
     basisPointsArray,
+    deduplicated,
   };
 
   const failedCheck = validateFeeSharePlan(plan).find((check) => !check.ok);
@@ -110,22 +117,30 @@ export function validateFeeSharePlan(plan: LaunchpadFeeSharePlan): FeeSharePlanC
     {
       id: "wallets_present",
       ok: noEmptyWallets,
-      message: noEmptyWallets ? "All fee-share wallets are present" : "Fee-share wallets cannot be empty",
+      message: noEmptyWallets
+        ? "All fee-share wallets are present"
+        : "Fee-share wallets cannot be empty",
     },
     {
       id: "bps_non_negative",
       ok: noNegativeBps,
-      message: noNegativeBps ? "All BPS values are non-negative" : "BPS values cannot be negative",
+      message: noNegativeBps
+        ? "All BPS values are non-negative"
+        : "BPS values cannot be negative",
     },
     {
       id: "bps_total",
       ok: plan.totalBps === 10000,
-      message: plan.totalBps === 10000 ? "BPS total is 10000" : "BPS total must be exactly 10000",
+      message: plan.totalBps === 10000
+        ? "BPS total is 10000"
+        : "BPS total must be exactly 10000",
     },
     {
       id: "creator_explicit",
       ok: creatorExplicit,
-      message: creatorExplicit ? "Creator BPS is explicit" : "Creator wallet must be explicit in fee-share",
+      message: creatorExplicit
+        ? "Creator BPS is explicit"
+        : "Creator wallet must be explicit in fee-share",
     },
     {
       id: "bags_shield_fee_share",
@@ -133,6 +148,39 @@ export function validateFeeSharePlan(plan: LaunchpadFeeSharePlan): FeeSharePlanC
       message: bagsShieldExplicit
         ? "Bags Shield fee share is explicit"
         : "Bags Shield fee-share wallet must be explicit when app fee-share is enabled",
+    },
+  ];
+}
+
+/**
+ * Informational audit checks — do not indicate structural misconfiguration.
+ * Carry warning: true so callers can keep safetyStatus = "paused" unchanged.
+ */
+export function auditFeeSharePlan(plan: LaunchpadFeeSharePlan): FeeSharePlanCheck[] {
+  if (plan.feesEnabled && plan.deduplicated) {
+    const roles =
+      "creator " + plan.creatorBps + " bps + Bags Shield " + plan.bagsShieldBps + " bps";
+    const effective =
+      "[" + plan.basisPointsArray.join(", ") + "] bps";
+    return [
+      {
+        id: "creator_not_bags_shield_wallet",
+        ok: false,
+        warning: true,
+        message:
+          "Creator wallet equals the Bags Shield wallet (" + plan.creatorWallet + "). " +
+          "Roles: " + roles + ". " +
+          "Effective on-chain claimers deduplicated to one entry: " + effective + ". " +
+          "Structurally valid but unusual — in production the creator should use a distinct wallet.",
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "creator_not_bags_shield_wallet",
+      ok: true,
+      message: "Creator wallet is distinct from the Bags Shield wallet.",
     },
   ];
 }

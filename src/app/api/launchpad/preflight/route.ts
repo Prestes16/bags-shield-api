@@ -24,6 +24,7 @@ import { buildLaunchpadFeeQuote } from "@/lib/launchpad/fees";
 import {
   buildLaunchpadFeeSharePlan,
   validateFeeSharePlan,
+  auditFeeSharePlan,
   type FeeSharePlanCheck,
 } from "@/lib/launchpad/fee-share-plan";
 
@@ -218,11 +219,15 @@ export async function POST(req: NextRequest) {
       initialBuyLamports,
       extraTipLamports: 0,
     });
-    const checks = appendSafetyChecks(validateFeeSharePlan(feeShare));
-    const failedChecks = checks.filter((check) => !check.ok);
+    const checks = appendSafetyChecks([
+      ...validateFeeSharePlan(feeShare),
+      ...auditFeeSharePlan(feeShare),
+    ]);
+    // Structural failures exclude warning-only checks so safetyStatus stays "paused".
+    const structuralFailures = checks.filter((check) => !check.ok && !check.warning);
     const launchAllowed = false;
-    const safetyStatus = failedChecks.length > 0 ? "blocked_partial_config" : "paused";
-    const reason = failedChecks.length > 0
+    const safetyStatus = structuralFailures.length > 0 ? "blocked_partial_config" : "paused";
+    const reason = structuralFailures.length > 0
       ? "Launchpad fee-share configuration is not safe for public launch flow."
       : "Launchpad is paused while Bags Shield hardens the final transaction flow. No partial SOL-spending config transaction will be requested.";
 
@@ -232,7 +237,7 @@ export async function POST(req: NextRequest) {
       launchAllowed,
       safetyStatus,
       mode: getLaunchpadMode(),
-      failedChecks: failedChecks.map((check) => check.id),
+      failedChecks: structuralFailures.map((check) => check.id),
     });
 
     return jsonResponse(req, requestId, {
