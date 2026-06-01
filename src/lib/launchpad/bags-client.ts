@@ -223,6 +223,26 @@ function sanitizeUpstreamCode(value: unknown): string | undefined {
   return compact || undefined;
 }
 
+function sanitizeRawResponseHint(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  let raw: string;
+
+  try {
+    raw = typeof value === "string" ? value : JSON.stringify(value);
+  } catch {
+    raw = String(value);
+  }
+
+  const redacted = raw
+    .replace(/("(?:signedTransaction|transaction|serializedTransaction|privateKey|apiKey|secret|authorization|x-api-key)"\s*:\s*")([^"]+)(")/gi, "$1[redacted]$3")
+    .replace(/\b[A-Za-z0-9+/=]{96,}\b/g, "[redacted-long-value]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
+
+  return redacted || undefined;
+}
+
 function buildUpstreamErrorDetails(
   value: unknown,
   status: number,
@@ -230,12 +250,14 @@ function buildUpstreamErrorDetails(
 ): Record<string, unknown> {
   const upstreamCode = sanitizeUpstreamCode(value);
   const upstreamMessage = sanitizeUpstreamError(value);
+  const rawResponseHint = sanitizeRawResponseHint(value);
 
   return {
     status,
     statusText,
     ...(upstreamCode ? { upstreamCode } : {}),
     ...(upstreamMessage ? { upstreamMessage } : {}),
+    ...(rawResponseHint ? { rawResponseHint } : {}),
   };
 }
 

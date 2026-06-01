@@ -26,7 +26,10 @@ import {
   createFeeShareConfig,
   type BagsFeeShareConfigRequest,
 } from "@/lib/launchpad/bags-client";
-import { buildLaunchpadFeeShare } from "@/lib/launchpad/fees";
+import {
+  BAGS_SHIELD_FEE_SHARE_WALLET,
+  buildLaunchpadFeeShare,
+} from "@/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 import {
   isLaunchpadPublicWritesPaused,
@@ -74,6 +77,16 @@ function pickConfigKey(response: Record<string, unknown>) {
   if (typeof meteoraConfigKey === "string" && meteoraConfigKey.trim()) return meteoraConfigKey;
 
   return undefined;
+}
+
+function getUpstreamStatus(details?: Record<string, unknown>) {
+  const status = details?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
+function getUpstreamString(details: Record<string, unknown> | undefined, key: string) {
+  const value = details?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 export async function POST(req: NextRequest) {
@@ -290,20 +303,32 @@ export async function POST(req: NextRequest) {
       baseMint: input.baseMint,
       claimersArray: feeShare.claimersArray,
       basisPointsArray: feeShare.basisPointsArray,
-      // partnerConfig is ALWAYS server-side — client value is discarded
+      // partner and partnerConfig are ALWAYS server-side — client values are discarded
+      partner: BAGS_SHIELD_FEE_SHARE_WALLET,
       partnerConfig: serverPartnerConfig,
       ...(input.bagsConfigType ? { bagsConfigType: input.bagsConfigType } : {}),
-      ...(input.partner ? { partner: input.partner } : {}),
       ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
     };
 
     const bagsResult = await createFeeShareConfig(config);
 
     if ("error" in bagsResult) {
+      const upstreamStatus = getUpstreamStatus(bagsResult.error.details);
+      const upstreamCode = getUpstreamString(bagsResult.error.details, "upstreamCode");
+      const upstreamMessage = getUpstreamString(bagsResult.error.details, "upstreamMessage");
+      const rawResponseHint = getUpstreamString(bagsResult.error.details, "rawResponseHint");
       SafeLogger.error("Bags fee-share config request failed", undefined, {
         requestId,
         endpoint: ROUTE,
         errorCode: bagsResult.error.code,
+        upstreamStatus,
+        upstreamCode,
+        payloadKeys: Object.keys(config),
+        claimersCount: config.claimersArray.length,
+        basisPointsCount: config.basisPointsArray.length,
+        totalBps: config.basisPointsArray.reduce((total, bps) => total + bps, 0),
+        hasPartner: Boolean(config.partner),
+        hasPartnerConfig: Boolean(config.partnerConfig),
       });
 
       return jsonResponse(
@@ -311,10 +336,28 @@ export async function POST(req: NextRequest) {
         requestId,
         {
           success: false,
-          error: { code: bagsResult.error.code, message: bagsResult.error.message },
-          meta: { requestId, upstream: "bags", elapsedMs: Date.now() - startTime },
+          error: {
+            code: "BAGS_CREATE_CONFIG_FAILED",
+            message: "Bags create-config failed",
+            upstreamStatus,
+            upstreamCode,
+            upstreamMessage: upstreamMessage || bagsResult.error.message,
+            rawResponseHint,
+          },
+          meta: {
+            requestId,
+            upstream: "bags",
+            upstreamStatus,
+            elapsedMs: Date.now() - startTime,
+          },
         },
-        { status: bagsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
+        {
+          status: bagsResult.error.code === "BAGS_NOT_CONFIGURED"
+            ? 503
+            : upstreamStatus === 400 || upstreamStatus === 422
+              ? upstreamStatus
+              : 502,
+        },
       );
     }
 
@@ -352,6 +395,8 @@ export async function POST(req: NextRequest) {
           feeShare: {
             feesEnabled: feeShare.feesEnabled,
             treasuryWallet: feeShare.treasuryWallet,
+            partner: BAGS_SHIELD_FEE_SHARE_WALLET,
+            partnerConfig: serverPartnerConfig,
             claimersArray: feeShare.claimersArray,
             basisPointsArray: feeShare.basisPointsArray,
             creatorFeeShareBps: feeShare.creatorFeeShareBps,
