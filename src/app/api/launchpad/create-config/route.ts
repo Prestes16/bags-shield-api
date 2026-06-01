@@ -24,7 +24,9 @@ import {
 } from "@/lib/launchpad/schemas";
 import {
   createFeeShareConfig,
+  type BagsFeeShareConfigResponse,
   type BagsFeeShareConfigRequest,
+  type BagsResult,
 } from "@/lib/launchpad/bags-client";
 import {
   BAGS_SHIELD_FEE_SHARE_WALLET,
@@ -87,6 +89,59 @@ function getUpstreamStatus(details?: Record<string, unknown>) {
 function getUpstreamString(details: Record<string, unknown> | undefined, key: string) {
   const value = details?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getBpsTotal(config: BagsFeeShareConfigRequest) {
+  return config.basisPointsArray.reduce((total, bps) => total + bps, 0);
+}
+
+function summarizeAttempt(
+  name: string,
+  config: BagsFeeShareConfigRequest,
+  result: BagsResult<BagsFeeShareConfigResponse>,
+) {
+  if (!("error" in result)) {
+    return {
+      name,
+      success: true,
+      sentKeys: Object.keys(config),
+      claimersCount: config.claimersArray.length,
+      basisPointsCount: config.basisPointsArray.length,
+      totalBps: getBpsTotal(config),
+      hasPartner: Boolean(config.partner),
+      hasPartnerConfig: Boolean(config.partnerConfig),
+    };
+  }
+
+  return {
+    name,
+    success: false,
+    sentKeys: Object.keys(config),
+    claimersCount: config.claimersArray.length,
+    basisPointsCount: config.basisPointsArray.length,
+    totalBps: getBpsTotal(config),
+    hasPartner: Boolean(config.partner),
+    hasPartnerConfig: Boolean(config.partnerConfig),
+    errorCode: result.error.code,
+    upstreamStatus: getUpstreamStatus(result.error.details),
+    upstreamCode: getUpstreamString(result.error.details, "upstreamCode"),
+    upstreamMessage: getUpstreamString(result.error.details, "upstreamMessage") || result.error.message,
+    rawResponseHint: getUpstreamString(result.error.details, "rawResponseHint"),
+  };
+}
+
+function shouldRetryWithoutPartnerConfig(result: BagsResult<BagsFeeShareConfigResponse>) {
+  if (!("error" in result)) return false;
+
+  const upstreamStatus = getUpstreamStatus(result.error.details);
+  const upstreamMessage =
+    getUpstreamString(result.error.details, "upstreamMessage") || result.error.message || "";
+  const rawResponseHint = getUpstreamString(result.error.details, "rawResponseHint") || "";
+
+  return (
+    upstreamStatus === 500 &&
+    /Bags API request failed|Internal server error/i.test(`${upstreamMessage} ${rawResponseHint}`)
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -310,7 +365,39 @@ export async function POST(req: NextRequest) {
       ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
     };
 
-    const bagsResult = await createFeeShareConfig(config);
+    const fallbackConfig: BagsFeeShareConfigRequest = {
+      payer: input.payer,
+      baseMint: input.baseMint,
+      claimersArray: feeShare.claimersArray,
+      basisPointsArray: feeShare.basisPointsArray,
+      ...(input.bagsConfigType ? { bagsConfigType: input.bagsConfigType } : {}),
+      ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
+    };
+
+    let configAttempt = "partner_config";
+    let bagsResult = await createFeeShareConfig(config);
+    const attempts: Array<ReturnType<typeof summarizeAttempt>> = [
+      summarizeAttempt(configAttempt, config, bagsResult),
+    ];
+
+    if ("error" in bagsResult && shouldRetryWithoutPartnerConfig(bagsResult)) {
+      SafeLogger.warn("Bags fee-share config failed with partner config; retrying without optional partner fields", {
+        requestId,
+        endpoint: ROUTE,
+        upstreamStatus: getUpstreamStatus(bagsResult.error.details),
+        totalBps: getBpsTotal(config),
+        claimersCount: config.claimersArray.length,
+        basisPointsCount: config.basisPointsArray.length,
+        hasPartner: Boolean(config.partner),
+        hasPartnerConfig: Boolean(config.partnerConfig),
+        fallbackKeepsBagsShieldClaimer: fallbackConfig.claimersArray.includes(BAGS_SHIELD_FEE_SHARE_WALLET),
+      });
+
+      configAttempt = "fee_share_without_partner_config";
+      const fallbackResult = await createFeeShareConfig(fallbackConfig);
+      attempts.push(summarizeAttempt(configAttempt, fallbackConfig, fallbackResult));
+      bagsResult = fallbackResult;
+    }
 
     if ("error" in bagsResult) {
       const upstreamStatus = getUpstreamStatus(bagsResult.error.details);
@@ -323,12 +410,14 @@ export async function POST(req: NextRequest) {
         errorCode: bagsResult.error.code,
         upstreamStatus,
         upstreamCode,
-        payloadKeys: Object.keys(config),
-        claimersCount: config.claimersArray.length,
-        basisPointsCount: config.basisPointsArray.length,
-        totalBps: config.basisPointsArray.reduce((total, bps) => total + bps, 0),
-        hasPartner: Boolean(config.partner),
-        hasPartnerConfig: Boolean(config.partnerConfig),
+        attemptCount: attempts.length,
+        finalAttempt: configAttempt,
+        payloadKeys: Object.keys(configAttempt === "partner_config" ? config : fallbackConfig),
+        claimersCount: feeShare.claimersArray.length,
+        basisPointsCount: feeShare.basisPointsArray.length,
+        totalBps: feeShare.totalBps,
+        hasPartner: configAttempt === "partner_config",
+        hasPartnerConfig: configAttempt === "partner_config",
       });
 
       return jsonResponse(
@@ -343,11 +432,13 @@ export async function POST(req: NextRequest) {
             upstreamCode,
             upstreamMessage: upstreamMessage || bagsResult.error.message,
             rawResponseHint,
+            attempts,
           },
           meta: {
             requestId,
             upstream: "bags",
             upstreamStatus,
+            configAttempt,
             elapsedMs: Date.now() - startTime,
           },
         },
@@ -395,8 +486,10 @@ export async function POST(req: NextRequest) {
           feeShare: {
             feesEnabled: feeShare.feesEnabled,
             treasuryWallet: feeShare.treasuryWallet,
-            partner: BAGS_SHIELD_FEE_SHARE_WALLET,
-            partnerConfig: serverPartnerConfig,
+            partner: configAttempt === "partner_config" ? BAGS_SHIELD_FEE_SHARE_WALLET : null,
+            partnerConfig: configAttempt === "partner_config" ? serverPartnerConfig : null,
+            partnerConfigAttempt: configAttempt,
+            partnerConfigFallbackUsed: configAttempt !== "partner_config",
             claimersArray: feeShare.claimersArray,
             basisPointsArray: feeShare.basisPointsArray,
             creatorFeeShareBps: feeShare.creatorFeeShareBps,
@@ -408,6 +501,8 @@ export async function POST(req: NextRequest) {
           requestId,
           upstream: "bags",
           upstreamStatus: 200,
+          configAttempt,
+          partnerConfigFallbackUsed: configAttempt !== "partner_config",
           elapsedMs: Date.now() - startTime,
         },
       },
