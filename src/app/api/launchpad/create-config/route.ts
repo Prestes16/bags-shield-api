@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
 import {
   getOrGenerateRequestId,
   safeJsonParse,
@@ -32,6 +33,23 @@ import {
   LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
   LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
 } from "@/lib/launchpad/safety";
+
+const PARTNER_CONFIG_ENV = "LAUNCHPAD_PARTNER_CONFIG";
+
+/**
+ * Returns the server-side partner config PDA from env, validated as a Solana
+ * public key. Returns null if the env var is absent, empty, or invalid.
+ * Client-supplied `partnerConfig` is NEVER used — always overwritten server-side.
+ */
+function getServerPartnerConfig(): string | null {
+  const raw = process.env[PARTNER_CONFIG_ENV]?.trim();
+  if (!raw) return null;
+  try {
+    return new PublicKey(raw).toBase58();
+  } catch {
+    return null;
+  }
+}
 
 const ROUTE = "/api/launchpad/create-config";
 
@@ -219,6 +237,31 @@ export async function POST(req: NextRequest) {
 
   try {
     const input = ("data" in validation ? validation.data : {}) as BagsFeeShareConfigRequest;
+
+    // Resolve and validate the partner config PDA server-side.
+    // Client-supplied `partnerConfig` is intentionally ignored — always overwritten.
+    const serverPartnerConfig = getServerPartnerConfig();
+    if (!serverPartnerConfig) {
+      SafeLogger.error("Launchpad partner config is not configured on the server", undefined, {
+        requestId,
+        endpoint: ROUTE,
+        envVar: PARTNER_CONFIG_ENV,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "LAUNCHPAD_PARTNER_CONFIG_NOT_CONFIGURED",
+            message: "Launchpad partner config is not configured on the server",
+          },
+          meta: { requestId, elapsedMs: Date.now() - startTime },
+        },
+        { status: 503 },
+      );
+    }
+
     let feeShare: ReturnType<typeof buildLaunchpadFeeShare>;
     try {
       feeShare = buildLaunchpadFeeShare(input.payer);
@@ -247,9 +290,10 @@ export async function POST(req: NextRequest) {
       baseMint: input.baseMint,
       claimersArray: feeShare.claimersArray,
       basisPointsArray: feeShare.basisPointsArray,
+      // partnerConfig is ALWAYS server-side — client value is discarded
+      partnerConfig: serverPartnerConfig,
       ...(input.bagsConfigType ? { bagsConfigType: input.bagsConfigType } : {}),
       ...(input.partner ? { partner: input.partner } : {}),
-      ...(input.partnerConfig ? { partnerConfig: input.partnerConfig } : {}),
       ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
     };
 

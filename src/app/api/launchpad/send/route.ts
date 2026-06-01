@@ -25,6 +25,11 @@ import {
   updateUserLaunchConfirmed,
   updateUserLaunchSubmitted,
 } from "@/lib/launchpad/launch-registry";
+import {
+  isLaunchpadPublicWritesPaused,
+  LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
+  LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
+} from "@/lib/launchpad/safety";
 
 export const runtime = "nodejs";
 
@@ -150,6 +155,26 @@ export async function POST(req: NextRequest) {
           "X-RateLimit-Reset": String(rateLimitCheck.resetAt),
         },
       },
+    );
+  }
+
+  if (isLaunchpadPublicWritesPaused()) {
+    SafeLogger.warn("Launchpad send blocked by server-side Safety Gate", {
+      requestId,
+      endpoint: ROUTE,
+    });
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: {
+          code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
+          message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
+        },
+        meta: { requestId },
+      },
+      { status: 423 },
     );
   }
 
