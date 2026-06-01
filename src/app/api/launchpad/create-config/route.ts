@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
           code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
           message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
         },
-        meta: { requestId, elapsedMs: Date.now() - startTime },
+        meta: { requestId, elapsedMs: Date.now() - startTime, publicWritesEnabled: false },
       },
       { status: 423 },
     );

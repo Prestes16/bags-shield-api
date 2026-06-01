@@ -172,26 +172,9 @@ export async function POST(req: NextRequest) {
           code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
           message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
         },
-        meta: { requestId },
+        meta: { requestId, publicWritesEnabled: false },
       },
       { status: 423 },
-    );
-  }
-
-  const rpcUrl = getLaunchRpcUrl();
-  if (!rpcUrl) {
-    return jsonResponse(
-      req,
-      requestId,
-      {
-        success: false,
-        error: {
-          code: "RPC_NOT_CONFIGURED",
-          message: "Launchpad broadcast is unavailable because SOLANA_RPC_URL is not configured",
-        },
-        meta: { requestId },
-      },
-      { status: 503 },
     );
   }
 
@@ -265,6 +248,23 @@ export async function POST(req: NextRequest) {
     wallet?: string;
     launchWallet?: string;
   };
+
+  const rpcUrl = getLaunchRpcUrl();
+  if (!rpcUrl) {
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: {
+          code: "RPC_NOT_CONFIGURED",
+          message: "Launchpad broadcast is unavailable because SOLANA_RPC_URL is not configured",
+        },
+        meta: { requestId },
+      },
+      { status: 503 },
+    );
+  }
 
   let rawTransaction: Uint8Array;
   try {

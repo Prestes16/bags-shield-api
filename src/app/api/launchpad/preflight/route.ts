@@ -19,7 +19,7 @@ import {
   SafeLogger,
 } from "@/lib/security";
 import { handlePreflight } from "@/lib/security/cors";
-import { getLaunchpadMode } from "@/lib/env";
+import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
 import { buildLaunchpadFeeQuote } from "@/lib/launchpad/fees";
 import {
   buildLaunchpadFeeSharePlan,
@@ -27,8 +27,10 @@ import {
   auditFeeSharePlan,
   type FeeSharePlanCheck,
 } from "@/lib/launchpad/fee-share-plan";
+import { isLaunchpadPublicWritesEnabled } from "@/lib/launchpad/safety";
 
 const ROUTE = "/api/launchpad/preflight";
+const PARTNER_CONFIG_ENV = "LAUNCHPAD_PARTNER_CONFIG";
 
 interface SafePreflightRequest {
   wallet?: string;
@@ -69,6 +71,10 @@ function normalizePublicKey(value: unknown) {
   } catch {
     return null;
   }
+}
+
+function getServerPartnerConfig() {
+  return normalizePublicKey(process.env[PARTNER_CONFIG_ENV]);
 }
 
 function safeLamports(value: unknown) {
@@ -225,28 +231,48 @@ export async function POST(req: NextRequest) {
     ]);
     // Structural failures exclude warning-only checks so safetyStatus stays "paused".
     const structuralFailures = checks.filter((check) => !check.ok && !check.warning);
-    const launchAllowed = false;
-    const safetyStatus = structuralFailures.length > 0 ? "blocked_partial_config" : "paused";
+    const partnerConfig = getServerPartnerConfig();
+    const mode = getLaunchpadMode();
+    const publicWritesEnabled = isLaunchpadPublicWritesEnabled();
+    const internalLaunchModeEnabled = publicWritesEnabled;
+    const launchAllowed = isLaunchpadEnabled() && mode === "real" && publicWritesEnabled && Boolean(partnerConfig) && structuralFailures.length === 0;
+    const safetyStatus = structuralFailures.length > 0
+      ? "blocked_partial_config"
+      : launchAllowed
+        ? "internal_enabled"
+        : publicWritesEnabled && !partnerConfig
+          ? "partner_config_missing"
+          : "paused";
     const reason = structuralFailures.length > 0
       ? "Launchpad fee-share configuration is not safe for public launch flow."
-      : "Launchpad is paused while Bags Shield hardens the final transaction flow. No partial SOL-spending config transaction will be requested.";
+      : launchAllowed
+        ? "Internal launch mode is enabled. Review the fee-share summary before signing."
+        : publicWritesEnabled && !partnerConfig
+          ? "Internal launch mode is enabled, but LAUNCHPAD_PARTNER_CONFIG is not configured yet."
+          : "Launchpad writes are paused. Set LAUNCHPAD_PUBLIC_WRITES_ENABLED=true only in the internal environment to enable launches.";
 
     SafeLogger.info("Launchpad safety preflight completed", {
       requestId,
       endpoint: ROUTE,
       launchAllowed,
       safetyStatus,
-      mode: getLaunchpadMode(),
+      mode,
       failedChecks: structuralFailures.map((check) => check.id),
+      internalLaunchModeEnabled,
+      publicWritesEnabled,
+      hasPartnerConfig: Boolean(partnerConfig),
     });
 
     return jsonResponse(req, requestId, {
       success: true,
       response: {
         launchAllowed,
+        internalLaunchModeEnabled,
+        publicWritesEnabled,
         safetyStatus,
         reason,
-        mode: getLaunchpadMode(),
+        mode,
+        partnerConfig,
         tokenDraft: body.tokenDraft || body.config?.token || null,
         feeShare,
         tips: {

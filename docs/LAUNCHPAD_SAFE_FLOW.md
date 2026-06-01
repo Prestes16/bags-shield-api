@@ -103,10 +103,33 @@ flow is reactivated:
 LAUNCHPAD_PUBLIC_WRITES_ENABLED=false
 ```
 
-When public writes are paused, valid calls to `/api/launchpad/create-config` and
-`/api/launchpad/create-launch-transaction` return
-`LAUNCHPAD_SAFE_MODE_PAUSED`. Invalid payloads still return validation errors so
-negative smokes continue to prove schema behavior.
+When public writes are paused, calls to `/api/launchpad/create-config`,
+`/api/launchpad/create-launch-transaction`, and `/api/launchpad/send` return
+`LAUNCHPAD_SAFE_MODE_PAUSED` before any transaction is created or broadcast.
+
+Internal launch testing is controlled by:
+
+```text
+LAUNCHPAD_PUBLIC_WRITES_ENABLED=true
+```
+
+Do not enable this in public production without explicit approval. When enabled
+in the internal environment, `/api/launchpad/preflight` can return
+`launchAllowed: true` and `safetyStatus: "internal_enabled"` if all fee-share
+checks pass and `LAUNCHPAD_PARTNER_CONFIG` is configured.
+
+The app must show the internal launch summary before requesting a signature:
+
+1. Creator: `9500` bps.
+2. Bags Shield: `500` bps.
+3. `tipLamports = 0`.
+4. Server-side `LAUNCHPAD_PARTNER_CONFIG`.
+5. Estimated spend.
+
+The user must explicitly confirm that summary before the wallet signature prompt.
+`/api/launchpad/send` remains a separate endpoint and only broadcasts a
+user-signed transaction after the create-launch-transaction step returns a valid
+transaction.
 
 ## Partner Config Path
 

@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
           code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
           message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
         },
-        meta: { requestId, elapsedMs: Date.now() - startTime },
+        meta: { requestId, elapsedMs: Date.now() - startTime, publicWritesEnabled: false },
       },
       { status: 423 },
     );
@@ -282,13 +282,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const feeFields: { tipWallet?: string; tipLamports?: number } =
-      feeQuote.feesEnabled && feeQuote.totalTipLamports > 0
-        ? {
-            tipWallet: feeQuote.treasuryWallet,
-            tipLamports: feeQuote.totalTipLamports,
-          }
-        : {};
+    const feeFields: { tipWallet?: string; tipLamports?: number } = {};
 
     SafeLogger.warn("Bags create-launch-transaction payload shape", {
       requestId,
