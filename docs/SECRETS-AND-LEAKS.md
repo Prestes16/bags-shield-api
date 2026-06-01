@@ -1,69 +1,84 @@
-# Auditoria de segredos e vazamentos
+# Secrets And Leak Hygiene
 
-Este documento descreve o que foi verificado para **evitar vazamento de dados sensíveis** (API keys, tokens, senhas) para o GitHub ou para o cliente (browser).
+Last updated: 2026-05-21
 
----
+This document records the local secret-hygiene policy for Bags Shield. It covers API keys, RPC URLs, wallet/private keys, signing certificates, build artifacts, and client/server separation.
 
-## 1. Arquivos que NUNCA devem ser commitados
+## Never Commit
 
-| Arquivo / padrão                                                | Motivo                   |
-| --------------------------------------------------------------- | ------------------------ |
-| `.env`                                                          | Contém segredos locais   |
-| `.env.local`, `.env.*.local`                                    | Idem                     |
-| `.env.production`, `.env.development` (com valores reais)       | Idem                     |
-| Qualquer arquivo com chaves Helius, Birdeye, BAGS, Vercel, HMAC | Exposição no repositório |
+Do not commit:
 
-**Ação:** O `.gitignore` já contém `.env`, `.env*.local` e `.cursorignore` contém `.env`, `.env.*` com exceção `!.env.example`. **Só `.env.example`** deve estar no repositório, e apenas com placeholders (ex.: `YOUR_KEY`, `change-me-in-prod`).
+- `.env`, `.env.local`, `.env.*.local`, `.env.production`, `.env.development`
+- API keys, bearer tokens, RPC URLs with `api-key=`, OAuth secrets, HMAC secrets
+- Private keys, wallet keypairs, seed phrases, keystores, certificates
+- Android signing files: `*.keystore`, `*.jks`, `*.p12`, `*.pfx`
+- Any file named like `credentials.json`, `token.json`, `id_rsa`, `private-key.*`
 
----
+Only `.env.example` should be committed, and it must contain placeholders or public addresses only.
 
-## 2. Variáveis de ambiente sensíveis (apenas no servidor)
+## Server-Only Variables
 
-Estas variáveis **nunca** devem ser prefixadas com `NEXT_PUBLIC_` (senão vão para o bundle do client):
+These must stay backend-only and must not use `NEXT_PUBLIC_`, `REACT_APP_`, or any frontend prefix:
 
-- `HELIUS_API_KEY` / `HELIUS_RPC_URL`
-- `BIRDEYE_API_KEY`
 - `BAGS_API_KEY`
-- `BAGS_SHIELD_API_BASE` (pode conter query string com key)
+- `BAGS_BEARER`
+- `HELIUS_API_KEY`
+- `HELIUS_RPC_URL`
+- `SOLANA_RPC_URL` if it contains a private provider key
+- `BIRDEYE_API_KEY`
 - `SCAN_HMAC_SECRET`
 - `LAUNCHPAD_HMAC_SECRET`
 - `INTEGRATION_SECRET`
 - `VERCEL_TOKEN`
-- `BAGS_BEARER`
+- `JUPITER_API_KEY`
 
-Uso no código: todas são lidas via `process.env.*` em rotas API ou em módulos server-only (ex.: `src/lib/helius.ts`, `src/lib/providers/birdeye.ts`).
+Public wallet addresses are allowed in code/docs when needed for transparency, for example the Bags Shield treasury wallet.
 
----
+## Current Jupiter Security Model
 
-## 3. Verificações realizadas
+Swap/Jupiter fees use server-side configuration:
 
-- **Chave Helius:** Nenhuma ocorrência da chave real (ex.: `abef8daf...`) no repositório. URLs em `helius.ts` usam a variável `key` vinda de `process.env`.
-- **.env.example:** Contém apenas placeholders (`HELIUS_API_KEY=`, `BAGS_BEARER=change-me-in-prod`, `SCAN_HMAC_SECRET=your-scan-hmac-secret-key-here-use-32-plus-chars`). Nenhum valor real.
-- **Logs:** `SafeLogger` e `sanitizeUpstreamError` redactam padrões como `api-key=`, `token=`, `bearer`. Nenhum `console.log` de `process.env` ou de corpo de resposta com segredos.
-- **Respostas HTTP:** Nenhum header ou body que exponha chaves. Erros em produção são genéricos (sem stack ou mensagem interna).
-- **Client (browser):** O internal-api da launchpad foi alterado para usar **apenas** `BAGS_SHIELD_API_BASE` (server-side), removendo `NEXT_PUBLIC_API_BASE` para evitar que uma URL com key seja exposta no client.
-- **Launchpad manifest:** Em produção, não é mais usado secret default; se `LAUNCHPAD_HMAC_SECRET` não estiver definido, a rota retorna 503.
+- `JUPITER_API_KEY` is read only in backend routes/providers.
+- The frontend never receives the key.
+- `/api/order` fails closed when swap fees are enabled but `JUPITER_API_KEY` or `JUPITER_REFERRAL_ACCOUNT` is missing.
+- `/api/order` must not create a signable transaction if the expected referral fee is not applied.
 
----
+## 2026-05-21 Hygiene Actions
 
-## 4. .gitignore e .cursorignore
+- Removed tracked Android signing material from the working tree: `android.keystore`.
+- Added keystore/certificate patterns to `.gitignore`.
+- Replaced the local absolute keystore path in `twa-manifest.json` with a non-secret placeholder.
+- Hardened `scripts/check-secrets.sh` to block staged key material such as keystores and certificates.
+- Confirmed the user-provided Jupiter key was not written to the repository.
 
-- **.gitignore:** `.env`, `.env*.local` estão listados; `.env.example` não está ignorado (correto).
-- **.cursorignore:** `.env`, `.env.*` com `!.env.example`, para que o Cursor não leia arquivos de ambiente reais.
+## Findings Requiring Rotation
 
-Se você criar novos arquivos de ambiente (ex.: `.env.production.local`), não os commite. Use sempre variáveis no painel da Vercel (ou equivalente) para produção.
+The following secrets were exposed in chat/log text, not committed by this audit:
 
----
+- A Jupiter API key.
+- A Helius RPC URL containing an API key.
+- A base58 wallet/private-key-like value used for setup commands.
 
-## 5. Checklist antes de cada push
+Rotate these credentials before production use. Chat exposure should be treated as compromised even if the repository is clean.
 
-- [ ] Nenhum arquivo `.env` ou `.env.local` (ou cópia) está no stage.
-- [ ] Nenhum valor real de API key/token em comentários, docs ou exemplos (use `SUA_CHAVE`, `YOUR_KEY`, etc.).
-- [ ] Nenhuma URL contendo `api-key=` ou `token=` em código ou docs, exceto em exemplos genéricos.
+## Local Checks Used
 
-Para conferir:  
-`git diff --cached` e `git status` antes do commit; em caso de dúvida, `git reset HEAD <arquivo>` e adicione o caminho ao `.gitignore` se necessário.
+Use these checks before staging/pushing:
 
----
+```powershell
+rg -n "jup_[A-Za-z0-9_\\-]{20,}|ghp_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_\\-]{20,}|api-key=[A-Za-z0-9_\\-]{12,}|PRIVATE_KEY\\s*=|BAGS_API_KEY\\s*=|HELIUS_API_KEY\\s*=|BIRDEYE_API_KEY\\s*=|JUPITER_API_KEY\\s*=" C:\Dev\bags-shield-api C:\Dev\bags-shield-app2 --glob "!node_modules/**" --glob "!build/**" --glob "!.next/**" --glob "!frontend/build/**"
+```
 
-_Última auditoria: 2025-02-08. Atualize este documento se novas variáveis sensíveis forem introduzidas._
+```powershell
+git -c safe.directory=C:/Dev/bags-shield-api -C C:\Dev\bags-shield-api status --short
+git -c safe.directory=C:/Dev/bags-shield-app2 -C C:\Dev\bags-shield-app2 status --short
+```
+
+## Push Checklist
+
+- [ ] No `.env*` file is staged.
+- [ ] No key/cert/keystore file is staged.
+- [ ] No API key appears in docs, examples, logs, screenshots, or scripts.
+- [ ] Frontend does not contain `BAGS_API_KEY`, `JUPITER_API_KEY`, `SOLANA_RPC_URL` with private key, or direct secret-bearing URLs.
+- [ ] Backend validates missing secrets with fail-closed behavior.
+- [ ] If any key appeared in chat/logs, rotate it before deploy.
