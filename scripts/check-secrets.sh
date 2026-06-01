@@ -68,6 +68,15 @@ if [ -z "$staged_files" ]; then
     exit 0
 fi
 
+key_material_files=$(git diff --cached --name-only --diff-filter=ACMR | grep -Ei '(^|/).+\.(keystore|jks|p12|pfx|pem|key)$|(^|/)id_rsa($|[.])' || true)
+if [ -n "$key_material_files" ]; then
+    echo ""
+    echo "Sensitive key material is staged."
+    echo "Remove signing keys, private keys and certificates from Git before committing."
+    echo "$key_material_files" | sed 's/^/  - /'
+    exit 1
+fi
+
 # Count staged files
 file_count=$(echo "$staged_files" | wc -l | tr -d ' ')
 echo "📊 Scanning $file_count staged file(s)..."

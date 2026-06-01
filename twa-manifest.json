@@ -17,7 +17,7 @@
   "maskableIconUrl": "https://bags-shield-api.vercel.app/icons/icon-512-maskable.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "C:\\Dev\\bags-shield-api\\android.keystore",
+    "path": "LOCAL_ONLY_ANDROID_KEYSTORE_NOT_COMMITTED.keystore",
     "alias": "bags_shield"
   },
   "appVersionName": "1",
