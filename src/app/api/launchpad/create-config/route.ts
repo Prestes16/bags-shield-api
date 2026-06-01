@@ -153,6 +153,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (isLaunchpadPublicWritesPaused()) {
+    SafeLogger.warn("Launchpad create-config blocked by server-side Safety Gate", {
+      requestId,
+      endpoint: ROUTE,
+    });
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: {
+          code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
+          message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
+        },
+        meta: { requestId, elapsedMs: Date.now() - startTime },
+      },
+      { status: 423 },
+    );
+  }
+
   const contentType = req.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
     return jsonResponse(
@@ -212,26 +232,6 @@ export async function POST(req: NextRequest) {
         meta: { requestId },
       },
       { status: 400 },
-    );
-  }
-
-  if (isLaunchpadPublicWritesPaused()) {
-    SafeLogger.warn("Launchpad create-config blocked by server-side Safety Gate", {
-      requestId,
-      endpoint: ROUTE,
-    });
-    return jsonResponse(
-      req,
-      requestId,
-      {
-        success: false,
-        error: {
-          code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
-          message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
-        },
-        meta: { requestId, elapsedMs: Date.now() - startTime },
-      },
-      { status: 423 },
     );
   }
 
