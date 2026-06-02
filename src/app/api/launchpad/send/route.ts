@@ -158,26 +158,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (isLaunchpadPublicWritesPaused()) {
-    SafeLogger.warn("Launchpad send blocked by server-side Safety Gate", {
-      requestId,
-      endpoint: ROUTE,
-    });
-    return jsonResponse(
-      req,
-      requestId,
-      {
-        success: false,
-        error: {
-          code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
-          message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
-        },
-        meta: { requestId, publicWritesEnabled: false },
-      },
-      { status: 423 },
-    );
-  }
-
   const contentType = req.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
     return jsonResponse(
@@ -247,7 +227,28 @@ export async function POST(req: NextRequest) {
     mint?: string;
     wallet?: string;
     launchWallet?: string;
+    purpose?: "launch" | "fee_share_setup";
   };
+
+  if (isLaunchpadPublicWritesPaused()) {
+    SafeLogger.warn("Launchpad send blocked by server-side Safety Gate", {
+      requestId,
+      endpoint: ROUTE,
+    });
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: {
+          code: LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
+          message: LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
+        },
+        meta: { requestId, publicWritesEnabled: false },
+      },
+      { status: 423 },
+    );
+  }
 
   const rpcUrl = getLaunchRpcUrl();
   if (!rpcUrl) {
@@ -293,7 +294,8 @@ export async function POST(req: NextRequest) {
       maxRetries: 3,
     });
 
-    const provenanceMint = input.tokenMint || input.mint;
+    const isFeeShareSetup = input.purpose === "fee_share_setup";
+    const provenanceMint = isFeeShareSetup ? undefined : input.tokenMint || input.mint;
     const provenanceWallet = input.wallet || input.launchWallet;
     let launchStatus: "submitted" | "confirmed" = "submitted";
     let confirmationStatus: string | null = null;
@@ -311,7 +313,9 @@ export async function POST(req: NextRequest) {
           hasWallet: Boolean(provenanceWallet),
         });
       }
+    }
 
+    if (isFeeShareSetup || provenanceMint) {
       try {
         const confirmation = await waitForSignatureConfirmation(connection, signature);
         confirmationStatus = confirmation.confirmationStatus;
@@ -320,6 +324,7 @@ export async function POST(req: NextRequest) {
           SafeLogger.warn("Launchpad transaction landed with an on-chain error", {
             requestId,
             endpoint: ROUTE,
+            purpose: input.purpose || "launch",
             tokenMint: provenanceMint,
             signature,
             confirmationStatus,
@@ -331,7 +336,9 @@ export async function POST(req: NextRequest) {
               success: false,
               error: {
                 code: "TRANSACTION_FAILED",
-                message: "Launch transaction failed on-chain",
+                message: isFeeShareSetup
+                  ? "Fee-share setup transaction failed on-chain"
+                  : "Launch transaction failed on-chain",
               },
               meta: { requestId, signature, confirmationStatus, elapsedMs: Date.now() - startTime },
             },
@@ -339,7 +346,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        if (confirmation.confirmed) {
+        if (confirmation.confirmed && provenanceMint) {
           launchStatus = "confirmed";
           const confirmedPersisted = await updateUserLaunchConfirmed({
             mint: provenanceMint,
@@ -360,6 +367,7 @@ export async function POST(req: NextRequest) {
         SafeLogger.warn("Launchpad confirmation polling failed; keeping submitted status", {
           requestId,
           endpoint: ROUTE,
+          purpose: input.purpose || "launch",
           tokenMint: provenanceMint,
           error: confirmationError instanceof Error ? confirmationError.message : String(confirmationError),
         });
@@ -371,8 +379,20 @@ export async function POST(req: NextRequest) {
       requestId,
       {
         success: true,
-        response: { signature, launchStatus, confirmationStatus },
-        meta: { requestId, signature, launchStatus, confirmationStatus, elapsedMs: Date.now() - startTime },
+        response: {
+          signature,
+          launchStatus: isFeeShareSetup ? "fee_share_setup_submitted" : launchStatus,
+          confirmationStatus,
+          purpose: input.purpose || "launch",
+        },
+        meta: {
+          requestId,
+          signature,
+          launchStatus: isFeeShareSetup ? "fee_share_setup_submitted" : launchStatus,
+          confirmationStatus,
+          purpose: input.purpose || "launch",
+          elapsedMs: Date.now() - startTime,
+        },
       },
       { status: 200 },
     );

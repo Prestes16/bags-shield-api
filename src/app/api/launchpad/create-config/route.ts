@@ -144,6 +144,41 @@ function shouldRetryWithoutPartnerConfig(result: BagsResult<BagsFeeShareConfigRe
   );
 }
 
+function collectFeeShareSetupTransactions(response: Record<string, unknown>) {
+  const setupTransactions: Array<{ transaction: string; blockhash?: unknown }> = [];
+
+  function addCandidate(value: unknown) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    const record = value as Record<string, unknown>;
+    const transaction = record.transaction;
+    if (typeof transaction === "string" && transaction.trim()) {
+      setupTransactions.push({
+        transaction: transaction.trim(),
+        ...(record.blockhash !== undefined ? { blockhash: record.blockhash } : {}),
+      });
+    }
+  }
+
+  const transactions = response.transactions;
+  if (Array.isArray(transactions)) {
+    for (const item of transactions) addCandidate(item);
+  }
+
+  const bundles = response.bundles;
+  if (Array.isArray(bundles)) {
+    for (const bundle of bundles) {
+      if (Array.isArray(bundle)) {
+        for (const item of bundle) addCandidate(item);
+      } else {
+        addCandidate(bundle);
+      }
+    }
+  }
+
+  addCandidate(response);
+  return setupTransactions;
+}
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   const requestId = getOrGenerateRequestId(req.headers);
@@ -460,6 +495,80 @@ export async function POST(req: NextRequest) {
     const hasBundles = bundles.length > 0;
     const needsCreation = upstreamResponse.needsCreation === true || hasTransactions || hasBundles;
     const publicFlowSafe = !hasTransactions && !hasBundles;
+    const feeShareSetupTransactions = collectFeeShareSetupTransactions(upstreamResponse);
+
+    if (feeShareSetupTransactions.length > 0) {
+      const transactionLengths = feeShareSetupTransactions.map((item) => item.transaction.length);
+      SafeLogger.warn("Bags fee-share config requires explicit setup transaction(s)", {
+        requestId,
+        endpoint: ROUTE,
+        configAttempt,
+        transactionCount: feeShareSetupTransactions.length,
+        transactionLengths,
+        configKeyPresent: Boolean(configKey),
+        totalBps: feeShare.totalBps,
+        tipsEnabled: false,
+      });
+
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: true,
+          response: {
+            status: "fee_share_setup_required",
+            requiresFeeShareSetup: true,
+            feeShareSetupTransactionCount: feeShareSetupTransactions.length,
+            feeShareSetupTransactions: feeShareSetupTransactions.map((item) => item.transaction),
+            feeShareSetupEncoding: "base58",
+            feeShareSetupTransactionLengths: transactionLengths,
+            configKey,
+            meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
+            needsCreation: true,
+            hasTransactions,
+            hasBundles,
+            publicFlowSafe: false,
+            feeShare: {
+              feesEnabled: feeShare.feesEnabled,
+              treasuryWallet: feeShare.treasuryWallet,
+              partner: configAttempt === "partner_config" ? BAGS_SHIELD_FEE_SHARE_WALLET : null,
+              partnerConfig: configAttempt === "partner_config" ? serverPartnerConfig : null,
+              partnerConfigAttempt: configAttempt,
+              partnerConfigFallbackUsed: configAttempt !== "partner_config",
+              claimersArray: feeShare.claimersArray,
+              basisPointsArray: feeShare.basisPointsArray,
+              creatorFeeShareBps: feeShare.creatorFeeShareBps,
+              bagsShieldFeeShareBps: feeShare.bagsShieldFeeShareBps,
+              totalBps: feeShare.totalBps,
+            },
+            tips: {
+              enabled: false,
+              tipWallet: null,
+              tipLamports: 0,
+            },
+            warning:
+              "Fee-share setup requires separate transaction(s). Continue only in internal mode.",
+            safety: {
+              publicFlowSafe: false,
+              needsCreation: true,
+              hasTransactions,
+              hasBundles,
+              reason:
+                "Fee-share setup requires explicit user-signed setup transaction(s) before the final launch transaction.",
+            },
+          },
+          meta: {
+            requestId,
+            upstream: "bags",
+            upstreamStatus: 200,
+            configAttempt,
+            partnerConfigFallbackUsed: configAttempt !== "partner_config",
+            elapsedMs: Date.now() - startTime,
+          },
+        },
+        { status: 201 },
+      );
+    }
 
     return jsonResponse(
       req,
