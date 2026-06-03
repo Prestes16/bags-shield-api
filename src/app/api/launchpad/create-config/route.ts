@@ -130,20 +130,6 @@ function summarizeAttempt(
   };
 }
 
-function shouldRetryWithoutPartnerConfig(result: BagsResult<BagsFeeShareConfigResponse>) {
-  if (!("error" in result)) return false;
-
-  const upstreamStatus = getUpstreamStatus(result.error.details);
-  const upstreamMessage =
-    getUpstreamString(result.error.details, "upstreamMessage") || result.error.message || "";
-  const rawResponseHint = getUpstreamString(result.error.details, "rawResponseHint") || "";
-
-  return (
-    upstreamStatus === 500 &&
-    /Bags API request failed|Internal server error/i.test(`${upstreamMessage} ${rawResponseHint}`)
-  );
-}
-
 function collectFeeShareSetupTransactions(response: Record<string, unknown>) {
   const setupTransactions: Array<{ transaction: string; blockhash?: unknown }> = [];
 
@@ -409,39 +395,11 @@ export async function POST(req: NextRequest) {
       ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
     };
 
-    const fallbackConfig: BagsFeeShareConfigRequest = {
-      payer: input.payer,
-      baseMint: input.baseMint,
-      claimersArray: feeShare.claimersArray,
-      basisPointsArray: feeShare.basisPointsArray,
-      ...(input.bagsConfigType ? { bagsConfigType: input.bagsConfigType } : {}),
-      ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
-    };
-
-    let configAttempt = "partner_config";
-    let bagsResult = await createFeeShareConfig(config);
+    const configAttempt = "partner_config";
+    const bagsResult = await createFeeShareConfig(config);
     const attempts: Array<ReturnType<typeof summarizeAttempt>> = [
       summarizeAttempt(configAttempt, config, bagsResult),
     ];
-
-    if ("error" in bagsResult && shouldRetryWithoutPartnerConfig(bagsResult)) {
-      SafeLogger.warn("Bags fee-share config failed with partner config; retrying without optional partner fields", {
-        requestId,
-        endpoint: ROUTE,
-        upstreamStatus: getUpstreamStatus(bagsResult.error.details),
-        totalBps: getBpsTotal(config),
-        claimersCount: config.claimersArray.length,
-        basisPointsCount: config.basisPointsArray.length,
-        hasPartner: Boolean(config.partner),
-        hasPartnerConfig: Boolean(config.partnerConfig),
-        fallbackKeepsBagsShieldClaimer: fallbackConfig.claimersArray.includes(BAGS_SHIELD_FEE_SHARE_WALLET),
-      });
-
-      configAttempt = "fee_share_without_partner_config";
-      const fallbackResult = await createFeeShareConfig(fallbackConfig);
-      attempts.push(summarizeAttempt(configAttempt, fallbackConfig, fallbackResult));
-      bagsResult = fallbackResult;
-    }
 
     if ("error" in bagsResult) {
       const upstreamStatus = getUpstreamStatus(bagsResult.error.details);
@@ -456,12 +414,12 @@ export async function POST(req: NextRequest) {
         upstreamCode,
         attemptCount: attempts.length,
         finalAttempt: configAttempt,
-        payloadKeys: Object.keys(configAttempt === "partner_config" ? config : fallbackConfig),
+        payloadKeys: Object.keys(config),
         claimersCount: feeShare.claimersArray.length,
         basisPointsCount: feeShare.basisPointsArray.length,
         totalBps: feeShare.totalBps,
-        hasPartner: configAttempt === "partner_config",
-        hasPartnerConfig: configAttempt === "partner_config",
+        hasPartner: true,
+        hasPartnerConfig: true,
       });
 
       return jsonResponse(
@@ -470,19 +428,27 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           error: {
-            code: "BAGS_CREATE_CONFIG_FAILED",
-            message: "Bags create-config failed",
+            code: "BAGS_PARTNER_CONFIG_CREATE_FAILED",
+            message: "Bags create-config failed with server-side partnerConfig",
             upstreamStatus,
             upstreamCode,
             upstreamMessage: upstreamMessage || bagsResult.error.message,
             rawResponseHint,
             attempts,
+            canRequestSignature: false,
+            canContinueToLaunch: false,
+          },
+          response: {
+            publicFlowSafe: false,
+            canRequestSignature: false,
+            canContinueToLaunch: false,
           },
           meta: {
             requestId,
             upstream: "bags",
             upstreamStatus,
             configAttempt,
+            partnerConfigFallbackUsed: false,
             elapsedMs: Date.now() - startTime,
           },
         },
@@ -558,7 +524,7 @@ export async function POST(req: NextRequest) {
               feesEnabled: feeShare.feesEnabled,
               treasuryWallet: feeShare.treasuryWallet,
               partnerConfigAttempt: configAttempt,
-              partnerConfigFallbackUsed: configAttempt !== "partner_config",
+              partnerConfigFallbackUsed: false,
               creatorFeeShareBps: feeShare.creatorFeeShareBps,
               bagsShieldFeeShareBps: feeShare.bagsShieldFeeShareBps,
               totalBps: feeShare.totalBps,
@@ -586,7 +552,7 @@ export async function POST(req: NextRequest) {
             upstream: "bags",
             upstreamStatus: 200,
             configAttempt,
-            partnerConfigFallbackUsed: configAttempt !== "partner_config",
+            partnerConfigFallbackUsed: false,
             elapsedMs: Date.now() - startTime,
           },
         },
@@ -622,7 +588,7 @@ export async function POST(req: NextRequest) {
             partner: configAttempt === "partner_config" ? BAGS_SHIELD_FEE_SHARE_WALLET : null,
             partnerConfig: configAttempt === "partner_config" ? serverPartnerConfig : null,
             partnerConfigAttempt: configAttempt,
-            partnerConfigFallbackUsed: configAttempt !== "partner_config",
+            partnerConfigFallbackUsed: false,
             claimersArray: feeShare.claimersArray,
             basisPointsArray: feeShare.basisPointsArray,
             creatorFeeShareBps: feeShare.creatorFeeShareBps,
@@ -635,7 +601,7 @@ export async function POST(req: NextRequest) {
           upstream: "bags",
           upstreamStatus: 200,
           configAttempt,
-          partnerConfigFallbackUsed: configAttempt !== "partner_config",
+          partnerConfigFallbackUsed: false,
           elapsedMs: Date.now() - startTime,
         },
       },
