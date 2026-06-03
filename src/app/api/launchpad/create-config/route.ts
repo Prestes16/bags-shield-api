@@ -148,15 +148,24 @@ function collectFeeShareSetupTransactions(response: Record<string, unknown>) {
   const setupTransactions: Array<{ transaction: string; blockhash?: unknown }> = [];
 
   function addCandidate(value: unknown) {
+    if (typeof value === "string" && value.trim()) {
+      setupTransactions.push({ transaction: value.trim() });
+      return;
+    }
     if (!value || typeof value !== "object" || Array.isArray(value)) return;
     const record = value as Record<string, unknown>;
-    const transaction = record.transaction;
+    const transaction = record.transaction ?? record.tx ?? record.serializedTransaction;
     if (typeof transaction === "string" && transaction.trim()) {
       setupTransactions.push({
         transaction: transaction.trim(),
         ...(record.blockhash !== undefined ? { blockhash: record.blockhash } : {}),
       });
     }
+  }
+
+  const feeShareSetup = response.feeShareSetupTransactions;
+  if (Array.isArray(feeShareSetup)) {
+    for (const item of feeShareSetup) addCandidate(item);
   }
 
   const transactions = response.transactions;
@@ -489,21 +498,34 @@ export async function POST(req: NextRequest) {
 
     const upstreamResponse = bagsResult.response as Record<string, unknown>;
     const configKey = pickConfigKey(upstreamResponse);
+    const directFeeShareSetupTransactions = Array.isArray(upstreamResponse.feeShareSetupTransactions)
+      ? upstreamResponse.feeShareSetupTransactions
+      : [];
     const transactions = Array.isArray(upstreamResponse.transactions) ? upstreamResponse.transactions : [];
     const bundles = Array.isArray(upstreamResponse.bundles) ? upstreamResponse.bundles : [];
+    const hasDirectFeeShareSetupTransactions = directFeeShareSetupTransactions.length > 0;
     const hasTransactions = transactions.length > 0;
     const hasBundles = bundles.length > 0;
-    const needsCreation = upstreamResponse.needsCreation === true || hasTransactions || hasBundles;
-    const publicFlowSafe = !hasTransactions && !hasBundles;
+    const needsCreation =
+      upstreamResponse.needsCreation === true ||
+      hasDirectFeeShareSetupTransactions ||
+      hasTransactions ||
+      hasBundles;
+    const publicFlowSafe = !hasDirectFeeShareSetupTransactions && !hasTransactions && !hasBundles;
     const feeShareSetupTransactions = collectFeeShareSetupTransactions(upstreamResponse);
 
-    if (feeShareSetupTransactions.length > 0) {
+    if (feeShareSetupTransactions.length > 0 || hasDirectFeeShareSetupTransactions || hasTransactions || hasBundles) {
       const transactionLengths = feeShareSetupTransactions.map((item) => item.transaction.length);
+      const setupTransactionCount =
+        feeShareSetupTransactions.length ||
+        directFeeShareSetupTransactions.length ||
+        transactions.length ||
+        bundles.length;
       SafeLogger.warn("Bags fee-share config requires explicit setup transaction(s)", {
         requestId,
         endpoint: ROUTE,
         configAttempt,
-        transactionCount: feeShareSetupTransactions.length,
+        transactionCount: setupTransactionCount,
         transactionLengths,
         configKeyPresent: Boolean(configKey),
         totalBps: feeShare.totalBps,
@@ -514,29 +536,29 @@ export async function POST(req: NextRequest) {
         req,
         requestId,
         {
-          success: true,
+          success: false,
+          error: {
+            code: "FEE_SHARE_SETUP_NOT_SAFE",
+            message:
+              "Bags requires separate fee-share setup transactions. Launch is blocked to prevent partial SOL spend before a safe final launch transaction is available.",
+          },
           response: {
             status: "fee_share_setup_required",
             requiresFeeShareSetup: true,
-            feeShareSetupTransactionCount: feeShareSetupTransactions.length,
-            feeShareSetupTransactions: feeShareSetupTransactions.map((item) => item.transaction),
-            feeShareSetupEncoding: "base58",
+            feeShareSetupTransactionCount: setupTransactionCount,
             feeShareSetupTransactionLengths: transactionLengths,
-            configKey,
-            meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
+            configKeyPresent: Boolean(configKey),
             needsCreation: true,
             hasTransactions,
             hasBundles,
             publicFlowSafe: false,
+            canRequestSignature: false,
+            canContinueToLaunch: false,
             feeShare: {
               feesEnabled: feeShare.feesEnabled,
               treasuryWallet: feeShare.treasuryWallet,
-              partner: configAttempt === "partner_config" ? BAGS_SHIELD_FEE_SHARE_WALLET : null,
-              partnerConfig: configAttempt === "partner_config" ? serverPartnerConfig : null,
               partnerConfigAttempt: configAttempt,
               partnerConfigFallbackUsed: configAttempt !== "partner_config",
-              claimersArray: feeShare.claimersArray,
-              basisPointsArray: feeShare.basisPointsArray,
               creatorFeeShareBps: feeShare.creatorFeeShareBps,
               bagsShieldFeeShareBps: feeShare.bagsShieldFeeShareBps,
               totalBps: feeShare.totalBps,
@@ -547,14 +569,16 @@ export async function POST(req: NextRequest) {
               tipLamports: 0,
             },
             warning:
-              "Fee-share setup requires separate transaction(s). Continue only in internal mode.",
+              "Fee-share setup requires separate transaction(s). Bags Shield blocked signing to prevent partial SOL spend.",
             safety: {
               publicFlowSafe: false,
               needsCreation: true,
               hasTransactions,
               hasBundles,
+              canRequestSignature: false,
+              canContinueToLaunch: false,
               reason:
-                "Fee-share setup requires explicit user-signed setup transaction(s) before the final launch transaction.",
+                "Fee-share setup requires explicit user-signed setup transaction(s) before the final launch transaction. Public flow remains blocked.",
             },
           },
           meta: {
@@ -566,7 +590,7 @@ export async function POST(req: NextRequest) {
             elapsedMs: Date.now() - startTime,
           },
         },
-        { status: 201 },
+        { status: 409 },
       );
     }
 
