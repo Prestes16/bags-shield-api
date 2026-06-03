@@ -287,6 +287,62 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Helpers para classificar erros RPC (TAREFA B)
+  function classifyRpcError(err: unknown): {
+    code: string;
+    rpcCode?: number;
+    rpcMessage?: string;
+    upstreamStatus?: number;
+    rawResponseHint?: string;
+  } {
+    const message = err instanceof Error ? err.message : String(err);
+    const messageLower = message.toLowerCase();
+
+    // Timeout / conexão
+    if (
+      messageLower.includes("timeout") ||
+      messageLower.includes("econnrefused") ||
+      messageLower.includes("enotfound") ||
+      messageLower.includes("network") ||
+      messageLower.includes("etimedout") ||
+      messageLower.includes("socket")
+    ) {
+      return { code: "RPC_UNAVAILABLE", rpcMessage: "RPC endpoint is unreachable or timed out" };
+    }
+
+    // Saldo insuficiente
+    if (
+      messageLower.includes("insufficientfundsforrent") ||
+      messageLower.includes("insufficient funds") ||
+      messageLower.includes("insufficient lamports")
+    ) {
+      return { code: "INSUFFICIENT_FUNDS", rpcMessage: "Insufficient SOL balance for rent or fees" };
+    }
+
+    // Extrair código RPC JSON-RPC (-32xxx)
+    const rpcCodeMatch = message.match(/-3\d{4}/);
+    const rpcCode = rpcCodeMatch ? parseInt(rpcCodeMatch[0], 10) : undefined;
+
+    // Extrair status HTTP upstream se presente no erro
+    const httpStatusMatch = message.match(/\b(4\d{2}|5\d{2})\b/);
+    const upstreamStatus = httpStatusMatch ? parseInt(httpStatusMatch[0], 10) : undefined;
+
+    const rawHint = message.slice(0, 300).replace(/[A-Za-z0-9+/]{80,}/g, "[redacted-tx]");
+
+    return {
+      code: "SEND_FAILED",
+      rpcCode,
+      rpcMessage: message.slice(0, 200),
+      upstreamStatus,
+      rawResponseHint: rawHint,
+    };
+  }
+
+  const txLengthBytes = rawTransaction.length;
+  const sigPrefixForLog = rawTransaction.length >= 8
+    ? Array.from(rawTransaction.slice(0, 4)).map(b => b.toString(16).padStart(2, "0")).join("")
+    : "n/a";
+
   try {
     const connection = new Connection(rpcUrl, "confirmed");
     const signature = await connection.sendRawTransaction(rawTransaction, {
@@ -397,11 +453,26 @@ export async function POST(req: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
+    const elapsedMs = Date.now() - startTime;
+    const classified = classifyRpcError(error);
+
+    // TAREFA B — log seguro: sem tx completa, sem key, sem seed
     SafeLogger.error("Launchpad signed transaction broadcast failed", error, {
       requestId,
       endpoint: ROUTE,
-      elapsedMs: Date.now() - startTime,
+      purpose: input.purpose || "launch",
+      txLengthBytes,
+      txPrefixHex: sigPrefixForLog,
+      elapsedMs,
+      errorCode: classified.code,
+      rpcCode: classified.rpcCode,
+      upstreamStatus: classified.upstreamStatus,
     });
+
+    const httpStatus =
+      classified.code === "RPC_UNAVAILABLE" ? 503 :
+      classified.code === "INSUFFICIENT_FUNDS" ? 402 :
+      502;
 
     return jsonResponse(
       req,
@@ -409,12 +480,17 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         error: {
-          code: "BROADCAST_FAILED",
-          message: error instanceof Error ? error.message : "Failed to broadcast signed transaction",
+          code: classified.code,
+          message: classified.rpcMessage || "Failed to broadcast signed transaction",
+          purpose: input.purpose || "launch",
+          ...(classified.upstreamStatus !== undefined ? { upstreamStatus: classified.upstreamStatus } : {}),
+          ...(classified.rpcCode !== undefined ? { rpcCode: classified.rpcCode } : {}),
+          ...(classified.rpcMessage ? { rpcMessage: classified.rpcMessage.slice(0, 200) } : {}),
+          ...(classified.rawResponseHint ? { rawResponseHint: classified.rawResponseHint } : {}),
         },
-        meta: { requestId, elapsedMs: Date.now() - startTime },
+        meta: { requestId, elapsedMs },
       },
-      { status: 502 },
+      { status: httpStatus },
     );
   }
 }

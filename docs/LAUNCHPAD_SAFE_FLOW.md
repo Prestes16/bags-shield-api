@@ -131,6 +131,24 @@ The user must explicitly confirm that summary before the wallet signature prompt
 user-signed transaction after the create-launch-transaction step returns a valid
 transaction.
 
+## Separate Setup Recovery
+
+If Bags returns separate fee-share setup transaction(s), the public App2 flow
+must stop before requesting another signature. A confirmed setup transaction is
+not enough proof that a safe final launch transaction is available.
+
+The recovery path is read-only:
+
+1. Persist setup signatures locally by wallet and draft.
+2. Call `/api/launchpad/setup-status` to inspect ledger status, fees, SOL
+   deltas, and program IDs.
+3. Show the user that repeating setup can spend more SOL.
+4. Keep final launch disabled until the backend can prove that Bags returns a
+   config key without additional setup transactions.
+
+`/api/launchpad/setup-status` never signs, sends, broadcasts, returns a
+serialized transaction, or mutates launch provenance.
+
 ## Partner Config Path
 
 Bags supports partner configurations for collecting partner fees from launches.
