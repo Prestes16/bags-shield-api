@@ -435,7 +435,7 @@ export const launchpadSendRequestSchema = z
     mint: solanaAddressSchema.optional(),
     wallet: solanaAddressSchema.optional(),
     launchWallet: solanaAddressSchema.optional(),
-    purpose: z.enum(['launch', 'fee_share_setup']).default('launch').optional(),
+    purpose: z.enum(['launch']).default('launch').optional(),
   })
   .strict();
 

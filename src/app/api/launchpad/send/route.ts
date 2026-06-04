@@ -205,6 +205,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const parsedBody =
+    parseResult.data && typeof parseResult.data === "object" && !Array.isArray(parseResult.data)
+      ? (parseResult.data as Record<string, unknown>)
+      : {};
+  if (parsedBody.purpose === "fee_share_setup") {
+    SafeLogger.warn("Blocked legacy fee-share setup broadcast attempt", {
+      requestId,
+      endpoint: ROUTE,
+    });
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: false,
+        error: {
+          code: "FEE_SHARE_SETUP_BROADCAST_BLOCKED",
+          message:
+            "Fee-share setup broadcasts are blocked to prevent partial SOL spend before a safe final launch transaction is available.",
+        },
+        meta: { requestId },
+      },
+      { status: 409 },
+    );
+  }
+
   const validation = validateLaunchpadInput(launchpadSendRequestSchema, parseResult.data);
   if (!validation.ok) {
     return jsonResponse(
@@ -227,7 +252,7 @@ export async function POST(req: NextRequest) {
     mint?: string;
     wallet?: string;
     launchWallet?: string;
-    purpose?: "launch" | "fee_share_setup";
+    purpose?: "launch";
   };
 
   if (isLaunchpadPublicWritesPaused()) {
@@ -350,8 +375,7 @@ export async function POST(req: NextRequest) {
       maxRetries: 3,
     });
 
-    const isFeeShareSetup = input.purpose === "fee_share_setup";
-    const provenanceMint = isFeeShareSetup ? undefined : input.tokenMint || input.mint;
+    const provenanceMint = input.tokenMint || input.mint;
     const provenanceWallet = input.wallet || input.launchWallet;
     let launchStatus: "submitted" | "confirmed" = "submitted";
     let confirmationStatus: string | null = null;
@@ -371,7 +395,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (isFeeShareSetup || provenanceMint) {
+    if (provenanceMint) {
       try {
         const confirmation = await waitForSignatureConfirmation(connection, signature);
         confirmationStatus = confirmation.confirmationStatus;
@@ -392,9 +416,7 @@ export async function POST(req: NextRequest) {
               success: false,
               error: {
                 code: "TRANSACTION_FAILED",
-                message: isFeeShareSetup
-                  ? "Fee-share setup transaction failed on-chain"
-                  : "Launch transaction failed on-chain",
+                message: "Launch transaction failed on-chain",
               },
               meta: { requestId, signature, confirmationStatus, elapsedMs: Date.now() - startTime },
             },
@@ -437,14 +459,14 @@ export async function POST(req: NextRequest) {
         success: true,
         response: {
           signature,
-          launchStatus: isFeeShareSetup ? "fee_share_setup_submitted" : launchStatus,
+          launchStatus,
           confirmationStatus,
           purpose: input.purpose || "launch",
         },
         meta: {
           requestId,
           signature,
-          launchStatus: isFeeShareSetup ? "fee_share_setup_submitted" : launchStatus,
+          launchStatus,
           confirmationStatus,
           purpose: input.purpose || "launch",
           elapsedMs: Date.now() - startTime,

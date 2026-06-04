@@ -235,21 +235,21 @@ export async function POST(req: NextRequest) {
     const mode = getLaunchpadMode();
     const publicWritesEnabled = isLaunchpadPublicWritesEnabled();
     const internalLaunchModeEnabled = publicWritesEnabled;
-    const launchAllowed = isLaunchpadEnabled() && mode === "real" && publicWritesEnabled && Boolean(partnerConfig) && structuralFailures.length === 0;
+    // The Bags Shield fee is collected via the fee-claimer model (treasury in
+    // claimersArray), so a partner config PDA is NOT required to launch. Launch
+    // is gated only by feature flag, real mode, the public-writes safety gate,
+    // and a structurally valid fee-share plan.
+    const launchAllowed = isLaunchpadEnabled() && mode === "real" && publicWritesEnabled && structuralFailures.length === 0;
     const safetyStatus = structuralFailures.length > 0
       ? "blocked_partial_config"
       : launchAllowed
         ? "internal_enabled"
-        : publicWritesEnabled && !partnerConfig
-          ? "partner_config_missing"
-          : "paused";
+        : "paused";
     const reason = structuralFailures.length > 0
       ? "Launchpad fee-share configuration is not safe for public launch flow."
       : launchAllowed
         ? "Internal launch mode is enabled. Review the fee-share summary before signing."
-        : publicWritesEnabled && !partnerConfig
-          ? "Internal launch mode is enabled, but LAUNCHPAD_PARTNER_CONFIG is not configured yet."
-          : "Launchpad writes are paused. Set LAUNCHPAD_PUBLIC_WRITES_ENABLED=true only in the internal environment to enable launches.";
+        : "Launchpad writes are paused. Set LAUNCHPAD_PUBLIC_WRITES_ENABLED=true only in the internal environment to enable launches.";
 
     SafeLogger.info("Launchpad safety preflight completed", {
       requestId,

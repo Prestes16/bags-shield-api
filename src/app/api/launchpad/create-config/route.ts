@@ -40,6 +40,7 @@ import {
 } from "@/lib/launchpad/safety";
 
 const PARTNER_CONFIG_ENV = "LAUNCHPAD_PARTNER_CONFIG";
+const PARTNER_MODE_ENV = "LAUNCHPAD_PARTNER_MODE_ENABLED";
 
 /**
  * Returns the server-side partner config PDA from env, validated as a Solana
@@ -54,6 +55,19 @@ function getServerPartnerConfig(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Bags partner mechanism is opt-in. By default Bags Shield collects its fee
+ * share as an explicit fee CLAIMER (treasury in claimersArray), which is the
+ * documented v2 model and requires no on-chain partner config. The optional
+ * partner/partnerConfig path is only used when explicitly enabled AND a valid
+ * partner config PDA is configured — attaching a non-existent partner config
+ * makes Bags `/fee-share/config` fail with a 500.
+ */
+function isPartnerModeEnabled(): boolean {
+  const value = process.env[PARTNER_MODE_ENV]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
 }
 
 const ROUTE = "/api/launchpad/create-config";
@@ -128,50 +142,6 @@ function summarizeAttempt(
     upstreamMessage: getUpstreamString(result.error.details, "upstreamMessage") || result.error.message,
     rawResponseHint: getUpstreamString(result.error.details, "rawResponseHint"),
   };
-}
-
-function collectFeeShareSetupTransactions(response: Record<string, unknown>) {
-  const setupTransactions: Array<{ transaction: string; blockhash?: unknown }> = [];
-
-  function addCandidate(value: unknown) {
-    if (typeof value === "string" && value.trim()) {
-      setupTransactions.push({ transaction: value.trim() });
-      return;
-    }
-    if (!value || typeof value !== "object" || Array.isArray(value)) return;
-    const record = value as Record<string, unknown>;
-    const transaction = record.transaction ?? record.tx ?? record.serializedTransaction;
-    if (typeof transaction === "string" && transaction.trim()) {
-      setupTransactions.push({
-        transaction: transaction.trim(),
-        ...(record.blockhash !== undefined ? { blockhash: record.blockhash } : {}),
-      });
-    }
-  }
-
-  const feeShareSetup = response.feeShareSetupTransactions;
-  if (Array.isArray(feeShareSetup)) {
-    for (const item of feeShareSetup) addCandidate(item);
-  }
-
-  const transactions = response.transactions;
-  if (Array.isArray(transactions)) {
-    for (const item of transactions) addCandidate(item);
-  }
-
-  const bundles = response.bundles;
-  if (Array.isArray(bundles)) {
-    for (const bundle of bundles) {
-      if (Array.isArray(bundle)) {
-        for (const item of bundle) addCandidate(item);
-      } else {
-        addCandidate(bundle);
-      }
-    }
-  }
-
-  addCandidate(response);
-  return setupTransactions;
 }
 
 export async function POST(req: NextRequest) {
@@ -336,29 +306,12 @@ export async function POST(req: NextRequest) {
   try {
     const input = ("data" in validation ? validation.data : {}) as BagsFeeShareConfigRequest;
 
-    // Resolve and validate the partner config PDA server-side.
-    // Client-supplied `partnerConfig` is intentionally ignored — always overwritten.
+    // Partner mechanism is opt-in. Default flow collects the Bags Shield fee via
+    // the fee CLAIMER (treasury in claimersArray) and omits partner/partnerConfig
+    // entirely, which avoids the upstream 500 caused by referencing a partner
+    // config PDA that has not been created on-chain.
     const serverPartnerConfig = getServerPartnerConfig();
-    if (!serverPartnerConfig) {
-      SafeLogger.error("Launchpad partner config is not configured on the server", undefined, {
-        requestId,
-        endpoint: ROUTE,
-        envVar: PARTNER_CONFIG_ENV,
-      });
-      return jsonResponse(
-        req,
-        requestId,
-        {
-          success: false,
-          error: {
-            code: "LAUNCHPAD_PARTNER_CONFIG_NOT_CONFIGURED",
-            message: "Launchpad partner config is not configured on the server",
-          },
-          meta: { requestId, elapsedMs: Date.now() - startTime },
-        },
-        { status: 503 },
-      );
-    }
+    const partnerModeEnabled = isPartnerModeEnabled() && Boolean(serverPartnerConfig);
 
     let feeShare: ReturnType<typeof buildLaunchpadFeeShare>;
     try {
@@ -388,14 +341,16 @@ export async function POST(req: NextRequest) {
       baseMint: input.baseMint,
       claimersArray: feeShare.claimersArray,
       basisPointsArray: feeShare.basisPointsArray,
-      // partner and partnerConfig are ALWAYS server-side — client values are discarded
-      partner: BAGS_SHIELD_FEE_SHARE_WALLET,
-      partnerConfig: serverPartnerConfig,
+      // Partner mechanism is opt-in only. Client-supplied partner/partnerConfig
+      // are never used — values come from server env when partner mode is on.
+      ...(partnerModeEnabled
+        ? { partner: BAGS_SHIELD_FEE_SHARE_WALLET, partnerConfig: serverPartnerConfig as string }
+        : {}),
       ...(input.bagsConfigType ? { bagsConfigType: input.bagsConfigType } : {}),
       ...(input.additionalLookupTables ? { additionalLookupTables: input.additionalLookupTables } : {}),
     };
 
-    const configAttempt = "partner_config";
+    const configAttempt = partnerModeEnabled ? "partner_config" : "fee_claimer";
     const bagsResult = await createFeeShareConfig(config);
     const attempts: Array<ReturnType<typeof summarizeAttempt>> = [
       summarizeAttempt(configAttempt, config, bagsResult),
@@ -418,8 +373,8 @@ export async function POST(req: NextRequest) {
         claimersCount: feeShare.claimersArray.length,
         basisPointsCount: feeShare.basisPointsArray.length,
         totalBps: feeShare.totalBps,
-        hasPartner: true,
-        hasPartnerConfig: true,
+        hasPartner: partnerModeEnabled,
+        hasPartnerConfig: partnerModeEnabled,
       });
 
       return jsonResponse(
@@ -428,8 +383,10 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           error: {
-            code: "BAGS_PARTNER_CONFIG_CREATE_FAILED",
-            message: "Bags create-config failed with server-side partnerConfig",
+            code: "BAGS_CREATE_CONFIG_FAILED",
+            message: partnerModeEnabled
+              ? "Bags create-config (fee-share with partner) request failed"
+              : "Bags create-config (fee-share) request failed",
             upstreamStatus,
             upstreamCode,
             upstreamMessage: upstreamMessage || bagsResult.error.message,
@@ -478,86 +435,50 @@ export async function POST(req: NextRequest) {
       hasTransactions ||
       hasBundles;
     const publicFlowSafe = !hasDirectFeeShareSetupTransactions && !hasTransactions && !hasBundles;
-    const feeShareSetupTransactions = collectFeeShareSetupTransactions(upstreamResponse);
+    const setupTransactionCount =
+      directFeeShareSetupTransactions.length || transactions.length || bundles.length;
 
-    if (feeShareSetupTransactions.length > 0 || hasDirectFeeShareSetupTransactions || hasTransactions || hasBundles) {
-      const transactionLengths = feeShareSetupTransactions.map((item) => item.transaction.length);
-      const setupTransactionCount =
-        feeShareSetupTransactions.length ||
-        directFeeShareSetupTransactions.length ||
-        transactions.length ||
-        bundles.length;
-      SafeLogger.warn("Bags fee-share config requires explicit setup transaction(s)", {
+    // A configKey is mandatory for the launch transaction. If Bags returns no
+    // config key we cannot proceed — fail closed rather than launch blindly.
+    if (!configKey) {
+      SafeLogger.error("Bags create-config returned no config key", undefined, {
         requestId,
         endpoint: ROUTE,
         configAttempt,
-        transactionCount: setupTransactionCount,
-        transactionLengths,
-        configKeyPresent: Boolean(configKey),
-        totalBps: feeShare.totalBps,
-        tipsEnabled: false,
+        needsCreation,
+        hasTransactions,
+        hasBundles,
       });
-
       return jsonResponse(
         req,
         requestId,
         {
           success: false,
           error: {
-            code: "FEE_SHARE_SETUP_NOT_SAFE",
-            message:
-              "Bags requires separate fee-share setup transactions. Launch is blocked to prevent partial SOL spend before a safe final launch transaction is available.",
+            code: "BAGS_CONFIG_KEY_MISSING",
+            message: "Bags create-config did not return a config key; launch cannot proceed.",
           },
-          response: {
-            status: "fee_share_setup_required",
-            requiresFeeShareSetup: true,
-            feeShareSetupTransactionCount: setupTransactionCount,
-            feeShareSetupTransactionLengths: transactionLengths,
-            configKeyPresent: Boolean(configKey),
-            needsCreation: true,
-            hasTransactions,
-            hasBundles,
-            publicFlowSafe: false,
-            canRequestSignature: false,
-            canContinueToLaunch: false,
-            feeShare: {
-              feesEnabled: feeShare.feesEnabled,
-              treasuryWallet: feeShare.treasuryWallet,
-              partnerConfigAttempt: configAttempt,
-              partnerConfigFallbackUsed: false,
-              creatorFeeShareBps: feeShare.creatorFeeShareBps,
-              bagsShieldFeeShareBps: feeShare.bagsShieldFeeShareBps,
-              totalBps: feeShare.totalBps,
-            },
-            tips: {
-              enabled: false,
-              tipWallet: null,
-              tipLamports: 0,
-            },
-            warning:
-              "Fee-share setup requires separate transaction(s). Bags Shield blocked signing to prevent partial SOL spend.",
-            safety: {
-              publicFlowSafe: false,
-              needsCreation: true,
-              hasTransactions,
-              hasBundles,
-              canRequestSignature: false,
-              canContinueToLaunch: false,
-              reason:
-                "Fee-share setup requires explicit user-signed setup transaction(s) before the final launch transaction. Public flow remains blocked.",
-            },
-          },
-          meta: {
-            requestId,
-            upstream: "bags",
-            upstreamStatus: 200,
-            configAttempt,
-            partnerConfigFallbackUsed: false,
-            elapsedMs: Date.now() - startTime,
-          },
+          meta: { requestId, upstream: "bags", upstreamStatus: 200, elapsedMs: Date.now() - startTime },
         },
-        { status: 409 },
+        { status: 502 },
       );
+    }
+
+    if (needsCreation || hasTransactions || hasBundles) {
+      // Token Launch v2 requires the fee-share config account to exist on-chain
+      // before the final launch transaction. Bags returns the setup transaction
+      // (or Jito bundle) that the user signs. This rent (~0.0065 SOL) is a Bags
+      // protocol requirement, not a Bags Shield fee. The setup tx is returned so
+      // the client can sign it and proceed directly to the launch transaction.
+      SafeLogger.info("Bags fee-share config created; setup transaction(s) returned for signing", {
+        requestId,
+        endpoint: ROUTE,
+        configAttempt,
+        setupTransactionCount,
+        configKeyPresent: true,
+        partnerModeEnabled,
+        totalBps: feeShare.totalBps,
+      });
     }
 
     return jsonResponse(
@@ -573,20 +494,26 @@ export async function POST(req: NextRequest) {
           hasTransactions,
           hasBundles,
           publicFlowSafe,
+          setupTransactionCount,
+          // configKey is present, so the client may proceed to the launch step.
+          // When setup transactions/bundles are returned they must be signed and
+          // sent before (or bundled with) the final launch transaction.
+          canContinueToLaunch: true,
+          requiresSetupSignature: needsCreation || hasTransactions || hasBundles,
           safety: {
             publicFlowSafe,
             needsCreation,
             hasTransactions,
             hasBundles,
             reason: publicFlowSafe
-              ? "Fee-share config does not require a separate public-flow signature."
-              : "Fee-share config returned separate transactions/bundles and is unsafe for public launch flow while Safety Gate is active.",
+              ? "Fee-share config already exists on-chain; no setup signature required before launch."
+              : "Fee-share config setup transaction(s) returned. Sign the setup tx, then sign the launch transaction to complete the launch (Bags v2 rent applies to the config account).",
           },
           feeShare: {
             feesEnabled: feeShare.feesEnabled,
             treasuryWallet: feeShare.treasuryWallet,
-            partner: configAttempt === "partner_config" ? BAGS_SHIELD_FEE_SHARE_WALLET : null,
-            partnerConfig: configAttempt === "partner_config" ? serverPartnerConfig : null,
+            partner: partnerModeEnabled ? BAGS_SHIELD_FEE_SHARE_WALLET : null,
+            partnerConfig: partnerModeEnabled ? serverPartnerConfig : null,
             partnerConfigAttempt: configAttempt,
             partnerConfigFallbackUsed: false,
             claimersArray: feeShare.claimersArray,
