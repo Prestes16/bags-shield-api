@@ -1,0 +1,1350 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Bags Shield - Intelligence Layer for Solana DeFi</title>
+<style>
+/* â”€â”€â”€ Reset & Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#020617;--bg1:#07122a;
+  --surface:rgba(255,255,255,0.032);
+  --border:rgba(255,255,255,0.07);
+  --cyan:#4DD4FF;--blue:#2FA7FF;--purple:#9945FF;
+  --green:#4ADE80;--amber:#FFB340;--red:#FF3B5C;
+  --txt:#F0F4FF;--txt2:rgba(240,244,255,0.52);--txt3:rgba(240,244,255,0.28);
+  --ease-out:cubic-bezier(0.22,1,0.36,1);
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+}
+html{scroll-behavior:smooth;background:var(--bg)}
+body{color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Inter','SF Pro Display',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:rgba(77,212,255,0.25);border-radius:2px}
+
+/* â”€â”€â”€ Three.js Canvas Layer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+#dotted-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+#dotted-canvas canvas{display:block;width:100%!important;height:100%!important}
+
+/* â”€â”€â”€ Orbs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(90px);animation:orb-drift 18s ease-in-out infinite}
+.orb-1{width:700px;height:700px;background:radial-gradient(circle,rgba(77,212,255,.09),transparent 65%);top:-220px;left:-120px;animation-duration:20s}
+.orb-2{width:550px;height:550px;background:radial-gradient(circle,rgba(153,69,255,.07),transparent 65%);bottom:50px;right:-100px;animation-duration:24s;animation-delay:-8s}
+@keyframes orb-drift{0%,100%{transform:translate(0,0)}33%{transform:translate(30px,-22px)}66%{transform:translate(-18px,16px)}}
+
+/* â”€â”€â”€ Content Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.shell{position:relative;z-index:1}
+.inner{max-width:1280px;margin:0 auto;padding:0 36px}
+
+/* â”€â”€â”€ Shared â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.tag{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:99px;border:1px solid rgba(77,212,255,.22);background:rgba(77,212,255,.07);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:18px}
+.sec-title{font-size:clamp(1.9rem,3.2vw,2.9rem);font-weight:800;line-height:1.1;letter-spacing:-.035em;color:var(--txt);margin:0 0 14px}
+.sec-desc{font-size:1rem;line-height:1.65;color:var(--txt2);margin:0}
+.grad{background:linear-gradient(135deg,#fff 10%,#4DD4FF 55%,#9945FF 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-title-mobile{display:none}
+
+/* â”€â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.btn-p{display:inline-flex;align-items:center;gap:8px;padding:12px 26px;border-radius:12px;font-weight:700;font-size:.92rem;background:linear-gradient(135deg,#4DD4FF,#2FA7FF);color:#020617;border:none;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s var(--ease-spring),box-shadow .3s}
+.btn-p:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 36px rgba(77,212,255,.32)}
+.btn-s{display:inline-flex;align-items:center;gap:8px;padding:12px 26px;border-radius:12px;font-weight:700;font-size:.92rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:var(--txt);cursor:pointer;transition:all .22s}
+.btn-s:hover{border-color:rgba(77,212,255,.38);background:rgba(77,212,255,.05);transform:translateY(-1px)}
+
+/* â”€â”€â”€ Reveal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.rev{opacity:0;transform:translateY(22px);transition:opacity .65s var(--ease-out),transform .65s var(--ease-out)}
+.rev.on{opacity:1;transform:none}
+.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
+.d4{transition-delay:.32s}.d5{transition-delay:.40s}.d6{transition-delay:.48s}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   NAVBAR
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+nav{position:sticky;top:0;z-index:200;background:rgba(2,6,23,.82);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-bottom:1px solid var(--border)}
+.nav-i{max-width:1280px;margin:0 auto;padding:0 36px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-size:.97rem;font-weight:800;color:var(--txt);filter:drop-shadow(0 0 10px rgba(77,212,255,.18));transition:filter .2s ease,color .2s ease}
+.brand:hover{filter:drop-shadow(0 0 14px rgba(77,212,255,.24));color:#fff}
+.brand svg{transform:translateZ(0);filter:drop-shadow(0 0 8px rgba(77,212,255,.16))}
+.nav-links{display:flex;gap:28px}
+.nav-links a{font-size:.85rem;color:var(--txt2);font-weight:600;transition:color .2s}
+.nav-links a:hover{color:var(--txt)}
+.nav-ctas{display:flex;gap:10px;align-items:center}
+.nav-gh{padding:7px 16px;border-radius:9px;border:1px solid var(--border);color:var(--txt2);font-size:.83rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px}
+.nav-gh:hover{border-color:rgba(77,212,255,.3);color:var(--txt)}
+.nav-launch{padding:8px 18px;border-radius:9px;background:linear-gradient(135deg,#4DD4FF,#2FA7FF);color:#020617;font-weight:700;font-size:.83rem;display:flex;align-items:center;gap:6px;transition:transform .2s,box-shadow .2s}
+.nav-launch:hover{transform:translateY(-1px);box-shadow:0 0 22px rgba(77,212,255,.32)}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   HERO
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+#hero{padding:clamp(72px,9vw,116px) 0 clamp(56px,7vw,92px)}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(36px,5vw,88px);align-items:center}
+
+.status-pill{display:inline-flex;align-items:center;gap:10px;padding:6px 15px;border-radius:99px;border:1px solid rgba(74,222,128,.18);background:rgba(74,222,128,.05);font-size:.73rem;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:26px;width:fit-content;animation:fade-up .7s var(--ease-out) both}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#4ADE80;animation:pulse-dot 2.2s ease infinite}
+@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}60%{box-shadow:0 0 0 8px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+
+.hero-h1{font-size:clamp(2.7rem,4.8vw,4.8rem);font-weight:900;line-height:1.02;letter-spacing:-.045em;color:#fff;margin:0 0 22px;animation:fade-up .8s var(--ease-out) both}
+.hero-p{font-size:1.08rem;line-height:1.68;color:var(--txt2);max-width:510px;margin:0 0 34px;animation:fade-up .8s .12s var(--ease-out) both}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:50px;animation:fade-up .8s .22s var(--ease-out) both}
+@keyframes fade-up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* Partners */
+.partners{animation:fade-up .8s .32s var(--ease-out) both}
+.partners-lbl{font-size:.65rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px}
+.partners-row{display:flex;flex-wrap:wrap;align-items:center;gap:20px 28px}
+.partner-item{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:34px;opacity:.96;transition:opacity .2s ease,transform .2s ease,filter .2s ease;filter:grayscale(.04) drop-shadow(0 0 7px rgba(2,6,23,.52));cursor:default}
+.partner-item:hover{opacity:1;transform:translateY(-1px);filter:grayscale(0) drop-shadow(0 0 14px rgba(77,212,255,.18))}
+.partner-item img{height:26px;width:auto;max-width:132px;object-fit:contain;display:block;flex-shrink:0}
+.partner-item svg{display:none}
+.partner-name{font-size:.9rem;font-weight:800;letter-spacing:.02em;color:rgba(248,250,252,.94);white-space:nowrap}
+.partner-item.has-wordmark .partner-name{display:none}
+.partner-item.icon-only .partner-name{display:inline}
+.partner-item[data-source="bags"] img{height:24px}
+.partner-bags img{height:25px;filter:drop-shadow(0 0 10px rgba(0,233,79,.24))}
+.partner-item[data-source="dexscreener"] img{height:25px}
+.partner-item[data-source="jito"] img,.partner-item[data-source="meteora"] img{height:25px}
+
+/* Mock Col */
+.mock-col{display:flex;justify-content:flex-end;align-items:center;animation:fade-up .85s .08s var(--ease-out) both}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CSS @property for animated border
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+@property --bdr-a{syntax:'<angle>';initial-value:0deg;inherits:false}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   GLASS PHONE 3D FRAME
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.phone-outer{
+  position:relative;width:100%;max-width:310px;
+  display:flex;align-items:center;justify-content:center;
+  animation:phone-float 7s ease-in-out infinite;
+  cursor:pointer;
+}
+@keyframes phone-float{
+  0%,100%{transform:perspective(900px) rotateY(-13deg) rotateX(4deg) translateY(0)}
+  50%     {transform:perspective(900px) rotateY(-10deg) rotateX(2deg) translateY(-13px)}
+}
+.phone-outer:hover{animation-play-state:paused}
+
+/* Animated border */
+.phone-border{
+  position:absolute;inset:-2.5px;border-radius:44px;z-index:0;
+  background:conic-gradient(
+    from var(--bdr-a),
+    #4DD4FF 0%,#9945FF 22%,#2FA7FF 42%,#4ADE80 60%,#FFB340 78%,#4DD4FF 88%,#9945FF 100%
+  );
+  padding:2.5px;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  animation:bdr-spin 4.5s linear infinite,bdr-glow 4.5s ease-in-out infinite;
+}
+@keyframes bdr-spin{from{--bdr-a:0deg}to{--bdr-a:360deg}}
+@keyframes bdr-glow{0%,100%{opacity:.82;filter:blur(0)}50%{opacity:1;filter:blur(.4px)}}
+/* outer diffuse glow */
+.phone-border::before{
+  content:'';position:absolute;inset:-12px;border-radius:58px;
+  background:conic-gradient(from var(--bdr-a),rgba(77,212,255,.22) 0%,rgba(153,69,255,.22) 28%,rgba(74,222,128,.12) 58%,rgba(77,212,255,.22) 100%);
+  filter:blur(20px);z-index:-1;
+}
+
+/* Glass frame */
+.phone-frame{
+  position:relative;z-index:1;width:100%;border-radius:40px;
+  background:rgba(6,9,25,.75);
+  backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);
+  border:1px solid rgba(255,255,255,.09);overflow:hidden;
+  box-shadow:0 36px 72px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.10),inset 0 -1px 0 rgba(0,0,0,.25);
+}
+/* Glass sheen */
+.phone-frame::before{content:'';position:absolute;top:0;left:0;right:0;height:46%;background:linear-gradient(180deg,rgba(255,255,255,.055),transparent);border-radius:40px 40px 0 0;pointer-events:none;z-index:20}
+
+/* Spotlight overlay */
+.phone-spotlight{
+  position:absolute;inset:0;border-radius:40px;
+  background:radial-gradient(circle 170px at var(--sx,50%) var(--sy,50%),rgba(77,212,255,.16),transparent 72%);
+  pointer-events:none;opacity:0;transition:opacity .28s;z-index:15;
+}
+.phone-outer:hover .phone-spotlight{opacity:1}
+
+/* Ground glow */
+.phone-glow{
+  position:absolute;bottom:-44px;left:8%;right:8%;height:88px;
+  background:radial-gradient(ellipse,rgba(77,212,255,.20),transparent 68%);
+  filter:blur(22px);z-index:-1;
+  animation:glow-breathe 4.5s ease-in-out infinite;
+}
+@keyframes glow-breathe{0%,100%{opacity:.45;transform:scaleX(.88)}50%{opacity:1;transform:scaleX(1.1)}}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   APP SCREEN (CSS Recreation of real app)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.app{
+  background:#090E1F;min-height:570px;
+  display:flex;flex-direction:column;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+  position:relative;overflow:hidden;
+}
+/* subtle vignette */
+.app::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 100% 80% at 50% 0%,transparent 40%,rgba(4,7,20,.3));pointer-events:none;z-index:5}
+
+/* top bar */
+.app-top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;background:rgba(9,14,31,.96);border-bottom:1px solid rgba(255,255,255,.05);position:relative;z-index:6}
+.app-logo{display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:800;color:#4DD4FF}
+.app-btn-sm{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:rgba(77,212,255,.13);border:1px solid rgba(77,212,255,.28);color:#4DD4FF;font-size:.68rem;font-weight:700}
+
+/* hero */
+.app-hero{display:flex;flex-direction:column;align-items:center;padding:20px 18px 16px;position:relative;z-index:6}
+.shield-wrap{position:relative;width:76px;height:76px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.shield-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(77,212,255,.18);animation:sh-ring 3.5s ease-out infinite}
+.shield-ring-2{inset:-10px;animation-delay:.8s}
+.shield-ring-3{inset:-20px;animation-delay:1.6s;border-color:rgba(77,212,255,.08)}
+@keyframes sh-ring{0%{opacity:.55;transform:scale(1)}100%{opacity:0;transform:scale(1.4)}}
+.app-title{font-size:1.28rem;font-weight:900;color:#4DD4FF;letter-spacing:-.01em;margin-bottom:3px}
+.app-sub{font-size:.68rem;color:rgba(240,240,255,.38);text-align:center;line-height:1.45}
+
+/* search */
+.app-search{padding:0 14px 12px;display:flex;flex-direction:column;gap:7px;position:relative;z-index:6}
+.search-input{display:flex;align-items:center;gap:7px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.046);border:1px solid rgba(255,255,255,.07);color:rgba(240,240,255,.3);font-size:.68rem}
+.scan-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;border-radius:11px;background:linear-gradient(135deg,#1e7a96 0%,#144f78 50%,#28176a 100%);color:rgba(255,255,255,.88);font-size:.74rem;font-weight:700;letter-spacing:.01em}
+
+/* sections */
+.app-lbl{padding:2px 14px 6px;font-size:.68rem;font-weight:800;color:rgba(240,240,255,.82);position:relative;z-index:6}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 10px;position:relative;z-index:6}
+.q-card{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 8px;border-radius:12px;background:rgba(255,255,255,.036);border:1px solid rgba(255,255,255,.06);font-size:.67rem;font-weight:700;color:rgba(240,240,255,.75);cursor:pointer}
+.q-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.q-cyan{background:rgba(77,212,255,.11);color:#4DD4FF}
+.q-blue{background:rgba(47,167,255,.11);color:#2FA7FF}
+.mkt-bars{padding:0 14px 10px;display:flex;flex-direction:column;gap:5px;position:relative;z-index:6}
+.mkt-bar{height:7px;border-radius:3px;background:linear-gradient(90deg,rgba(77,212,255,.28),rgba(153,69,255,.14));animation:bar-shimmer 2.8s ease-in-out infinite alternate}
+@keyframes bar-shimmer{from{opacity:.45}to{opacity:.88}}
+.api-row{display:flex;align-items:center;gap:7px;padding:0 14px 8px;font-size:.66rem;color:rgba(240,240,255,.35);position:relative;z-index:6}
+.api-dot{width:5px;height:5px;border-radius:50%;background:#4ADE80;box-shadow:0 0 5px rgba(74,222,128,.65);animation:pulse-dot 2.2s ease infinite}
+.app-bnav{display:flex;align-items:center;justify-content:space-around;padding:9px 4px 15px;background:rgba(4,8,20,.94);border-top:1px solid rgba(255,255,255,.055);margin-top:auto;position:relative;z-index:6}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.52rem;color:rgba(240,240,255,.26);font-weight:600;flex:1}
+.bnav-active{color:#4DD4FF}
+.bnav-active svg{stroke:#4DD4FF!important}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FEATURES
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+#features{padding:40px 0 100px}
+.sec-head{text-align:center;margin-bottom:56px}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.fc{padding:30px;border-radius:22px;background:var(--surface);border:1px solid var(--border);transition:transform .3s var(--ease-spring),border-color .3s,box-shadow .3s;position:relative;overflow:hidden;cursor:default}
+.fc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(77,212,255,.38),transparent);opacity:0;transition:opacity .3s}
+.fc:hover{transform:translateY(-7px);border-color:rgba(77,212,255,.22);box-shadow:0 18px 52px -10px rgba(0,0,0,.5),0 0 0 1px rgba(77,212,255,.08)}
+.fc:hover::before{opacity:1}
+.fi{width:50px;height:50px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.fi-c{background:rgba(77,212,255,.11);color:var(--cyan)}
+.fi-p{background:rgba(153,69,255,.11);color:var(--purple)}
+.fi-g{background:rgba(74,222,128,.11);color:var(--green)}
+.fc h3{font-size:1.05rem;font-weight:800;margin:0 0 9px;color:var(--txt)}
+.fc p{font-size:.86rem;line-height:1.6;color:var(--txt2);margin:0}
+
+/* Launchpad */
+#launchpad{padding:0 0 100px}
+.launch-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:28px;align-items:stretch}
+.launch-copy{border-radius:26px;background:linear-gradient(135deg,rgba(77,212,255,.05),rgba(153,69,255,.035),rgba(255,255,255,.012));border:1px solid rgba(77,212,255,.12);padding:clamp(28px,4.2vw,48px);position:relative;overflow:hidden}
+.launch-copy::before{content:'';position:absolute;inset:auto -70px -90px auto;width:260px;height:260px;background:radial-gradient(circle,rgba(77,212,255,.11),transparent 68%);pointer-events:none}
+.launch-copy .sec-title{max-width:620px}
+.launch-copy .sec-desc{max-width:660px}
+.launch-card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:28px}
+.launch-card{border-radius:18px;background:rgba(255,255,255,.032);border:1px solid rgba(255,255,255,.075);padding:20px;min-height:156px;position:relative;overflow:hidden}
+.launch-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(77,212,255,.34),transparent);opacity:.58}
+.launch-card h3{font-size:.98rem;font-weight:850;color:var(--txt);margin:0 0 8px}
+.launch-card p{font-size:.82rem;line-height:1.55;color:var(--txt2);margin:0}
+.launch-side{display:flex;flex-direction:column;gap:14px}
+.claim-card{border-radius:26px;background:rgba(3,10,24,.78);border:1px solid rgba(77,212,255,.16);padding:28px;box-shadow:0 26px 70px -28px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.055)}
+.claim-kicker{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(77,212,255,.74);margin-bottom:14px}
+.claim-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}
+.claim-row h3{font-size:1.08rem;font-weight:900;color:#fff;margin:0;line-height:1.25}
+.claim-badge{border-radius:99px;border:1px solid rgba(74,222,128,.28);background:rgba(74,222,128,.08);color:#4ADE80;padding:6px 10px;font-size:.72rem;font-weight:800;white-space:nowrap}
+.claim-card p{font-size:.86rem;line-height:1.58;color:var(--txt2);margin:0 0 18px}
+.claim-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.claim-mini div{border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);padding:12px}
+.claim-mini span{display:block;font-size:.65rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px}
+.claim-mini strong{font-size:.85rem;color:var(--txt)}
+.claim-card .btn-p{width:100%;justify-content:center;margin-top:2px}
+.launch-note{border-radius:18px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);padding:18px;color:var(--txt2);font-size:.84rem;line-height:1.6}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DEEP DIVE
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+#security-model{padding:0 0 100px}
+.deep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.dc{border-radius:22px;background:var(--surface);border:1px solid var(--border);overflow:hidden;transition:transform .3s,border-color .3s,box-shadow .3s}
+.dc:hover{transform:translateY(-5px);border-color:rgba(77,212,255,.18);box-shadow:0 20px 52px -12px rgba(0,0,0,.5)}
+.dc-top{padding:26px 26px 0}
+.dc-tag{font-size:.64rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:9px}
+.dc h3{font-size:1.1rem;font-weight:800;color:var(--txt);margin:0;line-height:1.3}
+.dc-div{height:1px;background:var(--border);margin:18px 26px}
+.dc-body{padding:0 26px 26px}
+.dc-body p{font-size:.86rem;line-height:1.65;color:var(--txt2);margin:0 0 16px}
+.dc-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:9px}
+.dc-list li{display:flex;align-items:flex-start;gap:8px;font-size:.83rem;color:var(--txt2);line-height:1.5}
+.dc-list li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--cyan);flex-shrink:0;margin-top:7px}
+.dc-list strong{color:var(--txt)}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DOCS CTA
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+#documentation{padding:0 0 104px}
+.docs-hub{border-radius:30px;background:linear-gradient(140deg,rgba(77,212,255,.06),rgba(153,69,255,.045),rgba(255,255,255,.018));border:1px solid rgba(77,212,255,.13);padding:clamp(28px,5vw,58px);position:relative;overflow:hidden;box-shadow:0 28px 90px -48px rgba(77,212,255,.45)}
+.docs-hub::before{content:'';position:absolute;inset:-35% -18% auto auto;width:460px;height:460px;background:radial-gradient(circle,rgba(77,212,255,.095),transparent 67%);pointer-events:none}
+.docs-hub>*{position:relative;z-index:1}
+.docs-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,390px);gap:24px;align-items:end;margin-bottom:30px}
+.docs-kicker{font-size:.68rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px}
+.docs-hub .sec-title{font-size:clamp(2rem,4.2vw,3.25rem);margin-bottom:12px}
+.docs-hub .sec-desc{max-width:760px}
+.docs-index{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.docs-index a{display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:15px;border:1px solid rgba(255,255,255,.075);background:rgba(255,255,255,.035);padding:12px 14px;color:var(--txt2);font-size:.82rem;font-weight:800;transition:border-color .2s,background .2s,color .2s}
+.docs-index a:hover{border-color:rgba(77,212,255,.26);background:rgba(77,212,255,.065);color:var(--txt)}
+.link-arrow{margin-left:.45rem;color:var(--cyan);font-weight:900;opacity:.86;text-shadow:0 0 12px rgba(77,212,255,.25)}
+.link-arrow.external{display:inline-flex;transform:translateY(-1px)}
+.flow-chain{display:inline-flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:.45rem}
+.flow-arrow{display:inline-flex;align-items:center;justify-content:center;color:var(--cyan);opacity:.9;font-weight:900;transform:translateY(-1px);text-shadow:0 0 12px rgba(77,212,255,.25)}
+.docs-section{margin-top:34px}
+.docs-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:15px;min-width:0}
+.docs-section h3{font-size:1.12rem;margin:0;color:var(--txt)}
+.docs-section p{margin:0;color:var(--txt2);font-size:.88rem;line-height:1.65;overflow-wrap:break-word}
+.launch-standards{border-radius:24px;background:linear-gradient(145deg,rgba(77,212,255,.06),rgba(153,69,255,.045),rgba(5,12,26,.7));border:1px solid rgba(77,212,255,.14);padding:clamp(22px,4vw,32px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.standards-head{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(250px,.88fr);gap:22px;align-items:end;margin-bottom:18px}
+.standards-eyebrow{font-size:.66rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px}
+.standards-head h3{font-size:clamp(1.25rem,2.6vw,1.75rem);line-height:1.15;margin:0 0 10px}
+.standards-badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.standards-badges span{display:inline-flex;align-items:center;border-radius:999px;border:1px solid rgba(77,212,255,.18);background:rgba(77,212,255,.065);color:rgba(225,245,255,.9);font-size:.72rem;font-weight:800;padding:7px 10px;white-space:nowrap}
+.standards-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.standard-card{border-radius:18px;background:rgba(3,10,24,.72);border:1px solid rgba(255,255,255,.075);padding:17px;min-width:0}
+.standard-card strong{display:block;color:var(--txt);font-size:.92rem;margin-bottom:7px}
+.standard-card p{font-size:.8rem;line-height:1.58;color:var(--txt2)}
+.standards-panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.standards-panel{border-radius:20px;background:rgba(5,12,26,.74);border:1px solid rgba(255,255,255,.075);padding:18px;min-width:0}
+.practice-panel{margin-top:14px}
+.standards-panel h4{margin:0 0 8px;color:var(--txt);font-size:1rem}
+.standards-panel p{margin:0 0 12px;color:var(--txt2);font-size:.82rem;line-height:1.58}
+.check-list,.compact-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.check-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+.check-list li,.compact-list li{display:flex;gap:8px;align-items:flex-start;color:var(--txt2);font-size:.8rem;line-height:1.45}
+.check-list li::before,.compact-list li::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px rgba(77,212,255,.35);flex:0 0 6px;margin-top:7px}
+.api-purpose{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.api-purpose span{display:inline-flex;align-items:center;max-width:100%;min-width:0;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.075);color:var(--txt2);font-size:.74rem;font-weight:800;padding:7px 10px;overflow-wrap:break-word}
+.api-orbit-feature{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;align-items:center;max-width:100%;min-width:0;margin:0 0 16px;padding:20px;border-radius:24px;background:linear-gradient(145deg,rgba(77,212,255,.055),rgba(153,69,255,.04),rgba(5,12,26,.72));border:1px solid rgba(77,212,255,.13);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.045)}
+.api-orbit-feature::before{content:'';position:absolute;inset:-40% auto auto -16%;width:420px;height:420px;background:radial-gradient(circle,rgba(77,212,255,.12),transparent 68%);pointer-events:none}
+.api-orbit-feature>*{position:relative;z-index:1}
+.api-orbit-copy{min-width:0}
+.api-orbit-kicker{display:block;font-size:.66rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--cyan);margin-bottom:8px}
+.api-orbit-copy strong{display:block;color:var(--txt);font-size:1.05rem;line-height:1.25;margin-bottom:8px;overflow-wrap:break-word}
+.api-orbit-copy p{font-size:.84rem;color:var(--txt2);line-height:1.6;max-width:720px;overflow-wrap:break-word}
+.api-orbit-accessible{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+.api-orbit-stage{position:relative;height:230px;min-width:230px;display:grid;place-items:center;isolation:isolate}
+.api-orbit-stage::before,.api-orbit-stage::after{content:'';position:absolute;border-radius:50%;border:1px solid rgba(77,212,255,.16);box-shadow:0 0 34px rgba(77,212,255,.08)}
+.api-orbit-stage::before{width:190px;height:190px;animation:api-orbit-spin 18s linear infinite}
+.api-orbit-stage::after{width:118px;height:118px;border-color:rgba(153,69,255,.18);animation:api-orbit-spin 12s linear infinite reverse}
+.api-orbit-core{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,rgba(77,212,255,.28),rgba(153,69,255,.16),rgba(3,10,24,.92));border:1px solid rgba(77,212,255,.28);box-shadow:0 0 34px rgba(77,212,255,.18),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-weight:900;letter-spacing:.08em;font-size:.78rem}
+.api-orbit-core::before{content:attr(data-label)}
+.api-orbit-node{position:absolute;display:inline-flex;align-items:center;gap:6px;min-width:74px;justify-content:center;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(5,12,26,.9);box-shadow:0 10px 28px rgba(0,0,0,.35),0 0 20px rgba(77,212,255,.08);padding:7px 10px;color:var(--txt);font-size:.68rem;font-weight:900;white-space:nowrap;animation:api-node-float 4.8s ease-in-out infinite}
+.api-orbit-node::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px rgba(77,212,255,.65)}
+.api-orbit-node::after{content:attr(data-label)}
+.api-orbit-node.post::before{background:#b894ff;box-shadow:0 0 12px rgba(184,148,255,.62)}
+.api-orbit-node.health{transform:translate(0,-96px);animation-delay:0s}
+.api-orbit-node.scan{transform:translate(86px,-42px);animation-delay:.25s}
+.api-orbit-node.swap{transform:translate(86px,54px);animation-delay:.5s}
+.api-orbit-node.launch{transform:translate(0,100px);animation-delay:.75s}
+.api-orbit-node.claims{transform:translate(-88px,54px);animation-delay:1s}
+.api-orbit-node.quote{transform:translate(-88px,-42px);animation-delay:1.25s}
+@keyframes api-orbit-spin{to{transform:rotate(360deg)}}
+@keyframes api-node-float{0%,100%{margin-top:0;filter:brightness(1)}50%{margin-top:-4px;filter:brightness(1.18)}}
+@media(prefers-reduced-motion:reduce){
+  .api-orbit-stage::before,.api-orbit-stage::after,.api-orbit-node{animation:none}
+}
+.docs-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.doc-card,.endpoint-card,.flow-card,.note-card{border-radius:20px;background:rgba(5,12,26,.74);border:1px solid rgba(255,255,255,.075);padding:18px;min-width:0}
+.doc-card strong,.endpoint-card strong,.flow-card strong,.note-card strong{display:block;color:var(--txt);font-size:.95rem;margin-bottom:7px}
+.doc-card span,.endpoint-card p,.flow-card p,.note-card p{font-size:.82rem;line-height:1.58;color:var(--txt2)}
+.endpoint-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.endpoint-card{display:grid;gap:10px}
+.endpoint-top{display:flex;align-items:center;gap:9px;min-width:0}
+.method{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:24px;border-radius:999px;background:rgba(77,212,255,.12);color:var(--cyan);font-size:.66rem;font-weight:900;letter-spacing:.07em}
+.method.post{background:rgba(153,69,255,.12);color:#b894ff}
+.endpoint-path{font-family:'SF Mono','Fira Code','Courier New',monospace;font-size:.78rem;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.endpoint-note{font-size:.72rem;color:var(--txt3);line-height:1.45}
+.flow-grid,.note-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.flow-steps{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.flow-steps li{display:flex;gap:8px;color:var(--txt2);font-size:.8rem;line-height:1.45}
+.flow-steps li::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);flex:0 0 6px;margin-top:7px}
+.code-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.code-blk{background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;font-family:'SF Mono','Fira Code','Courier New',monospace;font-size:.76rem;color:#4DD4FF;line-height:1.55;white-space:pre-wrap;word-break:break-word;overflow-x:hidden}
+.cc{color:rgba(255,255,255,.28)}.cm{color:#9945FF}.cs{color:#4ADE80}.ck{color:#4DD4FF}.cv{color:#FFB340}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FOOTER
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+footer{border-top:1px solid var(--border);padding:56px 0 36px}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;margin-bottom:44px}
+.foot-brand p{font-size:.85rem;color:var(--txt3);line-height:1.6;margin:10px 0 0;max-width:270px}
+.foot-title{display:flex;align-items:center;gap:9px;font-size:1rem;font-weight:800;color:var(--txt)}
+.foot-col h4{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin:0 0 14px}
+.foot-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:9px}
+.foot-col a{font-size:.84rem;color:var(--txt2);transition:color .2s}
+.foot-col a:hover{color:var(--cyan)}
+.foot-bot{border-top:1px solid var(--border);padding-top:26px;display:flex;align-items:center;justify-content:space-between;font-size:.77rem;color:var(--txt3)}
+.foot-bot-links{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.foot-bot-links a{color:var(--txt3);transition:color .2s}
+.foot-bot-links a:hover{color:var(--cyan)}
+
+/* â”€â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media(max-width:1024px){
+  .feat-grid,.deep-grid{grid-template-columns:repeat(2,1fr)}
+  .docs-hero{grid-template-columns:1fr}
+  .docs-grid,.flow-grid,.note-grid,.standards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .standards-head,.standards-panels,.api-orbit-feature{grid-template-columns:1fr}
+  .standards-badges{justify-content:flex-start}
+  .api-orbit-stage{margin-inline:auto}
+  .launch-grid{grid-template-columns:1fr}
+  .foot-grid{grid-template-columns:1fr 1fr;gap:28px}
+}
+@media(max-width:768px){
+  .nav-links{display:none}
+  .nav-gh{display:none}
+  .nav-launch{padding:8px 13px;font-size:.8rem}
+  .hero-grid{grid-template-columns:1fr;text-align:center}
+  .hero-h1{font-size:clamp(2rem,9vw,2.35rem);letter-spacing:-.025em;max-width:340px;margin-left:auto;margin-right:auto}
+  .sec-title{font-size:clamp(1.75rem,8vw,2.15rem);letter-spacing:-.025em}
+  .hero-p{font-size:.96rem;max-width:340px}
+  .mock-col{justify-content:center}
+  .phone-outer{max-width:260px;animation:phone-float-simple 5.5s ease-in-out infinite}
+  @keyframes phone-float-simple{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
+  .status-pill,.hero-cta,.partners{margin-left:auto;margin-right:auto}
+  .hero-p{margin-left:auto;margin-right:auto}
+  .partners-row{justify-content:flex-start;gap:16px 18px}
+  .partner-item{min-height:30px;gap:8px}
+  .partner-item img{height:22px;max-width:108px}
+  .partner-item[data-source="bags"] img,.partner-item[data-source="dexscreener"] img,.partner-item[data-source="jito"] img,.partner-item[data-source="meteora"] img{height:21px}
+  .partner-bags img{height:22px}
+  .partner-name{font-size:.84rem}
+  .feat-grid,.deep-grid{grid-template-columns:1fr}
+  .docs-index,.docs-grid,.endpoint-grid,.flow-grid,.note-grid,.code-row,.standards-grid,.check-list{grid-template-columns:1fr}
+  .docs-hub{padding:24px 18px;border-radius:24px;max-width:100%;overflow-x:hidden}
+  .docs-section-head{display:block}
+  .docs-section-head p{margin-top:8px}
+  .docs-index a,.api-purpose span,.endpoint-card,.standard-card,.flow-card,.note-card,.doc-card{min-width:0;max-width:100%;white-space:normal}
+  .endpoint-path{min-width:0;max-width:100%}
+  .api-orbit-feature{padding:18px}
+  .api-orbit-stage{height:auto;min-width:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 0 0}
+  .api-orbit-stage::before,.api-orbit-stage::after,.api-orbit-core{display:none}
+  .api-orbit-node{position:static;transform:none!important;animation:none;min-width:auto}
+  .launch-card-grid,.claim-mini{grid-template-columns:1fr}
+  .launch-copy,.claim-card{padding:24px}
+  .foot-grid{grid-template-columns:1fr;gap:24px}
+  .foot-bot{flex-direction:column;gap:14px;text-align:center}
+  .inner{padding:0 20px}
+  .nav-i{padding:0 20px}
+}
+@media(max-width:640px){
+  .nav-i{padding:0 18px}
+  .nav-launch{width:42px;height:38px;padding:0;justify-content:center;font-size:0;gap:0}
+  .nav-launch svg{width:15px;height:15px}
+  .hero-h1{font-size:1.95rem;line-height:1.08;max-width:300px}
+  .hero-title-desktop{display:none}
+  .hero-title-mobile{display:inline}
+  .hero-p{font-size:.92rem;max-width:310px}
+  .sec-title{font-size:1.45rem;line-height:1.14;max-width:270px;margin-left:auto;margin-right:auto}
+  .partners{max-width:320px}
+}
+</style>
+</head>
+<body>
+
+<div id="dotted-canvas"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="shell">
+
+<nav>
+  <div class="nav-i">
+    <a href="#hero" class="brand">
+      <svg width="22" height="22" fill="none" stroke="#4DD4FF" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <polyline points="9 12 11 14 15 10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Bags Shield
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#launchpad">Launchpad</a>
+      <a href="#documentation">API Docs</a>
+    </div>
+    <div class="nav-ctas">
+      <a href="https://github.com/Prestes16" target="_blank" rel="noopener noreferrer" class="nav-gh" aria-label="Open Bags Shield on GitHub">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.4-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 6.1 18 6.4 18 6.4c.6 1.6.2 2.8.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>
+        GitHub
+      </a>
+      <a href="https://app.bagsshield.org" target="_blank" rel="noopener noreferrer" class="nav-launch" aria-label="Open the Bags Shield app">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+        Launch App
+      </a>
+    </div>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="inner">
+    <div class="hero-grid">
+
+      <div>
+        <div class="status-pill"><span class="status-dot"></span> API Status Available</div>
+
+        <h1 class="hero-h1">
+          <span class="hero-title-desktop">The Intelligence<br>Layer for <span class="grad">Solana DeFi.</span></span>
+          <span class="hero-title-mobile">The<br>Intelligence<br>Layer for<br><span class="grad">Solana DeFi.</span></span>
+        </h1>
+
+        <p class="hero-p">Risk signals, safer swap context, creator launch flows, and practical analytics built around the Solana ecosystem.</p>
+
+        <div class="hero-cta">
+          <a href="https://app.bagsshield.org" target="_blank" rel="noopener noreferrer" class="btn-p" aria-label="Open the Bags Shield app">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+            Launch App
+          </a>
+          <a href="#documentation" class="btn-s">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Documentation
+          </a>
+        </div>
+
+        <div class="partners">
+          <div class="partners-lbl">DATA &amp; ECOSYSTEM SOURCES</div>
+          <div class="partners-row" aria-label="Solana ecosystem and data sources">
+
+            <div class="partner-item has-wordmark" data-source="solana">
+              <svg width="24" height="19" viewBox="0 0 397 311" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="sg1" x1="23" y1="314" x2="374" y2="-10" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#9945FF"/>
+                    <stop offset="14%" stop-color="#8752F3"/>
+                    <stop offset="42%" stop-color="#5497D5"/>
+                    <stop offset="68%" stop-color="#43B4CA"/>
+                    <stop offset="82%" stop-color="#28E0B9"/>
+                    <stop offset="100%" stop-color="#19FB9B"/>
+                  </linearGradient>
+                </defs>
+                <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="url(#sg1)"/>
+                <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="url(#sg1)"/>
+                <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="url(#sg1)"/>
+              </svg>
+              <img src="./assets/partners/solana.svg" alt="Solana">
+            </div>
+
+            <a class="partner-item icon-only partner-bags" data-source="bags" href="https://bags.fm" target="_blank" rel="noopener noreferrer" aria-label="Bags">
+              <img src="./assets/partners/bags-icon.svg" alt="" aria-hidden="true">
+              <span class="partner-name">Bags</span>
+            </a>
+
+            <div class="partner-item icon-only" data-source="jupiter">
+              <svg width="26" height="26" viewBox="0 0 33 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="jg" x1="21.5" y1="6.5" x2="6.67" y2="32" gradientUnits="userSpaceOnUse">
+                    <stop offset=".0001" stop-color="#C7F284"/>
+                    <stop offset="1" stop-color="#00BEF0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M3.09 25.17c1.35 1.88 3.09 3.45 5.09 4.62 2 1.16 4.23 1.89 6.53 2.13-1.19-1.78-2.91-3.42-5.06-4.67-2.15-1.25-4.43-1.93-6.56-2.08z" fill="url(#jg)"/>
+                <path d="M12.54 22.27c-4.14-2.41-8.63-3.02-11.83-1.94.31 1.02.72 2.01 1.22 2.96 2.79-.06 5.83.7 8.66 2.34 2.83 1.65 5 3.92 6.32 6.37 1.07-.03 2.13-.17 3.18-.4-.65-3.32-3.4-6.91-7.55-9.33z" fill="url(#jg)"/>
+                <path d="M32.29 12.5c-.53-2.14-1.48-4.16-2.8-5.92a16.06 16.06 0 0 0-5.9-4.36 15.96 15.96 0 0 0-6.7-.88 16 16 0 0 0-5.13 1.33c3.54.43 7.48 1.77 11.34 4.01 3.86 2.24 6.97 5 9.1 7.87z" fill="url(#jg)"/>
+                <path d="M27.13 20.36c-1.81-3.01-4.92-5.9-8.75-8.12-3.83-2.22-7.87-3.5-11.39-3.58-3.09-.07-5.41.83-6.36 2.47l-.02.03c-.09.31-.16.62-.23.93 1.33-.52 2.87-.82 4.58-.85 3.81-.07 8.08 1.15 12 3.44 3.94 2.29 7.12 5.39 8.94 8.73.82 1.51 1.33 3 1.53 4.41.24-.21.47-.43.7-.66l.01-.01c.95-1.64.58-4.1-1.01-6.79z" fill="url(#jg)"/>
+                <path d="M15.46 17.25c-5.86-3.41-12.35-3.94-15.46-1.57.01.74.06 1.49.17 2.23.92-.28 1.86-.45 2.82-.52 3.48-.26 7.32.71 10.8 2.74 3.48 2.02 6.23 4.88 7.73 8.03.41.86.73 1.77.94 2.7.69-.27 1.37-.59 2.02-.95.52-3.89-3.15-9.25-9.02-12.66z" fill="url(#jg)"/>
+                <path d="M30.14 15.31c-1.83-3.01-4.97-5.9-8.83-8.14-3.86-2.23-7.93-3.52-11.44-3.62-2.69-.08-4.77.57-5.85 1.81 4.48-.76 10.39.52 16.12 3.85 5.73 3.33 9.77 7.83 11.33 12.1.53-1.55.07-3.68-1.33-5.98z" fill="url(#jg)"/>
+              </svg>
+              <img src="./assets/partners/jupiter.svg" alt="" aria-hidden="true">
+              <span class="partner-name">Jupiter</span>
+            </div>
+
+            <div class="partner-item has-wordmark" data-source="helius">
+              <svg width="22" height="22" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="22" cy="22" r="20" fill="rgba(232,65,37,.1)" stroke="rgba(232,65,37,.35)" stroke-width="1.2"/>
+                <line x1="22" y1="6" x2="22" y2="38" stroke="#E84125" stroke-width="2.6" stroke-linecap="round"/>
+                <line x1="5" y1="13.6" x2="39" y2="30.4" stroke="#E84125" stroke-width="2.6" stroke-linecap="round"/>
+                <line x1="39" y1="13.6" x2="5" y2="30.4" stroke="#E84125" stroke-width="2.6" stroke-linecap="round"/>
+                <circle cx="22" cy="22" r="3.5" fill="#E84125"/>
+              </svg>
+              <img src="./assets/partners/helius.svg" alt="Helius">
+            </div>
+
+            <div class="partner-item has-wordmark" data-source="jito">
+              <img src="./assets/partners/jito.svg" alt="Jito">
+            </div>
+
+            <div class="partner-item icon-only" data-source="meteora">
+              <img src="./assets/partners/meteora.svg" alt="" aria-hidden="true">
+              <span class="partner-name">Meteora</span>
+            </div>
+
+            <div class="partner-item icon-only" data-source="raydium">
+              <img src="./assets/partners/raydium.svg" alt="" aria-hidden="true">
+              <span class="partner-name">Raydium</span>
+            </div>
+
+            <div class="partner-item icon-only" data-source="orca">
+              <img src="./assets/partners/orca.svg" alt="" aria-hidden="true">
+              <span class="partner-name">Orca</span>
+            </div>
+
+            <div class="partner-item icon-only" data-source="dexscreener">
+              <img src="./assets/partners/dexscreener-white.svg" alt="" aria-hidden="true">
+              <span class="partner-name">DexScreener</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="mock-col">
+        <div class="phone-outer" id="phone">
+
+          <div class="phone-border"></div>
+
+          <div class="phone-frame">
+            <div class="phone-spotlight" id="spotlight"></div>
+
+            <div class="app">
+
+              <div class="app-top">
+                <div class="app-logo">
+                  <svg width="14" height="14" fill="none" stroke="#4DD4FF" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <polyline points="9 12 11 14 15 10" stroke-linecap="round"/>
+                  </svg>
+                  Bags Shield
+                </div>
+                <div class="app-btn-sm">
+                  <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+                  Connect
+                </div>
+              </div>
+
+              <div class="app-hero">
+                <div class="shield-wrap">
+                  <div class="shield-ring"></div>
+                  <div class="shield-ring shield-ring-2"></div>
+                  <div class="shield-ring shield-ring-3"></div>
+                  <svg width="50" height="50" fill="none" stroke="#4DD4FF" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linejoin="round"/>
+                    <polyline points="9 12 11 14 15 10" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="app-title">Bags Shield</div>
+                <div class="app-sub">Scan before you sign</div>
+              </div>
+
+              <div class="app-search">
+                <div class="search-input">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  Paste token mint...
+                </div>
+                <div class="scan-btn">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  Scan
+                </div>
+              </div>
+
+              <div class="app-lbl">Quick Actions</div>
+              <div class="quick-grid">
+                <div class="q-card">
+                  <div class="q-icon q-cyan">
+                    <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                  </div>
+                  Launch
+                </div>
+                <div class="q-card">
+                  <div class="q-icon q-blue">
+                    <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+                  </div>
+                  Swap
+                </div>
+              </div>
+
+              <div class="app-lbl">Market</div>
+              <div class="mkt-bars">
+                <div class="mkt-bar" style="width:65%"></div>
+                <div class="mkt-bar" style="width:42%;animation-delay:.5s"></div>
+              </div>
+
+              <div class="app-lbl">Status API/RPC</div>
+              <div class="api-row"><div class="api-dot"></div>API Status Available</div>
+
+              <div class="app-bnav">
+                <div class="bnav-item bnav-active">
+                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  Home
+                </div>
+                <div class="bnav-item">
+                  <svg width="15" height="15" fill="none" stroke="rgba(240,240,255,.3)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                  Launch
+                </div>
+                <div class="bnav-item">
+                  <svg width="15" height="15" fill="none" stroke="rgba(240,240,255,.3)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                  Portfolio
+                </div>
+                <div class="bnav-item">
+                  <svg width="15" height="15" fill="none" stroke="rgba(240,240,255,.3)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+                  Swap
+                </div>
+                <div class="bnav-item">
+                  <svg width="15" height="15" fill="none" stroke="rgba(240,240,255,.3)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  Profile
+                </div>
+                <div class="bnav-item">
+                  <svg width="15" height="15" fill="none" stroke="rgba(240,240,255,.3)" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  Settings
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="phone-glow"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="inner">
+    <div class="sec-head">
+      <div class="tag rev">Core Modules</div>
+      <h2 class="sec-title rev d1">Everything users need<br><span class="grad">to act with more context.</span></h2>
+      <p class="sec-desc rev d2">Scan, analyze, swap, and launch with clearer risk signals before interacting on-chain.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="fc rev d1">
+        <div class="fi fi-c">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Token Risk Scan</h3>
+        <p>Analyze token-level signals such as mint and freeze authority, metadata mutability, source coverage, liquidity context, holder distribution, and transfer restrictions when available.</p>
+      </div>
+      <div class="fc rev d2">
+        <div class="fi fi-p">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        </div>
+        <h3>Source Coverage</h3>
+        <p>See which providers responded, what was verified, and what remains unknown. Missing data stays visible instead of being replaced by fake fallback values.</p>
+      </div>
+      <div class="fc rev d3">
+        <div class="fi fi-g">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Safer Swap Context</h3>
+        <p>Use Jupiter-powered execution with pre-swap risk context so users can review signals before signing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="launchpad">
+  <div class="inner">
+    <div class="launch-grid">
+      <div class="launch-copy">
+        <div class="tag">Launchpad active</div>
+        <h2 class="sec-title">Launch smarter on Solana</h2>
+        <p class="sec-desc">Bags Shield Launchpad combines token creation, guided setup, risk-aware context, and eligible fee visibility in a single creator flow.</p>
+        <div class="launch-card-grid">
+          <div class="launch-card">
+            <h3>Guided Token Creation</h3>
+            <p>Create tokens through a cleaner flow designed to reduce setup mistakes and make key launch decisions easier to review.</p>
+          </div>
+          <div class="launch-card">
+            <h3>Security-First Setup</h3>
+            <p>Review critical configuration details before launch, with explicit wallet boundaries and risk-aware messaging.</p>
+          </div>
+          <div class="launch-card">
+            <h3>Eligible Fee Visibility</h3>
+            <p>Track supported Bags fee positions and prepare claims tied to trading activity from eligible launched tokens.</p>
+          </div>
+          <div class="launch-card">
+            <h3>Post-Launch Context</h3>
+            <p>Connect launch activity with scan context, monitoring signals, and creator-side visibility after the token goes live.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="launch-side">
+        <div class="claim-card">
+          <div class="claim-kicker">Bags fee visibility</div>
+          <div class="claim-row">
+            <h3>Track eligible launch fees.</h3>
+            <span class="claim-badge">When eligible</span>
+          </div>
+          <p>Track supported Bags fee positions and prepare claims from the creator experience without exposing private keys or Bags API secrets in the browser.</p>
+          <div class="claim-mini">
+            <div>
+              <span>Creator flow</span>
+              <strong>Launch, monitor, claim</strong>
+            </div>
+            <div>
+              <span>Context layer</span>
+              <strong>Scanner + fee visibility</strong>
+            </div>
+          </div>
+          <a href="https://app.bagsshield.org/launchpad" target="_blank" rel="noopener noreferrer" class="btn-p" aria-label="Open Bags Shield Launchpad">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+            Explore Launchpad
+          </a>
+        </div>
+        <div class="launch-note">
+          Bags Shield is built as a practical security and execution layer: ShieldScore, source coverage, safer swap context, creator-oriented launch flows and fee-claim visibility where supported by the Bags flow.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="security-model">
+  <div class="inner">
+    <div class="sec-head">
+      <div class="tag rev">Security-First Infrastructure</div>
+      <h2 class="sec-title rev d1">Infrastructure for<br><span class="grad">risk-aware execution.</span></h2>
+      <p class="sec-desc rev d2">How Bags Shield connects risk signals, swap context, creator flows, and eligible fee visibility through a server-side API.</p>
+    </div>
+    <div class="deep-grid">
+
+      <div class="dc rev d1">
+        <div class="dc-top">
+          <span class="dc-tag">MODEL</span>
+          <h3>Jupiter Executes. Bags Shield Adds Context.</h3>
+        </div>
+        <div class="dc-div"></div>
+        <div class="dc-body">
+          <p>Jupiter handles routing. Bags Shield adds validation, ShieldScore signals, pre-swap context, and transparent fee metadata before the user signs.</p>
+          <ul class="dc-list">
+            <li><span><strong>Transparent fee metadata:</strong> 50 bps app fee where applicable.</span></li>
+            <li><span><strong>Risk context:</strong> Signals are surfaced before execution.</span></li>
+            <li><span><strong>Fee Visibility:</strong> Creator and app fee language stays explicit where supported.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="dc rev d2">
+        <div class="dc-top">
+          <span class="dc-tag">TRUST</span>
+          <h3>
+            <span class="flow-chain">
+              <span class="flow-step">Scan</span>
+              <span class="flow-arrow" aria-hidden="true">→</span>
+              <span class="flow-step">Explain</span>
+              <span class="flow-arrow" aria-hidden="true">→</span>
+              <span class="flow-step">Act with Context.</span>
+            </span>
+          </h3>
+        </div>
+        <div class="dc-div"></div>
+        <div class="dc-body">
+          <p>Most scanners dump data. Bags Shield turns source coverage into clearer decisions by showing signals, reasons, and unknowns.</p>
+          <ul class="dc-list">
+            <li><span><strong>Pre-action risk signals:</strong> Risk context appears before wallet confirmation.</span></li>
+            <li><span><strong>ShieldScore:</strong> A compact scoring layer for quick review.</span></li>
+            <li><span><strong>Explainable reasons:</strong> Authorities, mutability, liquidity, and coverage.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="dc rev d3">
+        <div class="dc-top">
+          <span class="dc-tag">ENGINE</span>
+          <h3>Built for scale and traceability.</h3>
+        </div>
+        <div class="dc-div"></div>
+        <div class="dc-body">
+          <p>A server-side stack designed with typed validation, request IDs, provider coverage, and transparent failure states.</p>
+          <ul class="dc-list">
+            <li><span><strong>Vercel + TypeScript:</strong> Server-side API routes with typed contracts.</span></li>
+            <li><span><strong>Zod/AJV validation:</strong> Inputs are checked before upstream calls.</span></li>
+            <li><span><strong>Provider coverage:</strong> Helius, Birdeye, DexScreener, Jupiter.</span></li>
+            <li><span><strong>Request IDs:</strong> Traceable IDs on API calls.</span></li>
+            <li><span><strong>Solana Mobile pathway:</strong> Wallet-aware UX direction where supported.</span></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="documentation">
+  <div class="inner">
+    <div class="docs-hub rev">
+      <div class="docs-hero">
+        <div>
+          <div class="docs-kicker">Documentation &amp; API</div>
+          <h2 class="sec-title">Build with Bags Shield<br><span class="grad">without guessing the risk model</span></h2>
+          <p class="sec-desc">Understand how Bags Shield scans risk, adds pre-action context, prepares swaps, and supports creator launch flows on Solana.</p>
+        </div>
+        <div class="docs-index" aria-label="Documentation shortcuts">
+          <a href="#api-reference">API Reference <span class="link-arrow" aria-hidden="true">→</span></a>
+          <a href="#launch-standards">Launch Standards <span class="link-arrow" aria-hidden="true">→</span></a>
+          <a href="#launchpad">Token Launchpad <span class="link-arrow" aria-hidden="true">→</span></a>
+          <a href="#fees">Eligible Fees <span class="link-arrow" aria-hidden="true">→</span></a>
+          <a href="#security-model">Security Model <span class="link-arrow" aria-hidden="true">→</span></a>
+          <a href="#best-practices">Best Practices <span class="link-arrow" aria-hidden="true">→</span></a>
+          <a href="https://api.bagsshield.org/api/health" target="_blank" rel="noopener noreferrer" aria-label="Open Bags Shield API health status">API Health <span class="link-arrow external" aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-section-head">
+          <h3>Documentation Overview</h3>
+          <p>Every API surface is designed around typed validation, request traceability, explicit error states, no-store headers where appropriate, and provider coverage that remains visible when upstream data is partial.</p>
+        </div>
+        <div class="docs-grid">
+          <div class="doc-card">
+            <strong>Scanner</strong>
+            <span>Runs token-level checks with Solana RPC, Helius, DexScreener and optional provider context. Results are risk signals, not approvals.</span>
+          </div>
+          <div class="doc-card">
+            <strong>Safe Swap</strong>
+            <span>Wraps quote and swap preparation with pre-action context. Jupiter handles routing; Bags Shield adds validation and fee transparency.</span>
+          </div>
+          <div class="doc-card">
+            <strong>Launchpad</strong>
+            <span>Supports Bags token-info, fee quote, fee-share config, unsigned launch transaction creation and final signed broadcast with server-side guards.</span>
+          </div>
+          <div class="doc-card" id="fees">
+            <strong>Eligible Fee Visibility</strong>
+            <span>Shows explicit launch fee quotes, eligible fee-claim positions, and claim transaction preparation without exposing Bags API secrets in the browser.</span>
+          </div>
+          <div class="doc-card">
+            <strong>Infrastructure</strong>
+            <span>Includes health checks, price lookup, market summaries and a Solana RPC HTTP proxy so sensitive upstream endpoints stay server-side.</span>
+          </div>
+          <div class="doc-card">
+            <strong>Security Model</strong>
+            <span>Client input is untrusted. Backend validation, request IDs, upstream status reporting and fail-closed Launchpad gates keep risky states visible.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="docs-section launch-standards" id="launch-standards">
+        <div class="standards-head">
+          <div>
+            <div class="standards-eyebrow">Launchpad Safety &amp; Standards</div>
+            <h3>Launch flows built around Solana-native safety patterns.</h3>
+            <p>Bags Shield keeps launch steps explicit, wallet-signed, source-aware, and server-guarded so creators can review what matters before a token goes live.</p>
+          </div>
+          <div class="standards-badges" aria-label="Launch standards">
+            <span>Wallet signs</span>
+            <span>Server-side secrets</span>
+            <span>Source coverage</span>
+            <span>Fail-closed gates</span>
+            <span>Metadata clarity</span>
+            <span>Token-2022 aware</span>
+            <span>No fake fallback data</span>
+          </div>
+        </div>
+
+        <div class="standards-grid">
+          <div class="standard-card">
+            <strong>Wallet-Signed Transactions</strong>
+            <p>Launch and claim flows prepare unsigned transactions, but the user signs in their own wallet. Bags Shield does not hold or expose user private keys.</p>
+          </div>
+          <div class="standard-card">
+            <strong>Server-Side Secrets</strong>
+            <p>BAGS_API_KEY, RPC keys, service roles, fee configuration, and admin secrets stay in the API environment, never in the browser bundle.</p>
+          </div>
+          <div class="standard-card">
+            <strong>Metadata Clarity</strong>
+            <p>Launch inputs should produce clear token metadata: name, symbol, image URI, metadata URI, and creator-facing context should be visible before signing.</p>
+          </div>
+          <div class="standard-card">
+            <strong>Authority Awareness</strong>
+            <p>The scanner and launch context surface authority-related signals such as mint authority, freeze authority, metadata mutability, and extension-driven restrictions when available.</p>
+          </div>
+          <div class="standard-card">
+            <strong>Token-2022 Awareness</strong>
+            <p>Bags Shield treats Token-2022 extensions as risk and compatibility context, including transfer fees, transfer hooks, permanent delegates, pausable mints, and non-transferable behavior when detected.</p>
+          </div>
+          <div class="standard-card">
+            <strong>Fail-Closed Gates</strong>
+            <p>When required launch or fee-share checks are incomplete, the flow should stop or return a clear setup-required state instead of silently continuing.</p>
+          </div>
+        </div>
+
+        <div class="standards-panels">
+          <div class="standards-panel">
+            <h4>What Bags Shield checks before launch</h4>
+            <p>A launch should never feel like a black box. Bags Shield documents what was prepared, what the wallet signs, what the API sends, and which checks were unavailable.</p>
+            <ul class="check-list">
+              <li>Required creator inputs</li>
+              <li>Token metadata context</li>
+              <li>Fee quote visibility</li>
+              <li>Fee-share configuration state</li>
+              <li>Wallet and signing boundaries</li>
+              <li>Launch transaction purpose</li>
+              <li>Claim eligibility context</li>
+              <li>Provider/source coverage</li>
+              <li>Unknown or unavailable states</li>
+            </ul>
+          </div>
+          <div class="standards-panel">
+            <h4>What Bags Shield does not claim</h4>
+            <p>Bags Shield is a decision-support layer. It surfaces signals, source coverage, and setup context so users and creators can make more informed choices before signing.</p>
+            <ul class="compact-list">
+              <li>It does not certify that a token is safe.</li>
+              <li>It does not guarantee trading outcomes or fee revenue.</li>
+              <li>It does not replace user review or independent due diligence.</li>
+              <li>It does not sign user transactions.</li>
+              <li>It does not expose Bags API secrets or private keys in the browser.</li>
+              <li>It does not fabricate missing provider data.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="docs-section" id="api-reference">
+        <div class="docs-section-head">
+          <h3>API Reference</h3>
+          <p>Selected public routes from the current API surface. Launchpad write-flow routes may be feature-gated while fee-share safety checks are active.</p>
+        </div>
+        <div class="api-purpose" aria-label="API route groups">
+          <span>Status and health</span>
+          <span>Scan and market context</span>
+          <span>Quote and swap preparation</span>
+          <span>Launchpad token creation</span>
+          <span>Fee visibility and claim preparation</span>
+        </div>
+        <div class="api-orbit-feature" aria-label="API Reference route map">
+          <div class="api-orbit-copy">
+            <span class="api-orbit-kicker">Route Map</span>
+            <strong>One API surface, multiple guarded flows.</strong>
+            <p>Status, scan, quote, swap, Launchpad, and fee visibility routes stay grouped by purpose while sharing typed validation, explicit error states, and request traceability.</p>
+            <ul class="api-orbit-accessible" aria-label="API route map labels">
+              <li>Health</li>
+              <li>Scan</li>
+              <li>Quote</li>
+              <li>Swap</li>
+              <li>Launch</li>
+              <li>Claims</li>
+            </ul>
+          </div>
+          <div class="api-orbit-stage" aria-hidden="true">
+            <div class="api-orbit-core" data-label="API"></div>
+            <span class="api-orbit-node health" data-label="Health"></span>
+            <span class="api-orbit-node scan" data-label="Scan"></span>
+            <span class="api-orbit-node post swap" data-label="Swap"></span>
+            <span class="api-orbit-node post launch" data-label="Launch"></span>
+            <span class="api-orbit-node claims" data-label="Claims"></span>
+            <span class="api-orbit-node quote" data-label="Quote"></span>
+          </div>
+        </div>
+        <div class="endpoint-grid">
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method">GET</span><code class="endpoint-path">/api/health</code></div>
+            <p>Operational health check for API availability.</p>
+            <span class="endpoint-note">Use for uptime checks before calling scan, swap or launch flows.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method">GET</span><code class="endpoint-path">/api/scan?mint=&lt;mint&gt;</code></div>
+            <p>Reads scan context for a Solana token mint.</p>
+            <span class="endpoint-note">Also supports POST with JSON fields such as mint, wallet, amount, slippage and locale.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method">GET</span><code class="endpoint-path">/api/quote</code></div>
+            <p>Requests a Jupiter quote with inputMint, outputMint, amount and slippageBps.</p>
+            <span class="endpoint-note">Platform fee bps are injected server-side and returned with request metadata.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/swap</code></div>
+            <p>Prepares a swap transaction from a validated quote and wallet context.</p>
+            <span class="endpoint-note">The wallet signs client-side. The API does not sign user transactions.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method">GET</span><code class="endpoint-path">/api/price</code></div>
+            <p>Returns normalized token price data when upstream price coverage is available.</p>
+            <span class="endpoint-note">Missing prices stay missing; the app does not fabricate zero-dollar values.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/rpc</code></div>
+            <p>HTTP Solana RPC proxy for browser clients.</p>
+            <span class="endpoint-note">Keeps configured RPC URLs off the public bundle and returns upstream JSON as-is.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/launchpad/token-info</code></div>
+            <p>Creates Bags token info metadata context from validated launch inputs.</p>
+            <span class="endpoint-note">Returns tokenMint and metadata URI data when Bags accepts the request.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/launchpad/fee-quote</code></div>
+            <p>Computes the explicit launch fee quote shown before wallet signing.</p>
+            <span class="endpoint-note">Tips are disabled by default; fee-share basis points are server controlled.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/launchpad/create-config</code></div>
+            <p>Creates or checks Bags fee-share configuration for Launch v2.</p>
+            <span class="endpoint-note">Returns safe-mode or setup-required states when a separate setup transaction would be needed.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/launchpad/create-launch-transaction</code></div>
+            <p>Requests an unsigned Bags launch transaction after token-info and config validation.</p>
+            <span class="endpoint-note">Requires tokenMint, wallet, metadata URI, initialBuyLamports and configKey.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method post">POST</span><code class="endpoint-path">/api/launchpad/send</code></div>
+            <p>Broadcasts a final signed launch transaction envelope.</p>
+            <span class="endpoint-note">Only final launch purpose is allowed; fee-share setup broadcast is blocked.</span>
+          </div>
+          <div class="endpoint-card">
+            <div class="endpoint-top"><span class="method">GET</span><code class="endpoint-path">/api/launchpad/fee-claims/positions</code></div>
+            <p>Lists claimable fee positions for a valid wallet query parameter.</p>
+            <span class="endpoint-note">Pairs with POST /api/launchpad/fee-claims/transactions for claim transaction preparation.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-section-head">
+          <h3>Example Flows</h3>
+          <p>Short integration paths for common app actions.</p>
+        </div>
+        <div class="flow-grid">
+          <div class="flow-card">
+            <strong>Scan before swap</strong>
+            <p>Show risk context before a wallet signs.</p>
+            <ol class="flow-steps">
+              <li>GET /api/scan with the output token mint.</li>
+              <li>GET /api/quote for the proposed route.</li>
+              <li>POST /api/swap only after the user reviews context.</li>
+            </ol>
+          </div>
+          <div class="flow-card">
+            <strong>Launch token</strong>
+            <p>Keep launch steps explicit and traceable.</p>
+            <ol class="flow-steps">
+              <li>POST /api/launchpad/token-info.</li>
+              <li>POST /api/launchpad/fee-quote and /api/launchpad/create-config.</li>
+              <li>POST /api/launchpad/create-launch-transaction, then wallet signs, then /api/launchpad/send.</li>
+            </ol>
+          </div>
+          <div class="flow-card">
+            <strong>Claim eligible fees</strong>
+            <p>Prepare claim transactions without hiding the fee source.</p>
+            <ol class="flow-steps">
+              <li>GET /api/launchpad/fee-claims/positions?wallet=&lt;wallet&gt;.</li>
+              <li>POST /api/launchpad/fee-claims/transactions.</li>
+              <li>Wallet signs the returned transaction if the user chooses to claim.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="docs-section" id="best-practices">
+        <div class="docs-section-head">
+          <h3>Security Notes &amp; Developer Notes</h3>
+          <p>Bags Shield is a decision-support layer. It should not replace user review, wallet confirmation or independent due diligence.</p>
+        </div>
+        <div class="note-grid">
+          <div class="note-card">
+            <strong>No absolute safety claims</strong>
+            <p>ShieldScore, badges and provider coverage describe observed signals. They are not guarantees and should be shown with source context.</p>
+          </div>
+          <div class="note-card">
+            <strong>Keep secrets server-side</strong>
+            <p>BAGS_API_KEY, RPC keys, service roles and admin secrets belong in the API environment, never in a browser bundle.</p>
+          </div>
+          <div class="note-card">
+            <strong>Respect signed-transaction boundaries</strong>
+            <p>The API may prepare unsigned transactions, but users sign in their wallet. Do not retry signed transactions automatically.</p>
+          </div>
+        </div>
+        <div class="standards-panel practice-panel">
+          <h4>Best Practices</h4>
+          <ul class="check-list">
+            <li>Scan before signing.</li>
+            <li>Review source coverage.</li>
+            <li>Treat unknowns as risk.</li>
+            <li>Verify wallet prompts.</li>
+            <li>Keep secrets server-side.</li>
+            <li>Never fabricate fallback data.</li>
+            <li>Use fee claims only through supported Bags flows.</li>
+            <li>Fail closed on launch and claim flows when required context is missing.</li>
+          </ul>
+        </div>
+        <div class="code-row" style="margin-top:14px">
+          <div class="code-blk"><span class="cc"># Health check</span>
+<span class="cm">GET</span> https://api.bagsshield.org/api/health</div>
+          <div class="code-blk"><span class="cc"># Token scan by mint</span>
+<span class="cm">POST</span> https://api.bagsshield.org/api/scan
+{
+  <span class="ck">"mint"</span>: <span class="cs">"&lt;solana-token-mint&gt;"</span>,
+  <span class="ck">"locale"</span>: <span class="cs">"en"</span>
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="inner">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="foot-title">
+          <svg width="20" height="20" fill="none" stroke="#4DD4FF" stroke-width="1.7" viewBox="0 0 24 24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polyline points="9 12 11 14 15 10"/>
+          </svg>
+          Bags Shield
+        </div>
+        <p>The intelligence layer for Solana tokens. Risk signals, safer swap context, creator launch flows, and eligible fee visibility for users who want more context before acting on-chain.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="https://app.bagsshield.org" target="_blank" rel="noopener noreferrer">Launch App</a></li>
+          <li><a href="#documentation">Documentation</a></li>
+          <li><a href="#api-reference">API Reference</a></li>
+          <li><a href="#launchpad">Token Launchpad</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="#security-model">Security Model</a></li>
+          <li><a href="#fees">Eligible Fees</a></li>
+          <li><a href="#best-practices">Best Practices</a></li>
+          <li><a href="https://api.bagsshield.org/api/health" target="_blank" rel="noopener noreferrer">API Health</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="https://github.com/Prestes16" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="https://bags-shield.pages.dev" target="_blank" rel="noopener noreferrer">Docs Site</a></li>
+          <li><a href="https://api.bagsshield.org/api/health" target="_blank" rel="noopener noreferrer">API Status</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bot">
+        <span>&copy; 2026 Bags Shield. Built for the Solana ecosystem.</span>
+      <div class="foot-bot-links">
+        <a href="#security-model">Privacy Policy</a>
+        <a href="#documentation">Terms&#32;of Service</a>
+        <a href="#security-model">Security</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   THREE.JS DOTTED SURFACE  (DottedSurface component port)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+(function initDots() {
+  const SEPARATION = 140, AMOUNTX = 42, AMOUNTY = 64;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.set(0, 340, 1180);
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  document.getElementById('dotted-canvas').appendChild(renderer.domElement);
+
+  /* Build particle positions & colors */
+  const positions = [], colors = [];
+  for (let ix = 0; ix < AMOUNTX; ix++) {
+    for (let iy = 0; iy < AMOUNTY; iy++) {
+      positions.push(
+        ix * SEPARATION - (AMOUNTX * SEPARATION) / 2,
+        0,
+        iy * SEPARATION - (AMOUNTY * SEPARATION) / 2
+      );
+      /* Cyan-ish dots â€” RGB normalized */
+      colors.push(0.22, 0.72, 0.90);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,    3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 5,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.38,
+    sizeAttenuation: true
+  });
+
+  scene.add(new THREE.Points(geo, mat));
+
+  let count = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    const pos = geo.attributes.position.array;
+    let i = 0;
+    for (let ix = 0; ix < AMOUNTX; ix++) {
+      for (let iy = 0; iy < AMOUNTY; iy++) {
+        pos[i * 3 + 1] =
+          Math.sin((ix + count) * 0.3) * 48 +
+          Math.sin((iy + count) * 0.5) * 48;
+        i++;
+      }
+    }
+    geo.attributes.position.needsUpdate = true;
+    renderer.render(scene, camera);
+    count += 0.065;
+  }
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  animate();
+})();
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SPOTLIGHT on Phone (ibelick/spotlight port)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+(function initSpotlight() {
+  const phoneOuter = document.getElementById('phone');
+  const spotlight  = document.getElementById('spotlight');
+  if (!phoneOuter || !spotlight) return;
+
+  phoneOuter.addEventListener('mousemove', function(e) {
+    const frame = this.querySelector('.phone-frame');
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width)  * 100;
+    const y = ((e.clientY - rect.top)  / rect.height) * 100;
+    spotlight.style.setProperty('--sx', x + '%');
+    spotlight.style.setProperty('--sy', y + '%');
+  });
+})();
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SCROLL REVEAL
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+(function initReveal() {
+  const io = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('on'); }),
+    { threshold: 0.1 }
+  );
+  document.querySelectorAll('.rev').forEach(el => io.observe(el));
+})();
+</script>
+</body>
+</html>
+
+
