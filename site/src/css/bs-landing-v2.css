@@ -253,12 +253,12 @@ nav{position:sticky;top:0;z-index:200;background:rgba(2,6,23,.82);backdrop-filte
 .app-diff-card:hover{transform:translateY(-4px);border-color:rgba(77,212,255,.2);background:linear-gradient(155deg,rgba(77,212,255,.06),rgba(153,69,255,.035));box-shadow:0 22px 58px -34px rgba(77,212,255,.5),inset 0 1px 0 rgba(255,255,255,.075)}
 .app-diff-card:hover::before{opacity:.72}
 .app-diff-card:hover::after{opacity:.7;transform:translateY(-8px)}
-.app-diff-icon{width:40px;height:40px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;background:rgba(77,212,255,.09);border:1px solid rgba(77,212,255,.16);box-shadow:0 0 24px rgba(77,212,255,.08);color:var(--cyan);font-size:1rem;font-weight:900;line-height:1}
+.bs2-workflow-card{text-align:left}
+.bs2-workflow-icon{width:44px;height:44px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;color:#4DD4FF;background:linear-gradient(180deg,rgba(77,212,255,.16),rgba(47,167,255,.08));border:1px solid rgba(77,212,255,.22);box-shadow:0 0 24px rgba(77,212,255,.10);margin-bottom:18px}
+.bs2-workflow-icon svg{width:21px;height:21px;display:block;flex-shrink:0}
+.bs2-workflow-card h3,.bs2-workflow-card h4{text-align:left}
 .app-diff-card h3{font-size:1rem;font-weight:850;color:var(--txt);line-height:1.25;margin:0 0 8px;overflow-wrap:break-word}
 .app-diff-card p{font-size:.83rem;line-height:1.58;color:var(--txt2);margin:0;overflow-wrap:break-word}
-.app-diff-card-wide{grid-column:span 3;min-height:auto;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:16px;align-items:start}
-.app-diff-card-wide .app-diff-icon{margin-bottom:0}
-.app-diff-card-wide h3{margin-top:2px}
 
 /* Launchpad */
 #launchpad{padding:0 0 100px}
@@ -416,7 +416,6 @@ footer{border-top:1px solid var(--border);padding:56px 0 36px}
   .feat-grid,.deep-grid{grid-template-columns:repeat(2,1fr)}
   .app-diff-head{grid-template-columns:1fr;align-items:start}
   .app-diff-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .app-diff-card-wide{grid-column:span 2}
   .docs-hero{grid-template-columns:1fr}
   .docs-grid,.flow-grid,.note-grid,.standards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .standards-head,.standards-panels,.api-orbit-feature{grid-template-columns:1fr}
@@ -449,8 +448,6 @@ footer{border-top:1px solid var(--border);padding:56px 0 36px}
   .app-diff-shell{padding:24px 18px;border-radius:24px;max-width:100%;overflow:hidden}
   .app-diff-grid{grid-template-columns:1fr}
   .app-diff-card{min-height:auto;max-width:100%}
-  .app-diff-card-wide{grid-column:auto;display:block}
-  .app-diff-card-wide .app-diff-icon{margin-bottom:16px}
   .docs-index,.docs-grid,.endpoint-grid,.flow-grid,.note-grid,.code-row,.standards-grid,.check-list{grid-template-columns:1fr}
   .docs-hub{padding:24px 18px;border-radius:24px;max-width:100%;overflow-x:hidden}
   .docs-section-head{display:block}
