@@ -114,10 +114,30 @@ async function responseFromRecord(
   // If on-chain data shows LP is locked, merge pool data from on-chain if missing
   const onChain = enriched && "onChain" in enriched ? enriched.onChain as Record<string, unknown> : null;
 
+  // Normalize the response status from the real pool/verification state so a stale
+  // persisted "awaiting_pool" record never overrides a freshly detected pool.
+  // Rule: pool == null -> awaiting_pool; pool present & !verified -> pool_detected;
+  // verified (on-chain lock proven) -> locked. Never "locked" without verified:true.
+  const verified = Boolean((enriched as Record<string, unknown>)?.verified);
+  const hasPool = Boolean(pool?.poolAddress || onChain?.poolAddress || record?.poolAddress);
+  let normalizedStatus: string = enriched?.status ?? record?.status ?? "not_requested";
+  if (verified) {
+    normalizedStatus = "locked";
+  } else if (hasPool) {
+    if (
+      normalizedStatus === "awaiting_pool" ||
+      normalizedStatus === "not_requested" ||
+      normalizedStatus === "pool_detected" ||
+      normalizedStatus === "locked"
+    ) {
+      normalizedStatus = "pool_detected";
+    }
+  }
+
   return {
     success: true,
     mint: record?.mint ?? null,
-    status: enriched?.status ?? record?.status ?? "not_requested",
+    status: normalizedStatus,
     pool: pool
       ? {
           poolAddress: pool.poolAddress,
