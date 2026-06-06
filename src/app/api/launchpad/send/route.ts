@@ -6,7 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Connection } from "@solana/web3.js";
+import { Connection, VersionedTransaction, PublicKey } from "@solana/web3.js";
+import { createHash } from "crypto";
+import { verifyToken } from "@/lib/auth/jwt";
+import { getUserProfile } from "@/lib/auth/supabase";
 import {
   getOrGenerateRequestId,
   safeJsonParse,
@@ -94,6 +97,203 @@ function decodeBase58(value: string): Uint8Array {
 function decodeSignedTransaction(value: string, encoding: "base64" | "base58") {
   if (encoding === "base58") return decodeBase58(value);
   return Uint8Array.from(Buffer.from(value, "base64"));
+}
+
+// ── Relay safety guard ─────────────────────────────────────────────────────────
+// /send is a thin broadcaster for user-signed launch/setup transactions. To avoid
+// being abused as an open transaction relay, a transaction is broadcast only when
+// it shows a STRONG link to a Bags Shield launch:
+//   1) it invokes the Bags fee-share program, or the Meteora DBC program; or
+//   2) it references the expected token mint (static keys or resolved LUT keys).
+// Common programs (System/ComputeBudget/SPL Token/Token-2022/ATA) are NEVER
+// sufficient on their own. Behaviour is controlled by LAUNCHPAD_RELAY_GUARD_MODE
+// ("strict" = enforce, default; "observe" = log-only, never blocks).
+const RELAY_STRONG_PROGRAM_IDS = new Set<string>([
+  "FEE2tBhCKAt7shrod19QttSVREUYPiyMzoku1mL1gqVK", // Bags fee-share / fee vault
+  "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",  // Meteora Dynamic Bonding Curve
+]);
+
+function getRelayGuardMode(): "strict" | "observe" {
+  const v = (process.env.LAUNCHPAD_RELAY_GUARD_MODE || "").trim().toLowerCase();
+  return v === "observe" ? "observe" : "strict";
+}
+
+type RelayVerdictCode =
+  | "RELAY_TX_NOT_ALLOWED"
+  | "RELAY_TX_LOOKUP_UNRESOLVED"
+  | "RELAY_TX_INSPECTION_FAILED";
+
+interface RelayVerdict {
+  allowed: boolean;
+  reason: string;
+  code?: RelayVerdictCode;
+}
+
+function readMessageParts(message: unknown): {
+  staticKeys: string[];
+  programIds: string[];
+  lutKeys: PublicKey[];
+} {
+  const msg = message as Record<string, unknown>;
+  const isV0 = Array.isArray(msg.staticAccountKeys);
+  const keysRaw = (isV0 ? msg.staticAccountKeys : msg.accountKeys) as
+    | Array<{ toBase58?: () => string } | string>
+    | undefined;
+  const staticKeys = (keysRaw ?? []).map((k) =>
+    typeof k === "string" ? k : k.toBase58?.() ?? String(k),
+  );
+  const ixs = (isV0 ? msg.compiledInstructions : msg.instructions) as
+    | Array<{ programIdIndex: number }>
+    | undefined;
+  const programIds = (ixs ?? [])
+    .map((ix) => staticKeys[ix.programIdIndex])
+    .filter((value): value is string => Boolean(value));
+  const lookups = (isV0 ? msg.addressTableLookups : []) as
+    | Array<{ accountKey: PublicKey }>
+    | undefined;
+  const lutKeys = (lookups ?? []).map((l) => l.accountKey);
+  return { staticKeys, programIds, lutKeys };
+}
+
+async function inspectRelayTransaction(
+  rawTransaction: Uint8Array,
+  expectedMint: string,
+  rpcUrl: string,
+): Promise<RelayVerdict> {
+  let vtx: VersionedTransaction;
+  try {
+    vtx = VersionedTransaction.deserialize(rawTransaction);
+  } catch {
+    return { allowed: false, reason: "deserialize_failed", code: "RELAY_TX_INSPECTION_FAILED" };
+  }
+
+  let parts: ReturnType<typeof readMessageParts>;
+  try {
+    parts = readMessageParts(vtx.message);
+  } catch {
+    return { allowed: false, reason: "inspect_error", code: "RELAY_TX_INSPECTION_FAILED" };
+  }
+
+  const { staticKeys, programIds, lutKeys } = parts;
+
+  // Strong signal: Bags fee-share or Meteora DBC program (program ids are static).
+  if (programIds.some((p) => RELAY_STRONG_PROGRAM_IDS.has(p))) {
+    return { allowed: true, reason: "strong_program" };
+  }
+  // Strong signal: expected mint referenced directly in static keys.
+  if (staticKeys.includes(expectedMint)) {
+    return { allowed: true, reason: "mint_in_static" };
+  }
+  // No strong signal in static keys and no lookup tables to resolve -> reject.
+  if (lutKeys.length === 0) {
+    return { allowed: false, reason: "no_strong_signal", code: "RELAY_TX_NOT_ALLOWED" };
+  }
+
+  // Resolve address lookup tables and search the loaded keys for the expected mint.
+  try {
+    const connection = new Connection(rpcUrl, "confirmed");
+    for (const tableKey of lutKeys) {
+      const table = await connection.getAddressLookupTable(tableKey);
+      if (!table?.value) {
+        return { allowed: false, reason: "lut_unresolved", code: "RELAY_TX_LOOKUP_UNRESOLVED" };
+      }
+      if (table.value.state.addresses.some((addr) => addr.toBase58() === expectedMint)) {
+        return { allowed: true, reason: "mint_in_lut" };
+      }
+    }
+    return { allowed: false, reason: "no_strong_signal_after_lut", code: "RELAY_TX_NOT_ALLOWED" };
+  } catch {
+    return { allowed: false, reason: "lut_resolve_error", code: "RELAY_TX_LOOKUP_UNRESOLVED" };
+  }
+}
+
+// ── Required-signer extraction (legacy + v0) ───────────────────────────────────
+function extractRequiredSigners(rawTransaction: Uint8Array): string[] | null {
+  try {
+    const vtx = VersionedTransaction.deserialize(rawTransaction);
+    const msg = vtx.message as unknown as Record<string, unknown>;
+    const isV0 = Array.isArray(msg.staticAccountKeys);
+    const keysRaw = (isV0 ? msg.staticAccountKeys : msg.accountKeys) as
+      | Array<{ toBase58?: () => string } | string>
+      | undefined;
+    const keys = (keysRaw ?? []).map((k) =>
+      typeof k === "string" ? k : k.toBase58?.() ?? String(k),
+    );
+    const header = msg.header as { numRequiredSignatures?: number } | undefined;
+    const n = header?.numRequiredSignatures ?? 0;
+    if (n <= 0) return [];
+    return keys.slice(0, n);
+  } catch {
+    return null;
+  }
+}
+
+// ── In-memory recent-broadcast cache (anti double-click / replay) ───────────────
+// Keyed by sha256(signedTransaction). Re-sending the EXACT same signed tx within
+// the TTL is idempotent (same on-chain signature), so we return the cached result
+// instead of hitting the RPC again. A legitimate retry produces a different signed
+// tx (new blockhash) and is NOT treated as a duplicate.
+interface RecentBroadcastEntry {
+  response: Record<string, unknown>;
+  meta: Record<string, unknown>;
+  ts: number;
+}
+const RECENT_BROADCAST_TTL_MS = 120_000;
+const recentBroadcasts = new Map<string, RecentBroadcastEntry>();
+
+function getRecentBroadcast(key: string): RecentBroadcastEntry | null {
+  const now = Date.now();
+  const entry = recentBroadcasts.get(key);
+  if (entry && now - entry.ts < RECENT_BROADCAST_TTL_MS) return entry;
+  if (entry) recentBroadcasts.delete(key);
+  if (recentBroadcasts.size > 500) {
+    for (const [k, v] of recentBroadcasts) {
+      if (now - v.ts >= RECENT_BROADCAST_TTL_MS) recentBroadcasts.delete(k);
+    }
+  }
+  return null;
+}
+
+function setRecentBroadcast(
+  key: string,
+  value: { response: Record<string, unknown>; meta: Record<string, unknown> },
+): void {
+  recentBroadcasts.set(key, { ...value, ts: Date.now() });
+}
+
+// ── Linked-wallet account check ────────────────────────────────────────────────
+// The launch wallet must belong to the authenticated Bags Shield account (any of
+// the user's verified linked wallets). Enabled by LAUNCHPAD_REQUIRE_LINKED_WALLET
+// (default false for internal/test; set true for public). When enabled it is
+// fail-closed: no/invalid session, or a wallet not in the account, is rejected.
+function requireLinkedWallet(): boolean {
+  const v = (process.env.LAUNCHPAD_REQUIRE_LINKED_WALLET || "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
+async function resolveLinkedWalletAccess(
+  req: NextRequest,
+  expectedWallet: string,
+): Promise<{ ok: boolean; reason: string; userId?: string }> {
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return { ok: false, reason: "no_session" };
+  let payload: { userId: string } | null;
+  try {
+    payload = await verifyToken(token);
+  } catch {
+    return { ok: false, reason: "session_verify_error" };
+  }
+  if (!payload?.userId) return { ok: false, reason: "invalid_session" };
+  let profile: Awaited<ReturnType<typeof getUserProfile>> = null;
+  try {
+    profile = await getUserProfile(payload.userId);
+  } catch {
+    return { ok: false, reason: "profile_lookup_error", userId: payload.userId };
+  }
+  if (!profile) return { ok: false, reason: "profile_not_found", userId: payload.userId };
+  const linked = profile.wallets.includes(expectedWallet);
+  return { ok: linked, reason: linked ? "linked" : "wallet_not_linked", userId: payload.userId };
 }
 
 function sleep(ms: number) {
@@ -253,6 +453,7 @@ export async function POST(req: NextRequest) {
     wallet?: string;
     launchWallet?: string;
     purpose?: "launch";
+    stage?: "config_setup" | "launch_final";
   };
 
   if (isLaunchpadPublicWritesPaused()) {
@@ -312,6 +513,191 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const expectedMint = input.tokenMint || input.mint;
+  const relayGuardMode = getRelayGuardMode();
+
+  if (!expectedMint) {
+    SafeLogger.warn("Launchpad send missing expected mint", {
+      requestId,
+      endpoint: ROUTE,
+      mode: relayGuardMode,
+      wallet: input.wallet || input.launchWallet,
+    });
+    if (relayGuardMode === "strict") {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "MISSING_EXPECTED_MINT",
+            message: "tokenMint or mint is required to broadcast a launch transaction.",
+          },
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+  } else {
+    const relayVerdict = await inspectRelayTransaction(rawTransaction, expectedMint, rpcUrl);
+    if (!relayVerdict.allowed) {
+      SafeLogger.warn("Launchpad send relay guard verdict", {
+        requestId,
+        endpoint: ROUTE,
+        mode: relayGuardMode,
+        reason: relayVerdict.reason,
+        verdictCode: relayVerdict.code,
+        mint: expectedMint,
+        wallet: input.wallet || input.launchWallet,
+        txLengthBytes: rawTransaction.length,
+      });
+      if (relayGuardMode === "strict") {
+        const code = relayVerdict.code ?? "RELAY_TX_NOT_ALLOWED";
+        const message =
+          code === "RELAY_TX_LOOKUP_UNRESOLVED"
+            ? "Could not resolve the transaction's address lookup tables to verify the launch mint."
+            : code === "RELAY_TX_INSPECTION_FAILED"
+              ? "The transaction could not be inspected for launch safety."
+              : "This endpoint only broadcasts Bags Shield launch transactions.";
+        return jsonResponse(
+          req,
+          requestId,
+          {
+            success: false,
+            error: { code, message },
+            meta: { requestId },
+          },
+          { status: 422 },
+        );
+      }
+    }
+  }
+
+  const expectedWallet = input.wallet || input.launchWallet;
+  const broadcastStage: "config_setup" | "launch_final" =
+    input.stage === "config_setup" ? "config_setup" : "launch_final";
+
+  if (!expectedWallet) {
+    SafeLogger.warn("Launchpad send missing expected wallet", {
+      requestId,
+      endpoint: ROUTE,
+      mode: relayGuardMode,
+      stage: broadcastStage,
+      mint: expectedMint,
+      txLengthBytes: rawTransaction.length,
+    });
+    if (relayGuardMode === "strict") {
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "MISSING_EXPECTED_WALLET",
+            message: "wallet or launchWallet is required to broadcast a launch transaction.",
+          },
+          meta: { requestId },
+        },
+        { status: 400 },
+      );
+    }
+  } else {
+    const requiredSigners = extractRequiredSigners(rawTransaction);
+    if (requiredSigners === null) {
+      SafeLogger.warn("Launchpad send could not extract required signers", {
+        requestId,
+        endpoint: ROUTE,
+        mode: relayGuardMode,
+        stage: broadcastStage,
+        mint: expectedMint,
+        wallet: expectedWallet,
+        txLengthBytes: rawTransaction.length,
+        reason: "signer_inspection_failed",
+      });
+      if (relayGuardMode === "strict") {
+        return jsonResponse(
+          req,
+          requestId,
+          {
+            success: false,
+            error: {
+              code: "RELAY_TX_INSPECTION_FAILED",
+              message: "The transaction could not be inspected for the expected signer.",
+            },
+            meta: { requestId },
+          },
+          { status: 422 },
+        );
+      }
+    } else if (!requiredSigners.includes(expectedWallet)) {
+      SafeLogger.warn("Launchpad send expected wallet is not a required signer", {
+        requestId,
+        endpoint: ROUTE,
+        mode: relayGuardMode,
+        stage: broadcastStage,
+        mint: expectedMint,
+        wallet: expectedWallet,
+        txLengthBytes: rawTransaction.length,
+        reason: "signer_mismatch",
+      });
+      if (relayGuardMode === "strict") {
+        return jsonResponse(
+          req,
+          requestId,
+          {
+            success: false,
+            error: {
+              code: "RELAY_TX_SIGNER_MISMATCH",
+              message: "The expected wallet is not a required signer of this transaction.",
+            },
+            meta: { requestId },
+          },
+          { status: 422 },
+        );
+      }
+    }
+  }
+
+  if (expectedWallet && requireLinkedWallet()) {
+    const access = await resolveLinkedWalletAccess(req, expectedWallet);
+    const userIdPartial = access.userId ? `${access.userId.slice(0, 8)}…` : null;
+    if (!access.ok) {
+      SafeLogger.warn("Launchpad send wallet not linked to authenticated account", {
+        requestId,
+        endpoint: ROUTE,
+        mode: relayGuardMode,
+        stage: broadcastStage,
+        mint: expectedMint,
+        wallet: expectedWallet,
+        userIdPartial,
+        reason: access.reason,
+        txLengthBytes: rawTransaction.length,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "WALLET_NOT_LINKED_TO_ACCOUNT",
+            message:
+              "The launch wallet must be linked and verified on your Bags Shield account before broadcasting.",
+          },
+          meta: { requestId },
+        },
+        { status: 403 },
+      );
+    }
+    SafeLogger.info("Launchpad send linked-wallet check passed", {
+      requestId,
+      endpoint: ROUTE,
+      stage: broadcastStage,
+      mint: expectedMint,
+      wallet: expectedWallet,
+      userIdPartial,
+    });
+  }
+
   // Helpers para classificar erros RPC (TAREFA B)
   function classifyRpcError(err: unknown): {
     code: string;
@@ -368,6 +754,31 @@ export async function POST(req: NextRequest) {
     ? Array.from(rawTransaction.slice(0, 4)).map(b => b.toString(16).padStart(2, "0")).join("")
     : "n/a";
 
+  const txFingerprint = createHash("sha256").update(rawTransaction).digest("hex");
+  const cachedBroadcast = getRecentBroadcast(txFingerprint);
+  if (cachedBroadcast) {
+    SafeLogger.warn("Launchpad send duplicate broadcast detected; returning cached result", {
+      requestId,
+      endpoint: ROUTE,
+      mode: relayGuardMode,
+      stage: broadcastStage,
+      mint: expectedMint,
+      wallet: expectedWallet,
+      txLengthBytes,
+      reason: "duplicate_broadcast",
+    });
+    return jsonResponse(
+      req,
+      requestId,
+      {
+        success: true,
+        response: { ...cachedBroadcast.response, duplicate: true },
+        meta: { requestId, ...cachedBroadcast.meta, duplicate: true, elapsedMs: Date.now() - startTime },
+      },
+      { status: 200 },
+    );
+  }
+
   try {
     const connection = new Connection(rpcUrl, "confirmed");
     const signature = await connection.sendRawTransaction(rawTransaction, {
@@ -379,7 +790,7 @@ export async function POST(req: NextRequest) {
     const provenanceWallet = input.wallet || input.launchWallet;
     let launchStatus: "submitted" | "confirmed" = "submitted";
     let confirmationStatus: string | null = null;
-    if (provenanceMint) {
+    if (provenanceMint && broadcastStage !== "config_setup") {
       const submittedPersisted = await updateUserLaunchSubmitted({
         mint: provenanceMint,
         wallet: provenanceWallet,
@@ -424,7 +835,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        if (confirmation.confirmed && provenanceMint) {
+        if (confirmation.confirmed && provenanceMint && broadcastStage !== "config_setup") {
           launchStatus = "confirmed";
           const confirmedPersisted = await updateUserLaunchConfirmed({
             mint: provenanceMint,
@@ -452,25 +863,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const successResponse = {
+      signature,
+      launchStatus,
+      confirmationStatus,
+      purpose: input.purpose || "launch",
+      stage: broadcastStage,
+    };
+    const successMeta = {
+      signature,
+      launchStatus,
+      confirmationStatus,
+      purpose: input.purpose || "launch",
+      stage: broadcastStage,
+    };
+    setRecentBroadcast(txFingerprint, { response: successResponse, meta: successMeta });
+
     return jsonResponse(
       req,
       requestId,
       {
         success: true,
-        response: {
-          signature,
-          launchStatus,
-          confirmationStatus,
-          purpose: input.purpose || "launch",
-        },
-        meta: {
-          requestId,
-          signature,
-          launchStatus,
-          confirmationStatus,
-          purpose: input.purpose || "launch",
-          elapsedMs: Date.now() - startTime,
-        },
+        response: successResponse,
+        meta: { requestId, ...successMeta, elapsedMs: Date.now() - startTime },
       },
       { status: 200 },
     );

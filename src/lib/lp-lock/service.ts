@@ -41,7 +41,18 @@ export interface DetectedPool {
   liquidityUsd: number;
 }
 
-const SUPPORTED_DEXES = ["orca", "meteora", "raydium"] as const;
+const SUPPORTED_DEXES = ["orca", "meteora", "raydium", "bags"] as const;
+
+/**
+ * Map a DexScreener dexId to our internal pool family. Bags launchpad pools are
+ * Meteora Dynamic Bonding Curve (DBC) pools under the hood, so dexId "bags" is
+ * treated as "meteora" — this is what triggers on-chain DBC lock verification via
+ * getMeteoraDbcLockState(). The record stays verified:false until on-chain proof.
+ */
+function mapDexIdToPoolType(dexId: string): "orca" | "meteora" | "raydium" {
+  if (dexId === "bags") return "meteora";
+  return dexId as "orca" | "meteora" | "raydium";
+}
 
 function supabaseHeaders(): Record<string, string> | null {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -149,7 +160,7 @@ export async function detectPoolForMint(mint: string): Promise<DetectedPool | nu
 
     return {
       poolAddress: best.pairAddress,
-      poolType: best.dexId as "orca" | "meteora" | "raydium",
+      poolType: mapDexIdToPoolType(best.dexId),
       liquidityUsd: best.liquidity?.usd ?? 0,
     };
   } catch {

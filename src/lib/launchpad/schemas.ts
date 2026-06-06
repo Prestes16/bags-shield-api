@@ -436,6 +436,7 @@ export const launchpadSendRequestSchema = z
     wallet: solanaAddressSchema.optional(),
     launchWallet: solanaAddressSchema.optional(),
     purpose: z.enum(['launch']).default('launch').optional(),
+    stage: z.enum(['config_setup', 'launch_final']).optional(),
   })
   .strict();
 

@@ -158,7 +158,7 @@ async function resolvePoolAddressFromDexScreener(mint: string): Promise<string |
         .filter(
           (p) =>
             p.chainId === "solana" &&
-            /meteora/i.test(p.dexId) &&
+            /meteora|bags/i.test(p.dexId) &&
             p.pairAddress,
         )
         .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
