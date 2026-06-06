@@ -9,7 +9,8 @@ import {
   SafeLogger,
 } from "@/lib/security";
 import { handlePreflight } from "@/lib/security/cors";
-import { getClaimTransactionsV3 } from "@/lib/launchpad/bags-client";
+import { getClaimTransactionsV3, getClaimablePositions } from "@/lib/launchpad/bags-client";
+import { resolveAccountWallets, isLinkedWalletRequired, userIdPartial } from "@/lib/launchpad/account-wallets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -164,6 +165,98 @@ export async function POST(req: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  // Public/strict: claims are bound to the authenticated account. feeClaimer must
+  // be one of the user's linked wallets, and a claimable position must exist for
+  // tokenMint under that feeClaimer before a claim transaction is generated.
+  if (isLinkedWalletRequired()) {
+    const account = await resolveAccountWallets(req);
+    if (!account.authenticated) {
+      SafeLogger.warn("Fee-claims transactions: auth required", {
+        requestId,
+        endpoint: ROUTE,
+        reason: account.reason,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "LINKED_WALLET_AUTH_REQUIRED",
+            message: "Sign in to your Bags Shield account to claim fees.",
+          },
+          meta: { requestId },
+        },
+        { status: 401 },
+      );
+    }
+    if (!account.wallets.includes(feeClaimer)) {
+      SafeLogger.warn("Fee-claims transactions: feeClaimer not linked", {
+        requestId,
+        endpoint: ROUTE,
+        userIdPartial: userIdPartial(account.userId),
+        reason: "wallet_not_linked",
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "WALLET_NOT_LINKED_TO_ACCOUNT",
+            message: "This wallet is not linked to your Bags Shield account.",
+          },
+          meta: { requestId },
+        },
+        { status: 403 },
+      );
+    }
+
+    const positionsResult = await getClaimablePositions(feeClaimer);
+    if ("error" in positionsResult) {
+      SafeLogger.error("Fee-claims transactions: positions lookup failed", undefined, {
+        requestId,
+        endpoint: ROUTE,
+        errorCode: positionsResult.error.code,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: { code: positionsResult.error.code, message: positionsResult.error.message },
+          meta: { requestId, upstream: "bags" },
+        },
+        { status: positionsResult.error.code === "BAGS_NOT_CONFIGURED" ? 503 : 502 },
+      );
+    }
+    const positions = Array.isArray(positionsResult.response)
+      ? (positionsResult.response as unknown as Array<Record<string, unknown>>)
+      : [];
+    const hasPosition = positions.some((pos) => (pos.baseMint ?? pos.tokenMint) === tokenMint);
+    if (!hasPosition) {
+      SafeLogger.warn("Fee-claims transactions: no claimable position for mint", {
+        requestId,
+        endpoint: ROUTE,
+        userIdPartial: userIdPartial(account.userId),
+        reason: "claim_position_not_found",
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "CLAIM_POSITION_NOT_FOUND",
+            message: "No claimable fee position was found for this token under your wallet.",
+          },
+          meta: { requestId },
+        },
+        { status: 404 },
+      );
+    }
   }
 
   const result = await getClaimTransactionsV3({ feeClaimer, tokenMint });
