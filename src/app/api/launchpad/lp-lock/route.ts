@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
   try {
     if (action === "schedule") {
       const lockDays = validLockDays(body.lockDays ?? body.additionalDays ?? 90);
-      const pool = await detectPoolForMint(mint);
+      const pool = await detectPoolForMint(mint, { wallet });
       const record = await updateLpLockStatus(mint, pool ? "pool_detected" : "awaiting_pool", {
         wallet,
         lockDays,
@@ -212,14 +212,28 @@ export async function POST(req: NextRequest) {
 
     if (action === "check") {
       let record = await getLpLockStatus(mint);
-      const pool = await detectPoolForMint(mint);
+      const pool = await detectPoolForMint(mint, { wallet });
 
-      if (record?.status === "awaiting_pool" && pool) {
-        record = await updateLpLockStatus(mint, "pool_detected", {
+      if (pool && (!record || record.status === "awaiting_pool")) {
+        const updated = await updateLpLockStatus(mint, "pool_detected", {
+          wallet: record?.wallet || wallet,
+          ...(record?.lockDays != null ? { lockDays: record.lockDays } : {}),
           poolAddress: pool.poolAddress,
           poolType: pool.poolType,
           lockedLiquidityUsd: pool.liquidityUsd,
         });
+        // Even if persistence is unavailable, reflect pool_detected in the response.
+        record = updated || {
+          mint,
+          wallet: record?.wallet || wallet,
+          lockDays: record?.lockDays ?? 0,
+          status: "pool_detected",
+          poolAddress: pool.poolAddress,
+          poolType: pool.poolType,
+          lockedLiquidityUsd: pool.liquidityUsd,
+          createdAt: record?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
       }
 
       return json(req, await responseFromRecord(record, pool));

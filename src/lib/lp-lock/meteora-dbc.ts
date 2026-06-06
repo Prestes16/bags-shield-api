@@ -201,7 +201,7 @@ function deriveLockState(
       source,
       message:
         "LP locked confirmado on-chain via Meteora DBC. " +
-        "Creator e partner podem reivindicar fees da posição travada.",
+        "Creator e partner podem reivindicar fees da posicao travada.",
     };
   }
 
@@ -247,7 +247,7 @@ function deriveLockState(
       source: "dlmm_pair_estimate",
       message:
         "Pool DLMM detectada. LP provavelmente travado via DBC graduation. " +
-        "Metadado de lock exato ainda não disponível na API.",
+        "Metadado de lock exato ainda nao disponivel na API.",
     };
   }
 
@@ -263,7 +263,7 @@ function deriveLockState(
     migrationStatus: "unknown",
     verified: false,
     source,
-    message: "Pool DLMM encontrada mas liquidez vazia — LP pode ainda não estar travado.",
+    message: "Pool DLMM encontrada mas liquidez vazia - LP pode ainda nao estar travado.",
   };
 }
 

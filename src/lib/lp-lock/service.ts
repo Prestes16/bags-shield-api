@@ -11,6 +11,9 @@
  */
 
 import { getMeteoraDbcLockState } from "./meteora-dbc";
+import { getClaimablePositions } from "@/lib/launchpad/bags-client";
+import { BAGS_SHIELD_FEE_SHARE_WALLET } from "@/lib/launchpad/fees";
+import { SafeLogger } from "@/lib/security";
 
 export type LpLockStatus =
   | "awaiting_pool"
@@ -128,13 +131,31 @@ export function getLpLockCapabilities() {
   };
 }
 
-export async function detectPoolForMint(mint: string): Promise<DetectedPool | null> {
+export interface DetectPoolOptions {
+  wallet?: string;
+  requestId?: string;
+}
+
+// A) DexScreener — works in local/dev, but its endpoint is frequently rate-limited
+// or blocked for serverless egress IPs, so it is only the first attempt.
+async function detectPoolViaDexScreener(
+  mint: string,
+  requestId?: string,
+): Promise<DetectedPool | null> {
   try {
     const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, {
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      SafeLogger.warn("LP-lock pool detect: DexScreener non-OK", {
+        requestId,
+        mint,
+        provider: "dexscreener",
+        httpStatus: res.status,
+      });
+      return null;
+    }
 
     const data = (await res.json()) as {
       pairs?: Array<{
@@ -156,16 +177,139 @@ export async function detectPoolForMint(mint: string): Promise<DetectedPool | nu
       .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
 
     const best = solanaPairs[0];
-    if (!best) return null;
+    SafeLogger.info("LP-lock pool detect: DexScreener probe", {
+      requestId,
+      mint,
+      provider: "dexscreener",
+      httpStatus: res.status,
+      pairCount: pairs.length,
+      dexIds: [...new Set(pairs.map((pair) => pair.dexId))].slice(0, 8),
+      accepted: Boolean(best),
+    });
 
+    if (!best) return null;
     return {
       poolAddress: best.pairAddress,
       poolType: mapDexIdToPoolType(best.dexId),
       liquidityUsd: best.liquidity?.usd ?? 0,
     };
-  } catch {
+  } catch (error) {
+    SafeLogger.warn("LP-lock pool detect: DexScreener failed", {
+      requestId,
+      mint,
+      provider: "dexscreener",
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
+}
+
+// B) Bags claimable-positions — authenticated Bags API (works from serverless).
+// The Bags Shield treasury is a fee claimer on every launch, so its positions
+// reliably expose the token's virtual pool even when DexScreener is blocked.
+async function detectPoolViaBagsClaimable(
+  mint: string,
+  wallets: string[],
+  requestId?: string,
+): Promise<DetectedPool | null> {
+  for (const wallet of wallets) {
+    if (!wallet) continue;
+    try {
+      const result = await getClaimablePositions(wallet);
+      if ("error" in result) {
+        SafeLogger.warn("LP-lock pool detect: Bags claimable error", {
+          requestId,
+          mint,
+          provider: "bags_claimable",
+          walletTried: `${wallet.slice(0, 4)}...`,
+          code: result.error.code,
+        });
+        continue;
+      }
+      const positions = Array.isArray(result.response)
+        ? (result.response as unknown as Array<Record<string, unknown>>)
+        : [];
+      const match = positions.find((pos) => {
+        const posMint = (pos.baseMint ?? pos.tokenMint) as string | undefined;
+        return posMint === mint;
+      });
+      const poolAddress = match
+        ? ((match.virtualPool ?? match.poolAddress) as string | undefined)
+        : undefined;
+
+      SafeLogger.info("LP-lock pool detect: Bags claimable probe", {
+        requestId,
+        mint,
+        provider: "bags_claimable",
+        walletTried: `${wallet.slice(0, 4)}...`,
+        positionCount: positions.length,
+        matched: Boolean(poolAddress),
+      });
+
+      if (poolAddress) {
+        return { poolAddress, poolType: "meteora", liquidityUsd: 0 };
+      }
+    } catch (error) {
+      SafeLogger.warn("LP-lock pool detect: Bags claimable threw", {
+        requestId,
+        mint,
+        provider: "bags_claimable",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve the on-chain pool for a token mint from the most reliable source
+ * available. Pool detected does NOT mean LP is locked/verified -- that is only
+ * confirmed later by getMeteoraDbcLockState() with real on-chain proof.
+ */
+export async function detectPoolForMint(
+  mint: string,
+  opts: DetectPoolOptions = {},
+): Promise<DetectedPool | null> {
+  const requestId = opts.requestId;
+
+  // A) DexScreener
+  const viaDex = await detectPoolViaDexScreener(mint, requestId);
+  if (viaDex) return viaDex;
+
+  // B) Bags claimable-positions (caller wallet + Bags Shield treasury claimer)
+  const candidateWallets = [opts.wallet, BAGS_SHIELD_FEE_SHARE_WALLET].filter(
+    (wallet, index, arr) => Boolean(wallet) && arr.indexOf(wallet) === index,
+  ) as string[];
+  const viaBags = await detectPoolViaBagsClaimable(mint, candidateWallets, requestId);
+  if (viaBags) return viaBags;
+
+  // C) Persisted record (Supabase) -- reuse a previously detected pool address
+  try {
+    const record = await getLpLockStatus(mint);
+    if (record?.poolAddress) {
+      SafeLogger.info("LP-lock pool detect: from persisted record", {
+        requestId,
+        mint,
+        provider: "supabase_record",
+      });
+      return {
+        poolAddress: record.poolAddress,
+        poolType: record.poolType ?? "meteora",
+        liquidityUsd: record.lockedLiquidityUsd ?? 0,
+      };
+    }
+  } catch {
+    // best-effort only
+  }
+
+  // D) Nothing found -- caller keeps awaiting_pool
+  SafeLogger.warn("LP-lock pool detect: not found", {
+    requestId,
+    mint,
+    reason: "no_pool_from_dexscreener_bags_or_record",
+    walletsTried: candidateWallets.length,
+  });
+  return null;
 }
 
 export async function getLpLockStatus(mint: string): Promise<LpLockRecord | null> {
@@ -275,7 +419,7 @@ export function enrichLpLockRecord(record: LpLockRecord) {
   ) as "migrated" | "unknown";
   const verified = false; // overridden to true by enrichLpLockRecordWithOnChainData when confirmed
   const providerMessage =
-    "Auto-lock via Meteora DBC — LP locked automatically by the protocol after graduation.";
+    "Auto-lock via Meteora DBC - LP locked automatically by the protocol after graduation.";
 
   return {
     ...record,
