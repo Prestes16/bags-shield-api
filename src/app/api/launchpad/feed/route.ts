@@ -221,9 +221,19 @@ export async function GET(req: NextRequest) {
 
   const filter = (req.nextUrl.searchParams.get("filter") ?? "recent") as Filter;
   const limit = Math.min(50, Math.max(1, Number(req.nextUrl.searchParams.get("limit") ?? 20)));
+  // Account-scoped: optional comma-separated linked wallets. Public launch
+  // provenance only; claim ownership is enforced in the fee-claims routes.
+  const scopedWallets = [
+    ...new Set(
+      (req.nextUrl.searchParams.get("wallets") ?? "")
+        .split(",")
+        .map((w) => w.trim())
+        .filter((w) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w)),
+    ),
+  ].slice(0, 25);
 
   // Check full-page cache
-  const pageCacheKey = `feed:${filter}:${limit}`;
+  const pageCacheKey = `feed:${filter}:${limit}:${scopedWallets.join("|")}`;
   const cached = getCached(pageCacheKey);
   if (cached) {
     return json({ success: true, filter, launches: cached });
@@ -255,10 +265,13 @@ export async function GET(req: NextRequest) {
       "metadata_uri",
       "config_key",
     ].join(",");
-    const res = await fetch(
-      `${sb.base}/user_launches?select=${selectFields}&order=created_at.desc&limit=100`,
-      { headers: sb.headers }
-    );
+    // When linked wallets are provided, return ALL launches by those wallets
+    // (as creator or launch wallet) regardless of global recency.
+    const inList = scopedWallets.join(",");
+    const launchUrl = scopedWallets.length
+      ? `${sb.base}/user_launches?select=${selectFields}&or=(creator_wallet.in.(${inList}),launch_wallet.in.(${inList}))&order=created_at.desc&limit=200`
+      : `${sb.base}/user_launches?select=${selectFields}&order=created_at.desc&limit=100`;
+    const res = await fetch(launchUrl, { headers: sb.headers });
     if (!res.ok) {
       console.warn("[launchpad/feed] provenance columns unavailable; returning empty feed");
       return json({ success: true, filter, launches: [] });
