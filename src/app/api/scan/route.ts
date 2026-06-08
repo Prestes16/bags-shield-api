@@ -22,32 +22,21 @@ import {
 import { checkOrcaLpLock } from '@/lib/providers/orca';
 import { collectSignals, runEngine } from '@/lib/score';
 import { verifyToken } from '@/lib/auth/jwt';
+import {
+  scanPaywallEnabled,
+  resolveScanUserId,
+  claimFreeScan,
+  consumePaidScan,
+  countFreeScansToday,
+  build402Body,
+  secondsUntilUtcReset,
+} from '@/lib/scan/paywall';
 
 // Rate limiting - simple in-memory store (use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 20; // 20 requests per minute per IP
 
-// ── Daily quota ─────────────────────────────────────────────────────────────
-// 5 free scans/day/IP — after that return 402 with pricing options.
-// Cost math:
-//   Helius free: ~100 k scans/month, paid: $0.01/1000 calls   → negligible
-//   DexScreener: free tier, ~300 req/min                       → free
-//   Birdeye:     free tier, 100 req/min                        → free
-//   Per-scan paid option: 0.002 SOL (~$0.20) covers all costs.
-const dailyQuotaStore = new Map<string, { count: number; resetTime: number }>();
-const DAILY_QUOTA_FREE  = 5;
-const DAILY_WINDOW_MS   = 24 * 60 * 60 * 1000; // 24 h
-
-/** Pricing options returned with 402 so the frontend can render them. */
-const PAYWALL_PRICING = {
-  free:  { scansPerDay: DAILY_QUOTA_FREE },
-  plans: [
-    { id: 'single', labelKey: 'scan.paywall.single', descKey: 'scan.paywall.singleDesc', priceSOL: 0.002, credits: 1 },
-    { id: 'pack10', labelKey: 'scan.paywall.pack',   descKey: 'scan.paywall.packDesc',   priceSOL: 0.01,  credits: 10 },
-    { id: 'weekly', labelKey: 'scan.paywall.weekly', descKey: 'scan.paywall.weeklyDesc', priceSOL: 0.05,  credits: -1 }, // -1 = unlimited 7 days
-  ],
-};
 
 const CANONICAL_ASSETS: Record<string, { symbol: string; name: string; category: 'native' | 'stablecoin' }> = {
   So11111111111111111111111111111111111111112: {
@@ -61,70 +50,6 @@ const CANONICAL_ASSETS: Record<string, { symbol: string; name: string; category:
     category: 'stablecoin',
   },
 };
-
-/**
- * Check (and increment) the daily free quota for a given IP.
- * Returns { allowed: true } if scan can proceed, or NextResponse (402) if over quota.
- */
-function applyDailyQuota(
-  ip: string,
-  requestId: string,
-  req: NextRequest,
-): { allowed: true; remaining: number } | NextResponse {
-  const now = Date.now();
-  const key = `dq:${ip}`;
-
-  // Occasional cleanup of expired entries
-  if (Math.random() < 0.05) {
-    for (const [k, e] of dailyQuotaStore.entries()) {
-      if (e.resetTime < now) dailyQuotaStore.delete(k);
-    }
-  }
-
-  const entry = dailyQuotaStore.get(key);
-
-  if (!entry || entry.resetTime <= now) {
-    // Fresh window — first scan of the day
-    dailyQuotaStore.set(key, { count: 1, resetTime: now + DAILY_WINDOW_MS });
-    return { allowed: true, remaining: DAILY_QUOTA_FREE - 1 };
-  }
-
-  if (entry.count >= DAILY_QUOTA_FREE) {
-    // Quota exhausted — respond 402
-    const resetInMs = entry.resetTime - now;
-    const resetInSecs = Math.ceil(resetInMs / 1000);
-
-    SafeLogger.warn('Daily quota exceeded', {
-      requestId,
-      clientIP: ip.substring(0, 8) + '...',
-      count: entry.count,
-      resetIn: resetInSecs,
-    });
-
-    const response = jsonSafe(
-      402,
-      {
-        success: false,
-        paywall: true,
-        error: {
-          code: 'DAILY_QUOTA_EXCEEDED',
-          message: `Free daily limit of ${DAILY_QUOTA_FREE} scans reached.`,
-          resetAfter: resetInSecs,
-        },
-        pricing: PAYWALL_PRICING,
-        meta: { requestId },
-      },
-      { 'x-request-id': requestId, 'retry-after': String(resetInSecs) },
-    );
-    applyCorsHeaders(req, response);
-    applyNoStore(response);
-    applySecurityHeaders(response);
-    return response;
-  }
-
-  entry.count++;
-  return { allowed: true, remaining: DAILY_QUOTA_FREE - entry.count };
-}
 
 async function applyRateLimit(req: NextRequest): Promise<{ success: true } | NextResponse> {
   const requestId = getOrGenerateRequestId(req.headers);
@@ -438,14 +363,49 @@ function make500Response(requestId: string, err: unknown, req: NextRequest): Nex
   return res;
 }
 
-/** Extract client IP from request (same logic as rate limiter). */
-function getClientIP(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    req.headers.get('cf-connecting-ip') ||
-    'unknown'
-  );
+async function applyScanPaywallGate(
+  req: NextRequest,
+  mint: string,
+  requestId: string,
+): Promise<{ ok: true } | NextResponse> {
+  if (!scanPaywallEnabled()) return { ok: true };
+
+  // Scanner requires a signed-in Bags Shield account (server-resolved userId).
+  const userId = await resolveScanUserId(req);
+  if (!userId) {
+    const res = jsonSafe(
+      401,
+      {
+        success: false,
+        error: { code: 'SCAN_AUTH_REQUIRED', message: 'Sign in to your Bags Shield account to use the scanner.' },
+        meta: { requestId },
+      },
+      { 'x-request-id': requestId },
+    );
+    applyCorsHeaders(req, res);
+    applyNoStore(res);
+    applySecurityHeaders(res);
+    return res;
+  }
+
+  // Free quota first (atomic, server-side). seq >= 1 means a free scan was granted.
+  const seq = await claimFreeScan(userId, mint);
+  if (seq >= 1) return { ok: true };
+
+  // Free exhausted -> consume a previously verified paid scan, if any.
+  const paid = await consumePaidScan(userId, mint);
+  if (paid) return { ok: true };
+
+  // Otherwise: 402 paywall (one extra scan needs an individual micro-payment).
+  const used = await countFreeScansToday(userId);
+  const res = jsonSafe(402, build402Body(used, requestId), {
+    'x-request-id': requestId,
+    'retry-after': String(secondsUntilUtcReset()),
+  });
+  applyCorsHeaders(req, res);
+  applyNoStore(res);
+  applySecurityHeaders(res);
+  return res;
 }
 
 export async function POST(req: NextRequest) {
@@ -456,12 +416,12 @@ export async function POST(req: NextRequest) {
     const rateLimitResult = await applyRateLimit(req);
     if ('status' in rateLimitResult) return rateLimitResult;
 
-    // Daily free-tier quota (5 scans/day/IP)
-    const quotaResult = applyDailyQuota(getClientIP(req), requestId, req);
-    if ('status' in quotaResult) return quotaResult;
-
     const validation = await validateRequest(req);
     if ('status' in validation) return validation;
+
+    const gate = await applyScanPaywallGate(req, validation.data.mint, validation.requestId);
+    if ('status' in gate) return gate;
+
     return await processScanRequest(validation.data, validation.requestId, req);
   } catch (err) {
     SafeLogger.warn('Scan handler error', { requestId });
@@ -477,12 +437,12 @@ export async function GET(req: NextRequest) {
     const rateLimitResult = await applyRateLimit(req);
     if ('status' in rateLimitResult) return rateLimitResult;
 
-    // Daily free-tier quota (5 scans/day/IP)
-    const quotaResult = applyDailyQuota(getClientIP(req), requestId, req);
-    if ('status' in quotaResult) return quotaResult;
-
     const validation = await validateRequest(req);
     if ('status' in validation) return validation;
+
+    const gate = await applyScanPaywallGate(req, validation.data.mint, validation.requestId);
+    if ('status' in gate) return gate;
+
     return await processScanRequest(validation.data, validation.requestId, req);
   } catch (err) {
     SafeLogger.warn('Scan handler error', { requestId });

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { applyCorsHeaders, handlePreflight } from '@/lib/security/cors';
+import { publicScanPaywallStatus } from '@/lib/scan/paywall';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
         ok: true,
         ts: new Date().toISOString(),
         deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? null,
+        ...publicScanPaywallStatus(),
       },
     },
     {
