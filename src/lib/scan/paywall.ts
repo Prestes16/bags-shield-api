@@ -146,6 +146,28 @@ export async function countFreeScansToday(userId: string): Promise<number> {
   }
 }
 
+/**
+ * Read-only: does a verified-but-unconsumed paid scan exist for (userId, mint)?
+ * Used by the scan gate to grant a paid scan WITHOUT consuming it; the intent is
+ * only flipped paid->used after the scan returns 2xx (consumePaidScan).
+ */
+export async function hasPaidScan(userId: string, mint: string | null): Promise<boolean> {
+  const sb = getSupabaseRest();
+  if (!sb) return false;
+  try {
+    const mintFilter = mint ? `&mint=eq.${encodeURIComponent(mint)}` : "";
+    const res = await fetch(
+      `${sb.base}/scan_payment_intents?user_id=eq.${userId}&status=eq.paid${mintFilter}&select=id&limit=1`,
+      { headers: sb.headers, cache: "no-store" },
+    );
+    if (!res.ok) return false;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Body returned with HTTP 402 when the free quota is exhausted. */
 export function build402Body(freeUsedToday: number, requestId: string) {
   return {

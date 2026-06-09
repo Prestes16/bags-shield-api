@@ -27,6 +27,7 @@ import {
   resolveScanUserId,
   claimFreeScan,
   consumePaidScan,
+  hasPaidScan,
   countFreeScansToday,
   build402Body,
   secondsUntilUtcReset,
@@ -363,12 +364,14 @@ function make500Response(requestId: string, err: unknown, req: NextRequest): Nex
   return res;
 }
 
+type ScanGrant = { ok: true; userId: string; grant: { type: 'free' | 'paid' } };
+
 async function applyScanPaywallGate(
   req: NextRequest,
   mint: string,
   requestId: string,
-): Promise<{ ok: true } | NextResponse> {
-  if (!scanPaywallEnabled()) return { ok: true };
+): Promise<ScanGrant | NextResponse> {
+  if (!scanPaywallEnabled()) return { ok: true, userId: '', grant: { type: 'free' } };
 
   // Scanner requires a signed-in Bags Shield account (server-resolved userId).
   const userId = await resolveScanUserId(req);
@@ -389,12 +392,14 @@ async function applyScanPaywallGate(
   }
 
   // Free quota first (atomic, server-side). seq >= 1 means a free scan was granted.
+  // Free scans are not charged to the user, so consuming up-front is fine.
   const seq = await claimFreeScan(userId, mint);
-  if (seq >= 1) return { ok: true };
+  if (seq >= 1) return { ok: true, userId, grant: { type: 'free' } };
 
-  // Free exhausted -> consume a previously verified paid scan, if any.
-  const paid = await consumePaidScan(userId, mint);
-  if (paid) return { ok: true };
+  // Free exhausted: require a verified (status 'paid') intent. DO NOT consume it
+  // here - the paid scan is only consumed AFTER a successful 2xx scan, so a
+  // provider error never charges the user (settlePaidGrant).
+  if (await hasPaidScan(userId, mint)) return { ok: true, userId, grant: { type: 'paid' } };
 
   // Otherwise: 402 paywall (one extra scan needs an individual micro-payment).
   const used = await countFreeScansToday(userId);
@@ -406,6 +411,26 @@ async function applyScanPaywallGate(
   applyNoStore(res);
   applySecurityHeaders(res);
   return res;
+}
+
+/**
+ * Settle a paid grant only AFTER the scan ran. On a successful 2xx scan the paid
+ * intent is consumed (paid->used + ledger). On any non-2xx response the intent is
+ * left 'paid' so the user can retry for free. If a 2xx scan cannot be settled
+ * (race/DB), we do not serve a free result and ask the client to retry (409).
+ */
+async function settlePaidGrant(
+  grant: ScanGrant,
+  response: NextResponse,
+  mint: string,
+  requestId: string,
+  req: NextRequest,
+): Promise<NextResponse> {
+  if (grant.grant.type !== 'paid') return response;
+  if (response.status < 200 || response.status >= 300) return response;
+  const consumed = await consumePaidScan(grant.userId, mint);
+  if (consumed) return response;
+  return jsonScanError(409, 'Scan payment could not be settled, please retry.', requestId, req);
 }
 
 export async function POST(req: NextRequest) {
@@ -422,7 +447,8 @@ export async function POST(req: NextRequest) {
     const gate = await applyScanPaywallGate(req, validation.data.mint, validation.requestId);
     if ('status' in gate) return gate;
 
-    return await processScanRequest(validation.data, validation.requestId, req);
+    const response = await processScanRequest(validation.data, validation.requestId, req);
+    return await settlePaidGrant(gate as ScanGrant, response, validation.data.mint, validation.requestId, req);
   } catch (err) {
     SafeLogger.warn('Scan handler error', { requestId });
     return make500Response(requestId, err, req);
@@ -443,7 +469,8 @@ export async function GET(req: NextRequest) {
     const gate = await applyScanPaywallGate(req, validation.data.mint, validation.requestId);
     if ('status' in gate) return gate;
 
-    return await processScanRequest(validation.data, validation.requestId, req);
+    const response = await processScanRequest(validation.data, validation.requestId, req);
+    return await settlePaidGrant(gate as ScanGrant, response, validation.data.mint, validation.requestId, req);
   } catch (err) {
     SafeLogger.warn('Scan handler error', { requestId });
     return make500Response(requestId, err, req);
