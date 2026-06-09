@@ -762,10 +762,10 @@ async function runLocalScan(
 
   if (!heliusR.ok) {
     if (heliusR.error?.toLowerCase().includes('invalid api key'))
-      return jsonScanError(401, 'Helius API key inválida (401).', requestId, req, upsHeader);
+      return jsonScanError(502, 'Helius provider auth failed (upstream 401).', requestId, req, upsHeader);
     return jsonScanError(
       502,
-      heliusR.error === 'Timeout' ? 'Helius indisponível' : `Helius upstream error (${heliusR.error}).`,
+      heliusR.error === 'Timeout' ? 'Helius unavailable' : `Helius upstream error (${heliusR.error}).`,
       requestId,
       req,
       upsHeader,
@@ -1020,10 +1020,10 @@ async function processScanRequest(data: z.infer<typeof ScanRequestSchema>, reque
               ? upstreamsHeader('429')
               : upstreamsHeader('5xx');
       if (status === 401) {
-        return jsonScanError(401, 'Helius API key inválida (401).', requestId, req, ups);
+        return jsonScanError(502, 'Helius provider auth failed (upstream 401).', requestId, req, ups);
       }
       if (status === 403) {
-        return jsonScanError(403, 'Helius RPC restrito (403).', requestId, req, ups);
+        return jsonScanError(502, 'Helius provider access restricted (upstream 403).', requestId, req, ups);
       }
       if (status === 429 || status >= 500) {
         return jsonScanError(502, `Helius upstream error (${status}).`, requestId, req, ups);
@@ -1048,7 +1048,7 @@ async function processScanRequest(data: z.infer<typeof ScanRequestSchema>, reque
       const msg = String(rpcError.message ?? '');
       if (code === -32401 || /invalid api key/i.test(msg)) {
         SafeLogger.warn('Helius non-OK', { requestId, status: 401 });
-        return jsonScanError(401, 'Helius API key inválida (401).', requestId, req, upstreamsHeader('401'));
+        return jsonScanError(502, 'Helius provider auth failed (upstream 401).', requestId, req, upstreamsHeader('401'));
       }
     }
 
@@ -1083,7 +1083,7 @@ async function processScanRequest(data: z.infer<typeof ScanRequestSchema>, reque
       (e?.name === 'TypeError' && typeof e?.message === 'string' && /fetch|network/i.test(e.message));
     if (isNetwork) {
       SafeLogger.warn('Helius non-OK', { requestId, status: 502 });
-      return jsonScanError(502, 'Helius indisponível', requestId, req, upstreamsHeader('timeout'));
+      return jsonScanError(502, 'Helius unavailable', requestId, req, upstreamsHeader('timeout'));
     }
     // Erro interno nosso → 500 com code+reqId+hint (bulletproof)
     SafeLogger.warn('Scan internal error', { requestId });
