@@ -19,6 +19,15 @@ export const dynamic = 'force-dynamic';
 const TEST_MINT = 'FpVETpk3TpPRQhWxSs5FyDtvcrDFbTMm5LtttWSSBAGS';
 const TIMEOUT_MS = 8_000;
 
+/** Mint base58-like, 32-64 chars. Retorna null se inválido. */
+function parseMintParam(raw: string | null): string | null {
+  if (!raw) return null;
+  const mint = raw.trim();
+  if (mint.length < 32 || mint.length > 64) return null;
+  if (!/^[1-9A-HJ-NP-Za-km-z]+$/.test(mint)) return null;
+  return mint;
+}
+
 function jsonNoStore(body: unknown, status = 200) {
   return new NextResponse(JSON.stringify(body), {
     status,
@@ -100,6 +109,17 @@ export async function GET(req: NextRequest) {
   const provided = (req.headers.get('x-diagnostic-token') ?? '').trim();
   if (!provided || !safeTokenMatch(provided, expected)) return notFound();
 
+  // Query param opcional ?mint= (base58-like, 32-64 chars). Inválido → 400.
+  const rawMint = req.nextUrl.searchParams.get('mint');
+  let testMint = TEST_MINT;
+  if (rawMint !== null) {
+    const parsed = parseMintParam(rawMint);
+    if (!parsed) {
+      return jsonNoStore({ success: false, error: 'Invalid mint param (expected base58, 32-64 chars).' }, 400);
+    }
+    testMint = parsed;
+  }
+
   const diagnostics = getHeliusDiagnostics();
   const rpcUrl = getHeliusRpcUrl();
 
@@ -108,7 +128,7 @@ export async function GET(req: NextRequest) {
   if (rpcUrl) {
     [getHealth, getAsset] = await Promise.all([
       probeRpc(rpcUrl, 'getHealth', []),
-      probeRpc(rpcUrl, 'getAsset', { id: TEST_MINT }),
+      probeRpc(rpcUrl, 'getAsset', { id: testMint }),
     ]);
   }
 
@@ -122,7 +142,9 @@ export async function GET(req: NextRequest) {
       helius: diagnostics,
       probes: {
         getHealth,
-        getAsset: getAsset ? { ...getAsset, mint: TEST_MINT } : null,
+        getAsset: getAsset ? { ...getAsset, mint: testMint } : null,
+        testedMint: testMint,
+        mintSource: testMint === TEST_MINT ? 'default' : 'query',
       },
     },
   });
