@@ -1007,7 +1007,8 @@ async function processScanRequest(data: z.infer<typeof ScanRequestSchema>, reque
   }
 
   const API_BASE = getApiBase();
-  const useProxy = !!process.env.BAGS_SHIELD_API_BASE?.trim() && !wouldProxyToSelf(API_BASE, req.url);
+  const scanProxyEnabled = process.env.SCAN_PROXY_ENABLED?.trim() === 'true';
+  const useProxy = scanProxyEnabled && !!process.env.BAGS_SHIELD_API_BASE?.trim() && !wouldProxyToSelf(API_BASE, req.url);
 
   // Local scan: Helius + DexScreener + optional Birdeye. Meteora scan remains disabled for reliability.
   if (!useProxy) {
