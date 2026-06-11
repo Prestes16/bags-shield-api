@@ -440,11 +440,25 @@ export async function POST(req: NextRequest) {
     // o array original (desktop continua funcionando) e expomos o motivo em
     // setupConsolidation para o cliente decidir.
     let finalTransactions = transactions;
+    let finalDirectSetup = directFeeShareSetupTransactions;
     let setupConsolidation: Record<string, unknown> | null = null;
-    if (transactions.length > 1 && bundles.length === 0 && directFeeShareSetupTransactions.length === 0) {
+    // Bags pode devolver as setup txs em dois formatos: `transactions`
+    // (objetos {transaction}) ou `feeShareSetupTransactions` (strings).
+    // Consolidamos ambos os formatos.
+    const consolidationCandidates: Array<{ transaction?: string }> | null =
+      bundles.length > 0
+        ? null
+        : directFeeShareSetupTransactions.length > 1
+          ? (directFeeShareSetupTransactions as unknown[]).map((t) =>
+              typeof t === "string" ? { transaction: t } : (t as { transaction?: string }),
+            )
+          : transactions.length > 1
+            ? (transactions as Array<{ transaction?: string }>)
+            : null;
+    if (consolidationCandidates) {
       const rpcUrl = (process.env.SOLANA_RPC_URL || "").trim() || getHeliusRpcUrl();
       const merged = await consolidateSetupTransactions(
-        transactions as Array<{ transaction?: string }>,
+        consolidationCandidates,
         input.payer,
         rpcUrl,
       );
@@ -452,7 +466,13 @@ export async function POST(req: NextRequest) {
         finalTransactions = [
           { transaction: merged.transaction, encoding: merged.encoding, blockhash: merged.blockhash },
         ];
-        setupConsolidation = { attempted: true, ok: true, mergedCount: merged.mergedCount };
+        finalDirectSetup = [];
+        setupConsolidation = {
+          attempted: true,
+          ok: true,
+          mergedCount: merged.mergedCount,
+          sourceShape: directFeeShareSetupTransactions.length > 1 ? "feeShareSetupTransactions" : "transactions",
+        };
         SafeLogger.info("Fee-share setup transactions consolidated for mobile", {
           requestId,
           endpoint: ROUTE,
@@ -465,7 +485,8 @@ export async function POST(req: NextRequest) {
           requestId,
           endpoint: ROUTE,
           code: failureCode,
-          setupTransactionCount: transactions.length,
+          directSetupCount: directFeeShareSetupTransactions.length,
+          transactionsCount: transactions.length,
         });
       }
     }
@@ -477,7 +498,7 @@ export async function POST(req: NextRequest) {
       hasBundles;
     const publicFlowSafe = !hasDirectFeeShareSetupTransactions && !hasTransactions && !hasBundles;
     const setupTransactionCount =
-      directFeeShareSetupTransactions.length || finalTransactions.length || bundles.length;
+      finalDirectSetup.length || finalTransactions.length || bundles.length;
 
     // A configKey is mandatory for the launch transaction. If Bags returns no
     // config key we cannot proceed — fail closed rather than launch blindly.
@@ -530,6 +551,7 @@ export async function POST(req: NextRequest) {
         response: {
           ...upstreamResponse,
           transactions: finalTransactions,
+          feeShareSetupTransactions: finalDirectSetup.length > 0 ? finalDirectSetup : undefined,
           setupConsolidation,
           configKey,
           meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
