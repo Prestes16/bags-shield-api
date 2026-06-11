@@ -33,6 +33,8 @@ import {
   buildLaunchpadFeeShare,
 } from "@/lib/launchpad/fees";
 import { getLaunchpadMode, isLaunchpadEnabled } from "@/lib/env";
+import { consolidateSetupTransactions } from "@/lib/launchpad/consolidate-setup";
+import { getHeliusRpcUrl } from "@/lib/helius";
 import {
   isLaunchpadPublicWritesPaused,
   LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
@@ -429,6 +431,45 @@ export async function POST(req: NextRequest) {
     const hasDirectFeeShareSetupTransactions = directFeeShareSetupTransactions.length > 0;
     const hasTransactions = transactions.length > 0;
     const hasBundles = bundles.length > 0;
+
+    // ── Consolidacao mobile/APK ─────────────────────────────────────────────
+    // O cliente mobile aceita no maximo 1 assinatura de setup. Quando a Bags
+    // retorna 2+ setup txs (payer-only, nao assinadas), fundimos as instrucoes
+    // em UMA VersionedTransaction v0 com blockhash fresco. Se a consolidacao
+    // for impossivel (assinatura parcial, signer extra, tamanho, LUT), mantemos
+    // o array original (desktop continua funcionando) e expomos o motivo em
+    // setupConsolidation para o cliente decidir.
+    let finalTransactions = transactions;
+    let setupConsolidation: Record<string, unknown> | null = null;
+    if (transactions.length > 1 && bundles.length === 0 && directFeeShareSetupTransactions.length === 0) {
+      const rpcUrl = (process.env.SOLANA_RPC_URL || "").trim() || getHeliusRpcUrl();
+      const merged = await consolidateSetupTransactions(
+        transactions as Array<{ transaction?: string }>,
+        input.payer,
+        rpcUrl,
+      );
+      if (merged.ok) {
+        finalTransactions = [
+          { transaction: merged.transaction, encoding: merged.encoding, blockhash: merged.blockhash },
+        ];
+        setupConsolidation = { attempted: true, ok: true, mergedCount: merged.mergedCount };
+        SafeLogger.info("Fee-share setup transactions consolidated for mobile", {
+          requestId,
+          endpoint: ROUTE,
+          mergedCount: merged.mergedCount,
+        });
+      } else {
+        const failureCode = "code" in merged ? String(merged.code) : "UNKNOWN";
+        setupConsolidation = { attempted: true, ok: false, code: failureCode };
+        SafeLogger.warn("Fee-share setup consolidation failed; returning original setup transactions", {
+          requestId,
+          endpoint: ROUTE,
+          code: failureCode,
+          setupTransactionCount: transactions.length,
+        });
+      }
+    }
+
     const needsCreation =
       upstreamResponse.needsCreation === true ||
       hasDirectFeeShareSetupTransactions ||
@@ -436,7 +477,7 @@ export async function POST(req: NextRequest) {
       hasBundles;
     const publicFlowSafe = !hasDirectFeeShareSetupTransactions && !hasTransactions && !hasBundles;
     const setupTransactionCount =
-      directFeeShareSetupTransactions.length || transactions.length || bundles.length;
+      directFeeShareSetupTransactions.length || finalTransactions.length || bundles.length;
 
     // A configKey is mandatory for the launch transaction. If Bags returns no
     // config key we cannot proceed — fail closed rather than launch blindly.
@@ -488,6 +529,8 @@ export async function POST(req: NextRequest) {
         success: true,
         response: {
           ...upstreamResponse,
+          transactions: finalTransactions,
+          setupConsolidation,
           configKey,
           meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
           needsCreation,
