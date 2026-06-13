@@ -14,6 +14,7 @@ const tests = [
   { name: "Schema Validation", script: "test-launchpad-schemas.js" },
   { name: "Anti-SSRF", script: "test-launchpad-ssrf.js" },
   { name: "Manifest Hash", script: "test-launchpad-manifest-hash.js" },
+  { name: "Paid Setup Recovery", script: "test-launchpad-recovery.mjs" },
 ];
 
 let passed = 0;

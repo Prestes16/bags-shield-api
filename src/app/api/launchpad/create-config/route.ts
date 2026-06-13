@@ -40,6 +40,7 @@ import {
   LAUNCHPAD_SAFE_MODE_PAUSED_CODE,
   LAUNCHPAD_SAFE_MODE_PAUSED_MESSAGE,
 } from "@/lib/launchpad/safety";
+import { upsertOwnedLaunchProvenance } from "@/lib/launchpad/launch-registry";
 
 const PARTNER_CONFIG_ENV = "LAUNCHPAD_PARTNER_CONFIG";
 const PARTNER_MODE_ENV = "LAUNCHPAD_PARTNER_MODE_ENABLED";
@@ -87,13 +88,52 @@ function jsonResponse(req: NextRequest, requestId: string, body: unknown, init?:
   return res;
 }
 
+/**
+ * Bags pode aninhar o payload util em formatos alternativos (`response`,
+ * `result`, `data`, `config`, `feeShareConfig`) dependendo da rota/versão.
+ * Normaliza para o primeiro objeto que contenha campos reconhecíveis do
+ * FeeShareConfigV2Response (docs.bags.fm: needsCreation/meteoraConfigKey são
+ * obrigatórios no shape v2).
+ */
+const CONFIG_SIGNAL_KEYS = [
+  "needsCreation",
+  "meteoraConfigKey",
+  "configKey",
+  "feeShareAuthority",
+  "transactions",
+  "feeShareSetupTransactions",
+  "bundles",
+] as const;
+
+function extractConfigRecord(raw: unknown): Record<string, unknown> {
+  const root = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const candidates: Record<string, unknown>[] = [root];
+  for (const key of ["response", "result", "data", "config", "feeShareConfig"]) {
+    const nested = root[key];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      candidates.push(nested as Record<string, unknown>);
+    }
+  }
+  for (const candidate of candidates) {
+    if (CONFIG_SIGNAL_KEYS.some((key) => key in candidate)) return candidate;
+  }
+  return root;
+}
+
+const CONFIG_KEY_FIELDS = [
+  "configKey",
+  "meteoraConfigKey",
+  "config_key",
+  "meteora_config_key",
+  "poolConfigKey",
+  "pool_config_key",
+] as const;
+
 function pickConfigKey(response: Record<string, unknown>) {
-  const configKey = response.configKey;
-  if (typeof configKey === "string" && configKey.trim()) return configKey;
-
-  const meteoraConfigKey = response.meteoraConfigKey;
-  if (typeof meteoraConfigKey === "string" && meteoraConfigKey.trim()) return meteoraConfigKey;
-
+  for (const field of CONFIG_KEY_FIELDS) {
+    const value = response[field];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
   return undefined;
 }
 
@@ -386,9 +426,13 @@ export async function POST(req: NextRequest) {
           success: false,
           error: {
             code: "BAGS_CREATE_CONFIG_FAILED",
-            message: partnerModeEnabled
-              ? "Bags create-config (fee-share with partner) request failed"
-              : "Bags create-config (fee-share) request failed",
+            // Propaga a mensagem upstream real em vez de um erro genérico.
+            message: [
+              partnerModeEnabled
+                ? "Bags create-config (fee-share with partner) request failed"
+                : "Bags create-config (fee-share) request failed",
+              upstreamMessage ? `Bags: ${upstreamMessage}` : null,
+            ].filter(Boolean).join(". "),
             upstreamStatus,
             upstreamCode,
             upstreamMessage: upstreamMessage || bagsResult.error.message,
@@ -412,16 +456,22 @@ export async function POST(req: NextRequest) {
           },
         },
         {
+          // Repassa o status upstream quando ele é acionável pelo cliente
+          // (4xx) em vez de converter tudo em 502 genérico. 5xx upstream e
+          // shapes inesperados continuam mapeados para 502 (bad gateway).
           status: bagsResult.error.code === "BAGS_NOT_CONFIGURED"
             ? 503
-            : upstreamStatus === 400 || upstreamStatus === 422
+            : upstreamStatus && [400, 401, 403, 404, 409, 422, 429].includes(upstreamStatus)
               ? upstreamStatus
               : 502,
         },
       );
     }
 
-    const upstreamResponse = bagsResult.response as Record<string, unknown>;
+    // Normaliza formatos alternativos de resposta da Bags (envelope/nesting
+    // variável) antes de extrair os campos do FeeShareConfigV2Response.
+    const rawUpstream = bagsResult.response;
+    const upstreamResponse = extractConfigRecord(rawUpstream);
     const configKey = pickConfigKey(upstreamResponse);
     const directFeeShareSetupTransactions = Array.isArray(upstreamResponse.feeShareSetupTransactions)
       ? upstreamResponse.feeShareSetupTransactions
@@ -500,9 +550,63 @@ export async function POST(req: NextRequest) {
     const setupTransactionCount =
       finalDirectSetup.length || finalTransactions.length || bundles.length;
 
-    // A configKey is mandatory for the launch transaction. If Bags returns no
-    // config key we cannot proceed — fail closed rather than launch blindly.
+    // A configKey is mandatory for the launch transaction.
     if (!configKey) {
+      const responseShapeHint = Object.keys(upstreamResponse).slice(0, 12);
+      // Config JÁ EXISTE on-chain (needsCreation === false) e nenhuma nova
+      // setup transaction foi retornada: o setup foi pago e confirmado em
+      // tentativa anterior. Não bloqueia o recovery com 502 — devolve sucesso
+      // com configReady e configKey null para o cliente reutilizar a chave
+      // persistida localmente. Nenhuma nova assinatura, nenhuma nova fee.
+      const configAlreadyExists =
+        upstreamResponse.needsCreation === false &&
+        !hasDirectFeeShareSetupTransactions &&
+        !hasTransactions &&
+        !hasBundles;
+
+      if (configAlreadyExists) {
+        SafeLogger.warn("Bags fee-share config already exists; upstream omitted config key (client recovery key required)", {
+          requestId,
+          endpoint: ROUTE,
+          configAttempt,
+          responseShapeHint,
+        });
+        return jsonResponse(
+          req,
+          requestId,
+          {
+            success: true,
+            response: {
+              ...upstreamResponse,
+              configKey: null,
+              meteoraConfigKey: null,
+              configKeySource: "client_recovery_required",
+              configReady: true,
+              needsCreation: false,
+              hasTransactions: false,
+              hasBundles: false,
+              publicFlowSafe: true,
+              setupTransactionCount: 0,
+              transactions: [],
+              canContinueToLaunch: true,
+              requiresSetupSignature: false,
+              safety: {
+                publicFlowSafe: true,
+                needsCreation: false,
+                hasTransactions: false,
+                hasBundles: false,
+                reason:
+                  "Fee-share config already exists on-chain. Bags did not echo the config key; reuse the locally persisted configKey from the original setup. No new signature or fee is required.",
+              },
+            },
+            meta: { requestId, upstream: "bags", upstreamStatus: 200, elapsedMs: Date.now() - startTime },
+          },
+          { status: 200 },
+        );
+      }
+
+      // Shape inesperado E criação aparentemente necessária: fail closed, mas
+      // com diagnóstico completo em vez de 502 opaco.
       SafeLogger.error("Bags create-config returned no config key", undefined, {
         requestId,
         endpoint: ROUTE,
@@ -510,6 +614,7 @@ export async function POST(req: NextRequest) {
         needsCreation,
         hasTransactions,
         hasBundles,
+        responseShapeHint,
       });
       return jsonResponse(
         req,
@@ -519,10 +624,84 @@ export async function POST(req: NextRequest) {
           error: {
             code: "BAGS_CONFIG_KEY_MISSING",
             message: "Bags create-config did not return a config key; launch cannot proceed.",
+            upstreamStatus: 200,
+            needsCreation: upstreamResponse.needsCreation ?? null,
+            responseShapeHint,
           },
           meta: { requestId, upstream: "bags", upstreamStatus: 200, elapsedMs: Date.now() - startTime },
         },
         { status: 502 },
+      );
+    }
+
+    // DURABLE_PROVENANCE_BEFORE_SIGNATURE: persist recovery data before returning paid setup transactions
+    // A provenance (wallet/mint/configKey/status) é persistida de forma
+    // SÍNCRONA e com guard de ownership ANTES de entregar setup transactions.
+    // Se há transações pagáveis e a persistência falhar, NÃO entregamos as
+    // transações — sem registro durável não há recovery garantido do rent.
+    const willReturnSetupTransactions = needsCreation || hasTransactions || hasBundles;
+    const persistence = await upsertOwnedLaunchProvenance({
+      mint: input.baseMint,
+      requestingWallet: input.payer,
+      creatorWallet: input.payer,
+      launchWallet: input.payer,
+      configKey,
+      launchStatus: "config_created",
+    });
+
+    if (persistence.conflict) {
+      // RECOVERY_OWNERSHIP_GATE: registro existente incompatível (outra wallet
+      // ou outra configKey) — nunca sobrescrever; bloquear sem pedir assinatura.
+      SafeLogger.warn("Launchpad create-config blocked by provenance ownership conflict", {
+        requestId,
+        endpoint: ROUTE,
+        reason: persistence.reason,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "RECOVERY_OWNERSHIP_MISMATCH",
+            message:
+              "A launch provenance already exists for this mint with a different wallet or configKey. No signature should be requested.",
+          },
+          response: {
+            canRequestSignature: false,
+            canContinueToLaunch: false,
+            newSetupRequired: false,
+          },
+          meta: { requestId, elapsedMs: Date.now() - startTime },
+        },
+        { status: 409 },
+      );
+    }
+
+    if (willReturnSetupTransactions && !persistence.persisted) {
+      SafeLogger.error("Launchpad create-config could not persist provenance before paid setup", undefined, {
+        requestId,
+        endpoint: ROUTE,
+        setupTransactionCount,
+      });
+      return jsonResponse(
+        req,
+        requestId,
+        {
+          success: false,
+          error: {
+            code: "PROVENANCE_PERSISTENCE_FAILED",
+            message:
+              "The launch provenance could not be durably persisted. To protect the paid setup, no setup transaction was returned and NO signature should be requested. Retry shortly.",
+          },
+          response: {
+            canRequestSignature: false,
+            canContinueToLaunch: false,
+            newSetupRequired: false,
+          },
+          meta: { requestId, elapsedMs: Date.now() - startTime },
+        },
+        { status: 503 },
       );
     }
 
@@ -555,6 +734,10 @@ export async function POST(req: NextRequest) {
           setupConsolidation,
           configKey,
           meteoraConfigKey: upstreamResponse.meteoraConfigKey || configKey,
+          configKeySource: "upstream",
+          provenancePersisted: persistence.persisted,
+          // Config pronta = já existe on-chain e nenhuma setup tx pendente.
+          configReady: !needsCreation && !hasTransactions && !hasBundles,
           needsCreation,
           hasTransactions,
           hasBundles,

@@ -54,7 +54,7 @@ export interface LaunchProvenanceInput {
   launchWallet?: string | null;
   metadataUri?: string | null;
   configKey?: string | null;
-  launchStatus: "token_info_created" | "transaction_created" | "submitted" | "confirmed" | "launched";
+  launchStatus: "token_info_created" | "config_created" | "transaction_created" | "submitted" | "confirmed" | "launched";
   txSignature?: string | null;
   confirmedAt?: string | null;
 }
@@ -190,6 +190,138 @@ export async function upsertUserLaunchProvenance(input: LaunchProvenanceInput) {
   } catch {
     return false;
   }
+}
+
+/**
+ * PAID_SETUP_RECOVERY: lê a provenance persistida de um launch pelo mint para
+ * recuperar o config_key salvo quando o create-config original foi pago.
+ * Read-only; retorna null quando o registro/Supabase não está disponível.
+ */
+export async function getLaunchProvenanceByMint(mint: string): Promise<{
+  configKey: string | null;
+  metadataUri: string | null;
+  launchStatus: string | null;
+  creatorWallet: string | null;
+  launchWallet: string | null;
+} | null> {
+  const sb = getSupabaseRest();
+  const cleanMint = cleanString(mint);
+  if (!sb || !cleanMint) return null;
+
+  try {
+    const url = `${sb.base}/user_launches?select=config_key,metadata_uri,launch_status,creator_wallet,launch_wallet&mint=eq.${encodeURIComponent(cleanMint)}&limit=1`;
+    const res = await fetch(url, { headers: sb.headers, cache: "no-store" });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as UserLaunchRow[];
+    if (!rows.length) return null;
+    return {
+      configKey: cleanString(rows[0].config_key),
+      metadataUri: cleanString(rows[0].metadata_uri),
+      launchStatus: cleanString(rows[0].launch_status),
+      creatorWallet: cleanString(rows[0].creator_wallet),
+      launchWallet: cleanString(rows[0].launch_wallet),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export type OwnedProvenanceResult =
+  | { status: "unavailable" }
+  | { status: "none" }
+  | { status: "other_wallet" }
+  | {
+      status: "owned";
+      configKey: string | null;
+      metadataUri: string | null;
+      launchStatus: string | null;
+      creatorWallet: string | null;
+      launchWallet: string | null;
+    };
+
+/**
+ * RECOVERY_OWNERSHIP_GATE: registry provenance must belong to the requesting wallet
+ *
+ * Lookup de provenance com vínculo OBRIGATÓRIO de ownership:
+ *   mint == baseMint AND (creator_wallet == wallet OR launch_wallet == wallet).
+ * Provenance de mesmo mint pertencente a OUTRA wallet nunca é aceita como
+ * fonte autoritativa — retorna "other_wallet" para a rota bloquear.
+ */
+export async function getLaunchProvenanceByMintAndWallet(
+  mint: string,
+  wallet: string,
+): Promise<OwnedProvenanceResult> {
+  const sb = getSupabaseRest();
+  const cleanMint = cleanString(mint);
+  const cleanWallet = cleanString(wallet);
+  if (!sb || !cleanMint || !cleanWallet) return { status: "unavailable" };
+
+  const row = await getLaunchProvenanceByMint(cleanMint);
+  if (row === null) {
+    // Distingue "sem registro" de "registro indisponível": refaz uma checagem
+    // mínima de existência para não mascarar erro de Supabase como "none".
+    try {
+      const url = `${sb.base}/user_launches?select=mint&mint=eq.${encodeURIComponent(cleanMint)}&limit=1`;
+      const res = await fetch(url, { headers: sb.headers, cache: "no-store" });
+      if (!res.ok) return { status: "unavailable" };
+      const rows = (await res.json()) as Array<{ mint?: string }>;
+      return rows.length ? { status: "unavailable" } : { status: "none" };
+    } catch {
+      return { status: "unavailable" };
+    }
+  }
+
+  const ownerWallets = [row.creatorWallet, row.launchWallet].filter(Boolean);
+  if (ownerWallets.length === 0) {
+    // Registro sem ownership gravado: não dá para provar posse — trata como
+    // não-confiável para fins de fonte autoritativa.
+    return { status: "none" };
+  }
+  if (!ownerWallets.includes(cleanWallet)) {
+    return { status: "other_wallet" };
+  }
+  return { status: "owned", ...row };
+}
+
+export interface GuardedUpsertResult {
+  persisted: boolean;
+  conflict: boolean;
+  reason?: string;
+}
+
+/**
+ * RECOVERY_OWNERSHIP_GATE + DURABLE_PROVENANCE_BEFORE_SIGNATURE:
+ * upsert que NUNCA sobrescreve ownership (creator_wallet/launch_wallet) nem
+ * config_key de um registro existente incompatível. Retorna o resultado real
+ * da persistência — o chamador decide se pode prosseguir.
+ */
+export async function upsertOwnedLaunchProvenance(
+  input: LaunchProvenanceInput & { requestingWallet: string },
+): Promise<GuardedUpsertResult> {
+  const mint = cleanString(input.mint);
+  const wallet = cleanString(input.requestingWallet);
+  if (!mint || !wallet) return { persisted: false, conflict: false, reason: "invalid_input" };
+
+  const existing = await getLaunchProvenanceByMint(mint);
+  if (existing) {
+    const owners = [existing.creatorWallet, existing.launchWallet].filter(Boolean);
+    if (owners.length > 0 && !owners.includes(wallet)) {
+      return { persisted: false, conflict: true, reason: "ownership_mismatch" };
+    }
+    const incomingKey = cleanString(input.configKey);
+    if (existing.configKey && incomingKey && existing.configKey !== incomingKey) {
+      return { persisted: false, conflict: true, reason: "config_key_mismatch" };
+    }
+  }
+
+  const persisted = await upsertUserLaunchProvenance({
+    ...input,
+    // Preserva ownership existente: nunca troca as wallets de um registro.
+    creatorWallet: existing?.creatorWallet || input.creatorWallet,
+    launchWallet: existing?.launchWallet || input.launchWallet,
+    configKey: existing?.configKey || input.configKey,
+  });
+  return { persisted, conflict: false };
 }
 
 export async function updateUserLaunchSubmitted(input: {
